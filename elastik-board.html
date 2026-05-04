@@ -399,6 +399,10 @@ body {
   display: none; gap: 4px;
 }
 .task-card:hover .task-actions { display: flex; }
+/* Never show hover actions on touch devices — tap expands inline instead */
+@media (pointer: coarse) {
+  .task-card:hover .task-actions { display: none; }
+}
 .task-action-btn {
   width: 22px; height: 22px; border-radius: 4px;
   border: none; background: var(--surface2);
@@ -1595,7 +1599,9 @@ function makeTaskCard(t) {
   const card = document.createElement('div');
   card.className = 'task-card';
   card.dataset.id = t.id;
-  card.draggable = true;
+  // draggable only on pointer devices — on touch it blocks tap→click and
+  // native drag is replaced by the handle-based touch drag anyway
+  if (window.matchMedia('(pointer: fine)').matches) card.draggable = true;
 
   const color = proj ? proj.color : '#888780';
   const showBadge = t.pid !== '_todos' && proj;
@@ -1610,7 +1616,6 @@ function makeTaskCard(t) {
       ${dueHtml}
     </div>
     <div class="task-actions">
-      <button class="task-action-btn" title="Edit" onclick="event.stopPropagation();openTaskModal('${t.id}')">✎</button>
       <button class="task-action-btn" title="Delete" onclick="event.stopPropagation();deleteTask('${t.id}')">×</button>
     </div>
     <div class="drag-handle" title="Drag to move">
