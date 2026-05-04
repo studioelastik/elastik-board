@@ -1771,10 +1771,12 @@ async function pushToFirebase() {
   if (!firebaseURL) return;
   isSendingToFirebase = true;
   try {
+    // Strip device-local state before syncing
+    const toSync = {...state, filterSection: null, filterProject: null};
     const res = await fetch(`${firebaseURL}/elastik.json`, {
       method: 'PUT',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(state)
+      body: JSON.stringify(toSync)
     });
     if (!res.ok) throw new Error();
     setSyncStatus('synced');
@@ -1784,6 +1786,22 @@ async function pushToFirebase() {
   isSendingToFirebase = false;
 }
 
+function migrateRemote(data) {
+  if (!data.sections) data.sections = defaultSections();
+  if (!data.colLabels) data.colLabels = {...STATUS_LABELS_DEFAULT};
+  data.projects.forEach(p => { if (!p.section) p.section = 'studio'; });
+  // Ensure general section exists
+  if (!data.sections.find(s => s.id === 'general'))
+    data.sections.push({id:'general', name:'General ToDos', color:'#888780'});
+  // Ensure _todos project exists
+  if (!data.projects.find(p => p.id === '_todos'))
+    data.projects.push({id:'_todos', name:'General', color:'#888780', section:'general'});
+  // Keep device-local filter state
+  data.filterSection = filterSection;
+  data.filterProject = filterProject;
+  return data;
+}
+
 async function pullFromFirebase() {
   if (!firebaseURL) return;
   setSyncStatus('syncing');
@@ -1791,12 +1809,8 @@ async function pullFromFirebase() {
     const res = await fetch(`${firebaseURL}/elastik.json`);
     const data = await res.json();
     if (data && data.tasks) {
-      if (!data.sections) data.sections = defaultSections();
-      data.projects.forEach(p => { if (!p.section) p.section = 'studio'; });
-      state = data;
+      state = migrateRemote(data);
       currentView = state.view || 'kanban';
-      filterSection = state.filterSection || null;
-      filterProject = state.filterProject || null;
       localStorage.setItem('elastik_v3', JSON.stringify(state));
       renderAll(); setView(currentView);
     }
@@ -1817,13 +1831,10 @@ function startFirebaseStream() {
     try {
       const remote = JSON.parse(e.data).data;
       if (!remote || !remote.tasks) return;
-      if (JSON.stringify(remote) === JSON.stringify(state)) return;
-      if (!remote.sections) remote.sections = defaultSections();
-      remote.projects.forEach(p => { if (!p.section) p.section = 'studio'; });
-      state = remote;
+      if (JSON.stringify({...remote, filterSection:null, filterProject:null}) ===
+          JSON.stringify({...state,  filterSection:null, filterProject:null})) return;
+      state = migrateRemote(remote);
       currentView = state.view || 'kanban';
-      filterSection = state.filterSection || null;
-      filterProject = state.filterProject || null;
       localStorage.setItem('elastik_v3', JSON.stringify(state));
       renderAll(); setView(currentView);
       setSyncStatus('synced');
