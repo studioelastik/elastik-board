@@ -1264,6 +1264,10 @@ let ctxTaskId = null;
 let draggedId = null;
 let dragPlaceholder = null;
 let pressTimer = null;
+let touchDragCloneEl = null;
+let touchDragTimer = null;
+let touchIsDragging = false;
+let touchStartX = 0, touchStartY = 0;
 const collapsedSections = new Set();
 
 // ── Helpers ──
@@ -1567,14 +1571,45 @@ function makeTaskCard(t) {
   });
   card.addEventListener('touchstart', e => {
     longPressed = false;
+    touchIsDragging = false;
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+    clearTimeout(touchDragTimer);
+    // 200ms hold → start drag
+    touchDragTimer = setTimeout(() => {
+      if (longPressed) return;
+      clearTimeout(pressTimer);
+      touchIsDragging = true;
+      draggedId = t.id;
+      startTouchDrag(card, e.touches[0]);
+    }, 200);
+    // 600ms hold → context menu
     pressTimer = setTimeout(() => {
+      if (touchIsDragging) return;
+      clearTimeout(touchDragTimer);
       longPressed = true;
-      const touch = e.touches[0];
-      showCtxMenu(touch.clientX, touch.clientY, t.id);
-    }, 500);
+      showCtxMenu(e.touches[0].clientX, e.touches[0].clientY, t.id);
+    }, 600);
   }, {passive: true});
-  card.addEventListener('touchend', () => clearTimeout(pressTimer));
-  card.addEventListener('touchmove', () => clearTimeout(pressTimer));
+
+  card.addEventListener('touchmove', e => {
+    const dx = e.touches[0].clientX - touchStartX;
+    const dy = e.touches[0].clientY - touchStartY;
+    if (touchIsDragging) {
+      e.preventDefault();
+      moveTouchDrag(e.touches[0]);
+    } else if (Math.abs(dx) > 12 || Math.abs(dy) > 12) {
+      // Moved too much before drag started → cancel both timers (let scroll happen)
+      clearTimeout(touchDragTimer);
+      clearTimeout(pressTimer);
+    }
+  }, {passive: false});
+
+  card.addEventListener('touchend', () => {
+    clearTimeout(pressTimer);
+    clearTimeout(touchDragTimer);
+    if (touchIsDragging) endTouchDrag();
+  });
 
   card.addEventListener('click', e => {
     if (didDrag || longPressed) { longPressed = false; return; }
@@ -1589,6 +1624,61 @@ function makeTaskCard(t) {
   });
 
   return card;
+}
+
+// ── Touch drag ──
+function startTouchDrag(card, touch) {
+  const rect = card.getBoundingClientRect();
+  touchDragCloneEl = card.cloneNode(true);
+  touchDragCloneEl.style.cssText = `
+    position:fixed; left:${rect.left}px; top:${rect.top}px;
+    width:${rect.width}px; z-index:9999; pointer-events:none;
+    opacity:0.92; transform:scale(1.04) rotate(1.5deg);
+    box-shadow:0 12px 32px rgba(0,0,0,.22); border-radius:10px; transition:none;
+  `;
+  document.body.appendChild(touchDragCloneEl);
+  card.style.opacity = '0.25';
+  dragPlaceholder = document.createElement('div');
+  dragPlaceholder.className = 'task-card drag-placeholder';
+  dragPlaceholder.style.height = rect.height + 'px';
+  card.after(dragPlaceholder);
+  if (navigator.vibrate) navigator.vibrate(30);
+}
+
+function moveTouchDrag(touch) {
+  if (!touchDragCloneEl) return;
+  const w = touchDragCloneEl.offsetWidth;
+  touchDragCloneEl.style.left = (touch.clientX - w / 2) + 'px';
+  touchDragCloneEl.style.top  = (touch.clientY - 36) + 'px';
+  touchDragCloneEl.style.visibility = 'hidden';
+  const el = document.elementFromPoint(touch.clientX, touch.clientY);
+  touchDragCloneEl.style.visibility = '';
+  if (!el) return;
+  const list = el.closest('.task-list');
+  if (!list) return;
+  document.querySelectorAll('.task-list').forEach(l => l.classList.remove('drag-over'));
+  list.classList.add('drag-over');
+  const empty = list.querySelector('.empty-col');
+  if (empty) empty.remove();
+  const after = getDragAfterElement(list, touch.clientY);
+  if (!after) list.appendChild(dragPlaceholder);
+  else list.insertBefore(dragPlaceholder, after);
+}
+
+function endTouchDrag() {
+  touchIsDragging = false;
+  if (touchDragCloneEl) { touchDragCloneEl.remove(); touchDragCloneEl = null; }
+  const origCard = draggedId ? document.querySelector(`.task-card[data-id="${draggedId}"]`) : null;
+  if (origCard) origCard.style.opacity = '';
+  const list = dragPlaceholder ? dragPlaceholder.closest('.task-list') : null;
+  if (list && draggedId) {
+    const task = getTask(draggedId);
+    if (task) { task.status = list.dataset.status; save(); }
+  }
+  if (dragPlaceholder) { dragPlaceholder.remove(); dragPlaceholder = null; }
+  document.querySelectorAll('.task-list').forEach(l => l.classList.remove('drag-over'));
+  draggedId = null;
+  renderAll();
 }
 
 function setupDropZone(list) {
