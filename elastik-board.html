@@ -298,8 +298,8 @@ body {
 .swimlane-spacer { flex: 1; }
 .swimlane-header { cursor: pointer; user-select: none; }
 .swimlane-header:hover .swimlane-title { color: var(--accent); }
-.swimlane-chevron { color: var(--text-3); display: flex; transition: transform .2s; }
-.swimlane-collapsed .swimlane-chevron { transform: rotate(-90deg); }
+.swimlane-chevron { color: var(--text-3); font-size: 13px; transition: transform .2s; display: inline-block; }
+.lane-chevron-collapsed { transform: rotate(-90deg); }
 .swimlane-collapsed { margin-bottom: 12px; }
 .swimlane-collapsed .swimlane-header { margin-bottom: 0; border-bottom-color: transparent; }
 
@@ -1151,7 +1151,6 @@ let draggedId = null;
 let dragPlaceholder = null;
 let pressTimer = null;
 const collapsedSections = new Set();
-const collapsedLanes = new Set();
 
 // ── Helpers ──
 function uid() { return Math.random().toString(36).slice(2,9); }
@@ -1265,9 +1264,14 @@ function renderSidebar() {
 }
 
 function toggleLane(id) {
-  if (collapsedLanes.has(id)) collapsedLanes.delete(id);
-  else collapsedLanes.add(id);
-  renderKanban();
+  const cols = document.getElementById('lane-cols-' + id);
+  const chevron = document.getElementById('lane-chevron-' + id);
+  const lane = document.getElementById('lane-' + id);
+  if (!cols) return;
+  const hidden = cols.style.display === 'none';
+  cols.style.display = hidden ? '' : 'none';
+  if (chevron) chevron.classList.toggle('lane-chevron-collapsed', !hidden);
+  if (lane) lane.classList.toggle('swimlane-collapsed', !hidden);
 }
 
 function editColTitle(el, status) {
@@ -1310,15 +1314,12 @@ function renderKanban() {
     const lane = document.createElement('div');
     lane.className = 'swimlane';
 
-    const isLaneCollapsed = collapsedLanes.has(sec.id);
-    if (isLaneCollapsed) lane.classList.add('swimlane-collapsed');
+    lane.id = 'lane-' + sec.id;
 
     const header = document.createElement('div');
     header.className = 'swimlane-header';
     header.innerHTML = `
-      <div class="swimlane-chevron">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5L6 8l3.5-3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </div>
+      <span class="swimlane-chevron" id="lane-chevron-${sec.id}">▾</span>
       <div class="swimlane-accent" style="background:${sec.color}"></div>
       <span class="swimlane-title">${sec.name}</span>
       <span class="swimlane-count">${tasks.length}</span>
@@ -1328,7 +1329,7 @@ function renderKanban() {
 
     const cols = document.createElement('div');
     cols.className = 'swimlane-cols';
-    if (isLaneCollapsed) cols.style.display = 'none';
+    cols.id = 'lane-cols-' + sec.id;
 
     STATUS_COLS_ORDER.forEach(status => {
       const colTasks = tasks.filter(t=>t.status===status);
