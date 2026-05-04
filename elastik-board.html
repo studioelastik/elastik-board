@@ -487,13 +487,22 @@ body {
 }
 .card-body-close:hover { background: var(--border-strong); }
 
-.task-add-date {
-  font-size: 13px; opacity: .35;
-  cursor: pointer; line-height: 1;
-  transition: opacity .15s;
-  display: inline-block;
+/* Date wrapper inside the inline editor */
+.card-date-wrap {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface2);
+  border-radius: var(--r);
+  padding: 7px 10px;
+  margin-bottom: 6px;
+  cursor: pointer;
 }
-.task-add-date:hover { opacity: .65; }
+.card-date-icon { flex-shrink: 0; color: var(--text-3); }
+.card-field-due {
+  flex: 1; border: none; outline: none;
+  background: transparent;
+  font-size: 13px; font-family: inherit; color: var(--text-2);
+  cursor: pointer; min-width: 0;
+}
 
 .task-due {
   font-size: 11px; font-weight: 500;
@@ -1627,25 +1636,22 @@ function makeTaskCard(t) {
   const shortName = showBadge ? proj.name.split('—')[0].trim() : '';
   const dueHtml = dueDateDisplay(t.dueDate);
 
-  const noDate = !t.dueDate;
   card.innerHTML = `
     <div class="task-project-bar" style="background:${color}"></div>
     <div class="task-name">${t.name}</div>
     <div class="task-meta">
       ${showBadge ? `<span class="project-badge" style="background:${color};color:#fff">${shortName}</span>` : ''}
-      ${noDate ? `<span class="task-add-date" title="Set due date">📅</span>` : dueHtml}
-    </div>
-    <div class="task-actions">
-      <button class="task-action-btn" title="Delete" onclick="event.stopPropagation();deleteTask('${t.id}')">
-        <svg width="11" height="12" viewBox="0 0 11 12" fill="none"><path d="M1 3h9M4 3V2h3v1M2 3l.5 7h6L9 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </button>
+      ${dueHtml}
     </div>
     <div class="drag-handle" title="Drag to move">
       <span></span><span></span><span></span>
     </div>
     <div class="task-body">
       <input  class="card-field card-field-name"  type="text"  value="${(t.name||'').replace(/"/g,'&quot;')}" placeholder="Task name">
-      <input  class="card-field card-field-due"   type="date"  value="${t.dueDate||''}">
+      <label class="card-date-wrap">
+        <svg class="card-date-icon" width="13" height="13" viewBox="0 0 14 14" fill="none"><rect x="1" y="2.5" width="12" height="11" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M1 6h12M5 1v3M9 1v3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        <input class="card-field-due" type="date" value="${t.dueDate||''}">
+      </label>
       <textarea class="card-field card-field-notes" placeholder="Notes…">${t.notes||''}</textarea>
       <div class="card-body-row">
         <button class="card-body-save">Save</button>
