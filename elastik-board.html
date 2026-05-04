@@ -2029,7 +2029,9 @@ renderAll();
 setView(currentView);
 if (firebaseURL) {
   setSyncStatus('syncing');
-  pullFromFirebase().then(startFirebaseStream);
+  // Push local state first so Firebase is always seeded with latest data,
+  // then pull (to get changes from other devices) and start live stream.
+  pushToFirebase().then(() => pullFromFirebase().then(startFirebaseStream));
 }
 </script>
 </body>
