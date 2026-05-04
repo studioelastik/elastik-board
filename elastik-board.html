@@ -350,24 +350,17 @@ body {
   overflow: hidden;   /* prevent inline-editor fields from bleeding outside */
   min-width: 0;       /* flex child shrink fix */
 }
-/* On touch: leave room at the bottom for the drag handle (≈ 32px) */
-@media (pointer: coarse) {
-  .task-card { padding-bottom: 38px; }
-  .task-card.expanded { padding-bottom: 14px; } /* handle hidden when editing */
-}
+/* Drag handle — inline in the meta row, touch only */
 .drag-handle {
   display: none;
-  position: absolute; bottom: 8px; right: 10px;
-  top: auto; transform: none;
+  flex-direction: column; gap: 3px; align-items: center;
   color: var(--border-strong); cursor: grab;
-  padding: 6px 4px; touch-action: none;
-  z-index: 2;
+  padding: 2px 4px; touch-action: none;
+  flex-shrink: 0; margin-left: 4px;
 }
 @media (pointer: coarse) {
-  .drag-handle { display: flex; flex-direction: column; gap: 3px; }
+  .drag-handle { display: flex; }
   .drag-handle span { display: block; width: 14px; height: 1.5px; background: currentColor; border-radius: 1px; }
-  /* shift task-actions left on mobile so they don't clash with handle */
-  .task-actions { right: 36px; }
 }
 .task-card:hover { border-color: var(--border-strong); box-shadow: 0 2px 8px rgba(0,0,0,.07); }
 .task-card.dragging { opacity: .4; transform: scale(.97); }
@@ -1724,9 +1717,7 @@ function makeTaskCard(t) {
       ${showBadge ? `<span class="project-badge" style="background:${color};color:#fff">${shortName}</span>` : ''}
       <span class="task-meta-spacer"></span>
       ${dueHtml}
-    </div>
-    <div class="drag-handle" title="Drag to move">
-      <span></span><span></span><span></span>
+      <div class="drag-handle" title="Drag to move"><span></span><span></span><span></span></div>
     </div>
     <div class="task-body">
       <input  class="card-field card-field-name"  type="text"  value="${(t.name||'').replace(/"/g,'&quot;')}" placeholder="Task name">
