@@ -1231,8 +1231,8 @@ function renderSidebar() {
   document.getElementById('nav-list').className   = 'sidebar-item'+(currentView==='list'?' active':'');
 }
 
-function editColTitle(e, status) {
-  const span = e.currentTarget;
+function editColTitle(el, status) {
+  const span = el;
   const current = statusLabel(status);
   const input = document.createElement('input');
   input.value = current;
@@ -1291,7 +1291,7 @@ function renderKanban() {
       col.innerHTML = `
         <div class="col-header">
           <div class="col-indicator" style="background:${colColors[status]}"></div>
-          <span class="col-title" onclick="editColTitle(event,'${status}')" title="Click to rename">${statusLabel(status)}</span>
+          <span class="col-title" onclick="editColTitle(this,'${status}')" title="Click to rename">${statusLabel(status)}</span>
           <span class="col-count">${colTasks.length}</span>
         </div>`;
 
