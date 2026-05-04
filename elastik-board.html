@@ -296,6 +296,12 @@ body {
   background: var(--surface2); padding: 1px 7px; border-radius: 8px;
 }
 .swimlane-spacer { flex: 1; }
+.swimlane-header { cursor: pointer; user-select: none; }
+.swimlane-header:hover .swimlane-title { color: var(--accent); }
+.swimlane-chevron { color: var(--text-3); display: flex; transition: transform .2s; }
+.swimlane-collapsed .swimlane-chevron { transform: rotate(-90deg); }
+.swimlane-collapsed { margin-bottom: 12px; }
+.swimlane-collapsed .swimlane-header { margin-bottom: 0; border-bottom-color: transparent; }
 
 .swimlane-cols {
   display: flex; gap: 0;
@@ -1145,6 +1151,7 @@ let draggedId = null;
 let dragPlaceholder = null;
 let pressTimer = null;
 const collapsedSections = new Set();
+const collapsedLanes = new Set();
 
 // ── Helpers ──
 function uid() { return Math.random().toString(36).slice(2,9); }
@@ -1257,6 +1264,12 @@ function renderSidebar() {
   document.getElementById('nav-list').className   = 'sidebar-item'+(currentView==='list'?' active':'');
 }
 
+function toggleLane(id) {
+  if (collapsedLanes.has(id)) collapsedLanes.delete(id);
+  else collapsedLanes.add(id);
+  renderKanban();
+}
+
 function editColTitle(el, status) {
   const span = el;
   const current = statusLabel(status);
@@ -1297,17 +1310,25 @@ function renderKanban() {
     const lane = document.createElement('div');
     lane.className = 'swimlane';
 
+    const isLaneCollapsed = collapsedLanes.has(sec.id);
+    if (isLaneCollapsed) lane.classList.add('swimlane-collapsed');
+
     const header = document.createElement('div');
     header.className = 'swimlane-header';
     header.innerHTML = `
+      <div class="swimlane-chevron">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5L6 8l3.5-3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
       <div class="swimlane-accent" style="background:${sec.color}"></div>
       <span class="swimlane-title">${sec.name}</span>
       <span class="swimlane-count">${tasks.length}</span>
       <div class="swimlane-spacer"></div>`;
+    header.onclick = () => toggleLane(sec.id);
     lane.appendChild(header);
 
     const cols = document.createElement('div');
     cols.className = 'swimlane-cols';
+    if (isLaneCollapsed) cols.style.display = 'none';
 
     STATUS_COLS_ORDER.forEach(status => {
       const colTasks = tasks.filter(t=>t.status===status);
