@@ -468,6 +468,37 @@ body {
 .s-block  { background: var(--s-block-bg);  color: var(--s-block-text);  }
 .s-nosched{ background: var(--s-nosched-bg);color: var(--s-nosched-text);}
 
+/* ── Settings ── */
+#settings-btn {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; color: var(--text-2);
+  cursor: pointer; background: none; border: none;
+  font-family: inherit; padding: 4px 0; margin-top: 8px;
+}
+#settings-btn:hover { color: var(--text); }
+.settings-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 0; border-bottom: 1px solid var(--border);
+}
+.settings-row:last-child { border-bottom: none; }
+.settings-label { font-size: 13px; color: var(--text); font-weight: 500; }
+.settings-sub { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+.zoom-controls { display: flex; align-items: center; gap: 10px; }
+.zoom-btn {
+  width: 34px; height: 34px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--r); cursor: pointer; color: var(--text);
+  transition: background .15s;
+}
+.zoom-btn:hover { background: var(--border-strong); }
+.zoom-btn-small { font-size: 11px; font-weight: 600; letter-spacing: .01em; }
+.zoom-btn-large { font-size: 17px; font-weight: 600; }
+#zoom-display {
+  font-size: 13px; color: var(--text-2); font-variant-numeric: tabular-nums;
+  min-width: 38px; text-align: center;
+}
+
 /* ── Modal ── */
 .modal-overlay {
   position: fixed; inset: 0;
@@ -855,6 +886,10 @@ body {
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
         New project
       </button>
+      <button id="settings-btn" onclick="openSettingsModal()">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="2" stroke="currentColor" stroke-width="1.2"/><path d="M6.5 1v1M6.5 11v1M1 6.5h1M11 6.5h1M2.4 2.4l.7.7M9.9 9.9l.7.7M9.9 2.4l-.7.7M2.4 9.9l.7-.7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+        Settings
+      </button>
     </div>
   </nav>
   <div id="sidebar-overlay" onclick="closeDrawer()"></div>
@@ -1005,6 +1040,42 @@ body {
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeSectionModal()">Cancel</button>
       <button class="btn-save" onclick="saveSection()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Settings Modal -->
+<div class="modal-overlay" id="settings-modal">
+  <div class="modal">
+    <h3>Settings</h3>
+    <div class="settings-row">
+      <div>
+        <div class="settings-label">Display size</div>
+        <div class="settings-sub">Scale the board UI up or down</div>
+      </div>
+      <div class="zoom-controls">
+        <button class="zoom-btn" onclick="changeZoom(-0.1)" title="Smaller">
+          <span class="zoom-btn-small">A</span>
+        </button>
+        <span id="zoom-display">120%</span>
+        <button class="zoom-btn" onclick="changeZoom(0.1)" title="Larger">
+          <span class="zoom-btn-large">A</span>
+        </button>
+      </div>
+    </div>
+    <div class="settings-row">
+      <div>
+        <div class="settings-label">Theme</div>
+        <div class="settings-sub">Light or dark mode</div>
+      </div>
+      <button class="zoom-btn" onclick="toggleTheme()" title="Toggle theme" style="width:auto;padding:0 12px;gap:6px;font-size:12px;">
+        <svg id="settings-theme-sun" width="14" height="14" viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="7.5" r="3" stroke="currentColor" stroke-width="1.3"/><path d="M7.5 1v1.5M7.5 12.5V14M1 7.5h1.5M12.5 7.5H14M3 3l1 1M11 11l1 1M11 3l-1 1M3 11l1-1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        <svg id="settings-theme-moon" width="14" height="14" viewBox="0 0 15 15" fill="none" style="display:none"><path d="M12 9.5A5.5 5.5 0 015.5 3c0-.41.05-.81.13-1.2A6 6 0 1013.2 9.87 5.5 5.5 0 0112 9.5z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+        <span id="settings-theme-label">Light</span>
+      </button>
+    </div>
+    <div class="modal-actions" style="margin-top:8px">
+      <button class="btn-cancel" onclick="closeSettingsModal()">Close</button>
     </div>
   </div>
 </div>
@@ -1880,6 +1951,12 @@ function applyTheme(theme) {
   const bnavMoon = document.getElementById('bnav-theme-moon');
   if (bnavSun)  bnavSun.style.display  = theme==='dark'  ? 'block' : 'none';
   if (bnavMoon) bnavMoon.style.display = theme==='light' ? 'block' : 'none';
+  const sunS  = document.getElementById('settings-theme-sun');
+  const moonS = document.getElementById('settings-theme-moon');
+  const lblS  = document.getElementById('settings-theme-label');
+  if (sunS)  sunS.style.display  = theme==='dark'  ? 'none'  : 'block';
+  if (moonS) moonS.style.display = theme==='light' ? 'none'  : 'block';
+  if (lblS)  lblS.textContent    = theme==='dark'  ? 'Dark'  : 'Light';
   localStorage.setItem('elastik_theme', theme);
 }
 function toggleTheme() {
@@ -1888,8 +1965,55 @@ function toggleTheme() {
   renderKanban();
 }
 
+// ── Zoom / display size ──
+let uiScale = parseFloat(localStorage.getItem('elastik_zoom') || '1.2');
+
+function applyZoom() {
+  const main = document.getElementById('main');
+  if (!main) return;
+  const mobile = window.innerWidth <= 768;
+  if (mobile) {
+    main.style.zoom   = uiScale;
+    main.style.width  = (100 / uiScale) + '%';
+    main.style.height = (100 / uiScale) + '%';
+  } else {
+    main.style.zoom = main.style.width = main.style.height = '';
+  }
+  const disp = document.getElementById('zoom-display');
+  if (disp) disp.textContent = Math.round(uiScale * 100) + '%';
+}
+
+function changeZoom(delta) {
+  uiScale = Math.round(Math.min(2.0, Math.max(0.7, uiScale + delta)) * 10) / 10;
+  localStorage.setItem('elastik_zoom', uiScale);
+  applyZoom();
+}
+
+function openSettingsModal() {
+  const theme = document.documentElement.getAttribute('data-theme');
+  const sunS  = document.getElementById('settings-theme-sun');
+  const moonS = document.getElementById('settings-theme-moon');
+  const lblS  = document.getElementById('settings-theme-label');
+  if (sunS)  sunS.style.display  = theme === 'dark'  ? 'none'  : 'block';
+  if (moonS) moonS.style.display = theme === 'light' ? 'none'  : 'block';
+  if (lblS)  lblS.textContent    = theme === 'dark'  ? 'Dark'  : 'Light';
+  const disp = document.getElementById('zoom-display');
+  if (disp) disp.textContent = Math.round(uiScale * 100) + '%';
+  document.getElementById('settings-modal').classList.add('open');
+  closeDrawer();
+}
+function closeSettingsModal() {
+  document.getElementById('settings-modal').classList.remove('open');
+}
+document.getElementById('settings-modal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeSettingsModal();
+});
+
+window.addEventListener('resize', applyZoom);
+
 // ── Init ──
 applyTheme(localStorage.getItem('elastik_theme') || 'light');
+applyZoom();
 renderAll();
 setView(currentView);
 if (firebaseURL) {
