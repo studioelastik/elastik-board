@@ -394,6 +394,36 @@ body {
 }
 .task-action-btn:hover { background: var(--border-strong); }
 
+.task-card { cursor: pointer; }
+.task-card.expanded { cursor: default; }
+
+.task-body {
+  display: none;
+  padding: 8px 8px 2px;
+  border-top: 1px solid var(--border);
+  margin-top: 8px;
+}
+.task-card.expanded .task-body { display: block; }
+
+.task-due {
+  font-size: 11px; font-weight: 500;
+  padding: 2px 7px; border-radius: 8px;
+  display: inline-block; margin-bottom: 6px;
+}
+.task-due.due-future  { background: var(--surface2); color: var(--text-3); }
+.task-due.due-today   { background: var(--accent-bg); color: var(--accent); }
+.task-due.due-overdue { background: #fdeaea; color: #c0392b; }
+[data-theme="dark"] .task-due.due-overdue { background: #3a1a1a; color: #e86868; }
+
+.task-notes-display {
+  font-size: 12px; color: var(--text-2); line-height: 1.55;
+  white-space: pre-wrap; word-break: break-word;
+}
+.task-link {
+  color: var(--accent); text-decoration: none; display: inline-block;
+}
+.task-link:hover { text-decoration: underline; }
+
 .col-add-btn {
   display: flex; align-items: center; gap: 6px;
   padding: 7px 10px; margin-top: 6px;
@@ -779,7 +809,7 @@ body {
   #list-view   { padding: 14px 12px calc(72px + env(safe-area-inset-bottom)) 12px; }
 
   .swimlane { margin-bottom: 28px; }
-  .kanban-col { width: 230px; margin-right: 10px; }
+  .kanban-col { width: 250px; margin-right: 10px; }
 
   /* Bottom sheet modals */
   .modal-overlay { align-items: flex-end; }
@@ -851,7 +881,7 @@ body {
 }
 
 @media (max-width: 400px) {
-  .kanban-col { width: 210px; }
+  .kanban-col { width: 230px; }
 }
 </style>
 </head>
@@ -977,7 +1007,11 @@ body {
     </div>
     <div class="form-group">
       <label>Notes</label>
-      <textarea id="task-notes-input" placeholder="Optional notes…"></textarea>
+      <textarea id="task-notes-input" placeholder="Phone, address, URL or any notes…"></textarea>
+    </div>
+    <div class="form-group">
+      <label>Due date</label>
+      <input type="date" id="task-due-input">
     </div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeTaskModal()">Cancel</button>
@@ -1453,6 +1487,37 @@ function renderKanban() {
   });
 }
 
+function parseNotes(text) {
+  if (!text) return '';
+  let s = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  // URLs
+  s = s.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" class="task-link" onclick="event.stopPropagation()">🔗 $1</a>');
+  // Phone numbers
+  s = s.replace(/(\+?[\d][\d\s\-\(\)\.]{5,}[\d])/g, m => {
+    const clean = m.replace(/[^\d+]/g,'');
+    if (clean.length < 7) return m;
+    return `<a href="tel:${clean}" class="task-link" onclick="event.stopPropagation()">📞 ${m}</a>`;
+  });
+  // Addresses: number + street name + street type
+  s = s.replace(/(\d+\s+[A-Za-z][A-Za-z\s]+(?:Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Drive|Dr|Lane|Ln|Way|Court|Ct|Place|Pl)[^\n]*)/g, m => {
+    const q = encodeURIComponent(m.trim());
+    return `<a href="https://maps.google.com/?q=${q}" target="_blank" class="task-link" onclick="event.stopPropagation()">📍 ${m}</a>`;
+  });
+  s = s.replace(/\n/g,'<br>');
+  return s;
+}
+
+function dueDateDisplay(dateStr) {
+  if (!dateStr) return '';
+  const due = new Date(dateStr + 'T00:00:00');
+  const today = new Date(); today.setHours(0,0,0,0);
+  const diff = due - today;
+  const label = due.toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+  if (diff < 0) return `<span class="task-due due-overdue">⚠ ${label}</span>`;
+  if (diff === 0) return `<span class="task-due due-today">Today</span>`;
+  return `<span class="task-due due-future">${label}</span>`;
+}
+
 function makeTaskCard(t) {
   const proj = getProject(t.pid);
   const card = document.createElement('div');
@@ -1463,19 +1528,29 @@ function makeTaskCard(t) {
   const color = proj ? proj.color : '#888780';
   const showBadge = t.pid !== '_todos' && proj;
   const shortName = showBadge ? proj.name.split('—')[0].trim() : '';
+  const dueHtml = dueDateDisplay(t.dueDate);
 
   card.innerHTML = `
     <div class="task-project-bar" style="background:${color}"></div>
     <div class="task-name">${t.name}</div>
     <div class="task-meta">
       ${showBadge ? `<span class="project-badge" style="background:${color}18;color:${color}">${shortName}</span>` : ''}
+      ${dueHtml}
     </div>
     <div class="task-actions">
-      <button class="task-action-btn" title="Edit" onclick="openTaskModal('${t.id}')">✎</button>
-      <button class="task-action-btn" title="Delete" onclick="deleteTask('${t.id}')">×</button>
+      <button class="task-action-btn" title="Edit" onclick="event.stopPropagation();openTaskModal('${t.id}')">✎</button>
+      <button class="task-action-btn" title="Delete" onclick="event.stopPropagation();deleteTask('${t.id}')">×</button>
+    </div>
+    <div class="task-body">
+      ${t.dueDate ? `<div style="margin-bottom:4px">${dueDateDisplay(t.dueDate)} Due</div>` : ''}
+      ${t.notes ? `<div class="task-notes-display">${parseNotes(t.notes)}</div>` : ''}
     </div>`;
 
+  // Expand on click (not on drag or long press)
+  let didDrag = false;
+  let longPressed = false;
   card.addEventListener('dragstart', e => {
+    didDrag = true;
     draggedId = t.id;
     setTimeout(()=>card.classList.add('dragging'), 0);
     e.dataTransfer.effectAllowed = 'move';
@@ -1485,20 +1560,33 @@ function makeTaskCard(t) {
     draggedId = null;
     if (dragPlaceholder) { dragPlaceholder.remove(); dragPlaceholder = null; }
     document.querySelectorAll('.task-list').forEach(l=>l.classList.remove('drag-over'));
+    setTimeout(()=>{ didDrag = false; }, 100);
   });
   card.addEventListener('contextmenu', e => {
     e.preventDefault(); showCtxMenu(e.clientX, e.clientY, t.id);
   });
-
-  // Long press for mobile context menu
   card.addEventListener('touchstart', e => {
+    longPressed = false;
     pressTimer = setTimeout(() => {
+      longPressed = true;
       const touch = e.touches[0];
       showCtxMenu(touch.clientX, touch.clientY, t.id);
     }, 500);
   }, {passive: true});
   card.addEventListener('touchend', () => clearTimeout(pressTimer));
   card.addEventListener('touchmove', () => clearTimeout(pressTimer));
+
+  card.addEventListener('click', e => {
+    if (didDrag || longPressed) { longPressed = false; return; }
+    if (e.target.closest('.task-actions')) return;
+    if (e.target.closest('.task-link')) return;
+    // Only expand if card has notes or due date
+    if (t.notes || t.dueDate) {
+      card.classList.toggle('expanded');
+    } else {
+      openTaskModal(t.id);
+    }
+  });
 
   return card;
 }
@@ -1664,12 +1752,14 @@ function openTaskModal(id=null, defaultStatus='next', defaultSectionId=null) {
     document.getElementById('task-modal-title').textContent = 'Edit task';
     document.getElementById('task-name-input').value = t.name;
     document.getElementById('task-notes-input').value = t.notes||'';
+    document.getElementById('task-due-input').value = t.dueDate||'';
     sel.value = t.pid;
     document.getElementById('task-status-select').value = t.status;
   } else {
     document.getElementById('task-modal-title').textContent = 'New task';
     document.getElementById('task-name-input').value = '';
     document.getElementById('task-notes-input').value = '';
+    document.getElementById('task-due-input').value = '';
     document.getElementById('task-status-select').value = defaultStatus;
     if (filterProject) sel.value = filterProject;
     else if (defaultSectionId === 'general') sel.value = '_todos';
@@ -1688,11 +1778,12 @@ function saveTask() {
   const pid = document.getElementById('task-project-select').value;
   const status = document.getElementById('task-status-select').value;
   const notes = document.getElementById('task-notes-input').value.trim();
+  const dueDate = document.getElementById('task-due-input').value || '';
   if (editingTaskId) {
     const t = getTask(editingTaskId);
-    t.name=name; t.pid=pid; t.status=status; t.notes=notes;
+    t.name=name; t.pid=pid; t.status=status; t.notes=notes; t.dueDate=dueDate;
   } else {
-    state.tasks.push({id:uid(),pid,name,status,notes});
+    state.tasks.push({id:uid(),pid,name,status,notes,dueDate});
   }
   save(); closeTaskModal(); renderAll();
 }
