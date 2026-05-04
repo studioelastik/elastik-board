@@ -1126,6 +1126,7 @@ body {
       <p style="font-size:12px;color:var(--text-2);margin-top:12px;line-height:1.5">
         All changes save instantly. Open this page on any device to stay in sync.
       </p>
+      <p id="sync-error-msg" style="font-size:12px;color:#E86868;margin-top:8px;line-height:1.5;word-break:break-all;"></p>
       <div class="modal-actions">
         <button class="btn-danger" onclick="disconnectFirebase()">Disconnect</button>
         <button class="btn-save" onclick="closeSyncModal()">Done</button>
@@ -1833,13 +1834,15 @@ let syncTimer = null;
 let isSendingToFirebase = false;
 let firebaseStream = null;
 
-function setSyncStatus(s) {
+function setSyncStatus(s, msg) {
   const dot = document.getElementById('sync-dot');
   if (!dot) return;
   dot.className = '';
   if (s === 'synced')  dot.classList.add('synced');
   if (s === 'syncing') dot.classList.add('syncing');
   if (s === 'error')   dot.classList.add('error');
+  const errEl = document.getElementById('sync-error-msg');
+  if (errEl) errEl.textContent = (s === 'error' && msg) ? msg : '';
 }
 
 function scheduleSyncToFirebase() {
@@ -1860,10 +1863,11 @@ async function pushToFirebase() {
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify(toSync)
     });
-    if (!res.ok) throw new Error();
+    if (!res.ok) { const t = await res.text(); throw new Error(`${res.status}: ${t}`); }
     setSyncStatus('synced');
-  } catch {
-    setSyncStatus('error');
+  } catch(e) {
+    console.error('Firebase push error:', e.message);
+    setSyncStatus('error', e.message);
   }
   isSendingToFirebase = false;
 }
@@ -1897,8 +1901,9 @@ async function pullFromFirebase() {
       renderAll(); setView(currentView);
     }
     setSyncStatus('synced');
-  } catch {
-    setSyncStatus('error');
+  } catch(e) {
+    console.error('Firebase pull error:', e.message);
+    setSyncStatus('error', e.message);
   }
 }
 
