@@ -386,25 +386,31 @@ body {
   font-size: 13px; line-height: 1.45;
   color: var(--text);
   padding-left: 8px;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
+  /* cap to 1 line so all cards stay the same height */
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+/* Always rendered — empty div keeps consistent card height */
 .task-note-preview {
-  font-size: 11.5px; line-height: 1.4;
+  font-size: 11.5px;
+  height: 17px; line-height: 17px;
   color: var(--text-3);
   padding-left: 8px;
-  margin-bottom: 6px;
+  margin-bottom: 5px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .note-preview-link {
   color: var(--accent); text-decoration: none;
-  display: inline-flex; align-items: center;
+  display: inline-flex; align-items: center; gap: 3px;
   max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  vertical-align: middle;
 }
 .note-preview-link:hover { text-decoration: underline; }
 .task-meta {
   display: flex; align-items: center; gap: 6px;
   padding-left: 8px;
   flex-wrap: nowrap;
+  min-height: 20px;
 }
 .task-meta-spacer { flex: 1; }
 .project-badge {
@@ -1623,25 +1629,44 @@ function renderKanban() {
   });
 }
 
-// Returns a single-line preview of notes: phone → tel link, address → maps link, else plain text
+// Single-line card preview: detects phone / URL / email / address, else plain first line
 function notePreview(notes) {
   if (!notes) return '';
-  // Phone number — first match
+
+  const ICO_PHONE = `<svg width="11" height="11" viewBox="0 0 14 14" fill="none"><path d="M12.5 9.8l-2-1.4a1 1 0 00-1.3.2l-.7.9A8.6 8.6 0 014.5 5l.9-.7a1 1 0 00.2-1.3L4.2 1a1 1 0 00-1.2-.4L1.5 1.2A1 1 0 001 2.2C1.4 8.2 5.8 12.6 11.8 13a1 1 0 001-.5l.6-1.5a1 1 0 00-.4-1.2z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>`;
+  const ICO_PIN   = `<svg width="10" height="12" viewBox="0 0 10 13" fill="none"><path d="M5 1C2.8 1 1 2.8 1 5c0 3 4 7 4 7s4-4 4-7c0-2.2-1.8-4-4-4z" stroke="currentColor" stroke-width="1.2"/><circle cx="5" cy="5" r="1.3" fill="currentColor"/></svg>`;
+  const ICO_LINK  = `<svg width="11" height="11" viewBox="0 0 14 14" fill="none"><path d="M8.5 5.5l-3 3a2 2 0 002.8 2.8l3-3a2 2 0 000-2.8l-.3-.3M5.5 8.5l3-3A2 2 0 005.7 2.7l-3 3a2 2 0 000 2.8l.3.3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>`;
+  const ICO_EMAIL = `<svg width="12" height="10" viewBox="0 0 14 11" fill="none"><rect x="1" y="1" width="12" height="9" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M1 3.5l6 3.5 6-3.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>`;
+
+  // Phone
   const phoneM = notes.match(/(\+?[\d][\d\s\-\(\)\.]{5,}[\d])/);
   if (phoneM) {
-    const clean = phoneM[1].replace(/[^\d+]/g, '');
+    const clean = phoneM[1].replace(/[^\d+]/g,'');
     if (clean.length >= 7)
-      return `<a href="tel:${clean}" class="note-preview-link" onclick="event.stopPropagation()"><svg width="11" height="11" viewBox="0 0 14 14" fill="none" style="vertical-align:-1px;margin-right:3px"><path d="M12.5 9.8l-2-1.4a1 1 0 00-1.3.2l-.7.9A8.6 8.6 0 014.5 5l.9-.7a1 1 0 00.2-1.3L4.2 1a1 1 0 00-1.2-.4L1.5 1.2A1 1 0 001 2.2C1.4 8.2 5.8 12.6 11.8 13a1 1 0 001-.5l.6-1.5a1 1 0 00-.4-1.2z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>${phoneM[1].trim()}</a>`;
+      return `<a href="tel:${clean}" class="note-preview-link" onclick="event.stopPropagation()">${ICO_PHONE} ${phoneM[1].trim()}</a>`;
   }
-  // Address — first match
+
+  // URL
+  const urlM = notes.match(/https?:\/\/[^\s\n]+/);
+  if (urlM) {
+    const display = urlM[0].replace(/^https?:\/\/(www\.)?/,'').replace(/[/?#].*$/,'');
+    return `<a href="${urlM[0]}" target="_blank" class="note-preview-link" onclick="event.stopPropagation()">${ICO_LINK} ${display}</a>`;
+  }
+
+  // Email
+  const emailM = notes.match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/);
+  if (emailM)
+    return `<a href="mailto:${emailM[0]}" class="note-preview-link" onclick="event.stopPropagation()">${ICO_EMAIL} ${emailM[0]}</a>`;
+
+  // Address
   const addrM = notes.match(/\d+\s+[A-Za-z][A-Za-z\s]+(?:Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Drive|Dr|Lane|Ln|Way|Court|Ct|Place|Pl)[^\n]*/);
   if (addrM) {
     const raw = addrM[0].trim();
-    const q = encodeURIComponent(raw);
     const safe = raw.replace(/&/g,'&amp;').replace(/</g,'&lt;');
-    return `<a href="https://maps.google.com/?q=${q}" target="_blank" class="note-preview-link" onclick="event.stopPropagation()"><svg width="10" height="13" viewBox="0 0 10 13" fill="none" style="vertical-align:-1px;margin-right:3px"><path d="M5 1C2.8 1 1 2.8 1 5c0 3 4 7 4 7s4-4 4-7c0-2.2-1.8-4-4-4z" stroke="currentColor" stroke-width="1.2"/><circle cx="5" cy="5" r="1.3" fill="currentColor"/></svg>${safe}</a>`;
+    return `<a href="https://maps.google.com/?q=${encodeURIComponent(raw)}" target="_blank" class="note-preview-link" onclick="event.stopPropagation()">${ICO_PIN} ${safe}</a>`;
   }
-  // Plain text — first line, HTML-escaped
+
+  // Plain first line
   const first = notes.split('\n')[0];
   return first.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
@@ -1691,16 +1716,14 @@ function makeTaskCard(t) {
   const shortName = showBadge ? proj.name.split('—')[0].trim() : '';
   const dueHtml = dueDateDisplay(t.dueDate);
 
-  const preview = notePreview(t.notes);
-
   card.innerHTML = `
     <div class="task-project-bar" style="background:${color}"></div>
     <div class="task-name">${t.name}</div>
-    ${preview ? `<div class="task-note-preview">${preview}</div>` : ''}
+    <div class="task-note-preview">${notePreview(t.notes)}</div>
     <div class="task-meta">
-      ${dueHtml}
-      <span class="task-meta-spacer"></span>
       ${showBadge ? `<span class="project-badge" style="background:${color};color:#fff">${shortName}</span>` : ''}
+      <span class="task-meta-spacer"></span>
+      ${dueHtml}
     </div>
     <div class="drag-handle" title="Drag to move">
       <span></span><span></span><span></span>
