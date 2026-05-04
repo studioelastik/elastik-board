@@ -696,6 +696,11 @@ body {
 
 /* ── Mobile layout ── */
 @media (max-width: 768px) {
+  html, body { height: 100%; overflow: hidden; }
+  #app { height: 100%; overflow: hidden; }
+  #main { height: 100%; min-height: 0; overflow: hidden; }
+  #kanban-view { overflow-y: auto; }
+  #list-view   { overflow-y: auto; flex: 1; }
   #sidebar {
     transform: translateX(-100%);
     z-index: 150;
@@ -787,6 +792,7 @@ body {
     background: var(--accent); color: white;
     border-radius: 50%; font-size: 0;
     box-shadow: 0 4px 14px rgba(200,80,26,.4);
+    justify-content: center;
   }
   [data-theme="dark"] .bnav-add { box-shadow: 0 4px 14px rgba(217,101,48,.35); }
   .bnav-add.active { color: white; }
