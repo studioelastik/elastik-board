@@ -1164,9 +1164,17 @@ function defaultSections() {
 function load() {
   const raw = JSON.parse(localStorage.getItem('elastik_v3') || 'null');
   if (raw) {
-    raw.projects.forEach(p => { if (!p.section) p.section = 'studio'; });
+    if (!raw.projects) raw.projects = defaultData().projects;
+    if (!raw.tasks)    raw.tasks    = [];
     if (!raw.sections) raw.sections = defaultSections();
     if (!raw.colLabels) raw.colLabels = {...STATUS_LABELS_DEFAULT};
+    raw.projects.forEach(p => { if (!p.section) p.section = 'studio'; });
+    // ensure general section always exists
+    if (!raw.sections.find(s => s.id === 'general'))
+      raw.sections.push({id:'general', name:'General ToDos', color:'#888780'});
+    // ensure _todos project always exists
+    if (!raw.projects.find(p => p.id === '_todos'))
+      raw.projects.push({id:'_todos', name:'General', color:'#888780', section:'general'});
     return raw;
   }
   return defaultData();
@@ -1230,7 +1238,10 @@ function getTask(id) { return state.tasks.find(t=>t.id===id); }
 function getSection(id) { return state.sections.find(s=>s.id===id); }
 function sectionTasks(sectionId) {
   let tasks = state.tasks.filter(t => {
-    const p = getProject(t.pid); return p && p.section === sectionId;
+    const p = getProject(t.pid);
+    // orphaned tasks (project missing) fall back to general section
+    if (!p) return sectionId === 'general';
+    return p.section === sectionId;
   });
   if (filterProject) tasks = tasks.filter(t=>t.pid===filterProject);
   return tasks;
@@ -1909,7 +1920,7 @@ function startFirebaseStream() {
       localStorage.setItem('elastik_v3', JSON.stringify(state));
       renderAll(); setView(currentView);
       setSyncStatus('synced');
-    } catch {}
+    } catch(err) { console.error('Firebase stream parse error', err); }
   });
   firebaseStream.onerror = () => setSyncStatus('error');
 }
