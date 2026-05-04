@@ -411,13 +411,66 @@ body {
 .task-card { cursor: pointer; }
 .task-card.expanded { cursor: default; }
 
+/* Hide static header content when expanded — body takes over */
+.task-card.expanded .task-name,
+.task-card.expanded .task-meta { display: none; }
+
 .task-body {
   display: none;
-  padding: 8px 8px 2px;
-  border-top: 1px solid var(--border);
-  margin-top: 8px;
+  padding: 2px 0 0;
 }
-.task-card.expanded .task-body { display: block; }
+.task-card.expanded .task-body {
+  display: block;
+  animation: card-expand .14s ease;
+}
+@keyframes card-expand {
+  from { opacity: 0; transform: translateY(-3px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Inline card editor fields */
+.card-field {
+  display: block; width: 100%;
+  background: var(--surface2);
+  border: none; outline: none;
+  border-radius: var(--r);
+  padding: 7px 10px;
+  font-size: 13px; font-family: inherit;
+  color: var(--text);
+  margin-bottom: 6px;
+  transition: background .1s;
+}
+.card-field:focus { background: var(--bg); }
+.card-field-name { font-weight: 500; font-size: 13px; }
+.card-field-due  { font-size: 12px; color: var(--text-2); }
+.card-field-notes { min-height: 64px; resize: vertical; line-height: 1.5; }
+.card-body-row {
+  display: flex; gap: 6px; align-items: center;
+  margin-top: 4px;
+}
+.card-body-save {
+  flex: 1;
+  background: var(--accent); color: #fff;
+  border: none; border-radius: var(--r);
+  padding: 7px 10px; font-size: 12px; font-weight: 500;
+  font-family: inherit; cursor: pointer; transition: opacity .15s;
+}
+.card-body-save:hover { opacity: .85; }
+.card-body-delete {
+  background: var(--surface2); color: var(--text-3);
+  border: none; border-radius: var(--r);
+  padding: 7px 10px; font-size: 12px;
+  font-family: inherit; cursor: pointer; transition: background .1s, color .1s;
+}
+.card-body-delete:hover { background: #fdeaea; color: #c0392b; }
+[data-theme="dark"] .card-body-delete:hover { background: #3a1a1a; color: #e86868; }
+.card-body-close {
+  background: none; border: none;
+  color: var(--text-3); cursor: pointer;
+  padding: 7px 8px; font-size: 15px; line-height: 1;
+  border-radius: var(--r); transition: background .1s;
+}
+.card-body-close:hover { background: var(--surface2); }
 
 .task-due {
   font-size: 11px; font-weight: 500;
@@ -569,21 +622,22 @@ body {
 .form-group input, .form-group select, .form-group textarea {
   width: 100%; padding: 8px 10px;
   font-size: 13px; font-family: inherit;
-  border: 1px solid var(--border-strong); border-radius: var(--r);
-  background: var(--bg); color: var(--text);
-  outline: none; transition: border-color .15s;
+  border: none; border-radius: var(--r);
+  background: var(--surface2); color: var(--text);
+  outline: none; transition: background .12s;
 }
 .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
-  border-color: var(--accent);
+  background: var(--bg);
 }
 .form-group textarea { resize: vertical; min-height: 60px; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
 .btn-cancel {
   padding: 7px 14px; font-size: 13px; font-family: inherit;
-  border: 1px solid var(--border-strong); border-radius: var(--r);
-  background: transparent; color: var(--text-2); cursor: pointer;
+  border: none; border-radius: var(--r);
+  background: var(--surface2); color: var(--text-2); cursor: pointer;
+  transition: background .1s;
 }
-.btn-cancel:hover { background: var(--surface2); }
+.btn-cancel:hover { background: var(--border-strong); }
 .btn-save {
   padding: 7px 16px; font-size: 13px; font-weight: 500; font-family: inherit;
   background: var(--accent); color: white;
@@ -1563,8 +1617,14 @@ function makeTaskCard(t) {
       <span></span><span></span><span></span>
     </div>
     <div class="task-body">
-      ${t.dueDate ? `<div style="margin-bottom:4px">${dueDateDisplay(t.dueDate)} Due</div>` : ''}
-      ${t.notes ? `<div class="task-notes-display">${parseNotes(t.notes)}</div>` : ''}
+      <input  class="card-field card-field-name"  type="text"  value="${(t.name||'').replace(/"/g,'&quot;')}" placeholder="Task name">
+      <input  class="card-field card-field-due"   type="date"  value="${t.dueDate||''}">
+      <textarea class="card-field card-field-notes" placeholder="Notes…">${t.notes||''}</textarea>
+      <div class="card-body-row">
+        <button class="card-body-save">Save</button>
+        <button class="card-body-delete">Delete</button>
+        <button class="card-body-close">✕</button>
+      </div>
     </div>`;
 
   // Expand on click (not on drag or long press)
@@ -1618,16 +1678,52 @@ function makeTaskCard(t) {
     }, {passive: false});
   }
 
+  // Inline editor wiring
+  const nameInput  = card.querySelector('.card-field-name');
+  const dueInput   = card.querySelector('.card-field-due');
+  const notesInput = card.querySelector('.card-field-notes');
+  const saveBtn    = card.querySelector('.card-body-save');
+  const delBtn     = card.querySelector('.card-body-delete');
+  const closeBtn   = card.querySelector('.card-body-close');
+
+  saveBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    const task = getTask(t.id);
+    if (task) {
+      const newName = nameInput.value.trim();
+      if (newName) task.name = newName;
+      task.dueDate = dueInput.value;
+      task.notes   = notesInput.value;
+      save();
+    }
+    card.classList.remove('expanded');
+    renderAll();
+  });
+
+  delBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    deleteTask(t.id);
+  });
+
+  closeBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    card.classList.remove('expanded');
+  });
+
+  // Stop body interactions from bubbling to the card toggle
+  card.querySelector('.task-body').addEventListener('click', e => e.stopPropagation());
+  card.querySelector('.task-body').addEventListener('touchstart', e => e.stopPropagation(), {passive: true});
+
   card.addEventListener('click', e => {
     if (didDrag || longPressed) { longPressed = false; return; }
     if (e.target.closest('.task-actions')) return;
     if (e.target.closest('.task-link')) return;
-    // Only expand if card has notes or due date
-    if (t.notes || t.dueDate) {
-      card.classList.toggle('expanded');
-    } else {
-      openTaskModal(t.id);
-    }
+    if (e.target.closest('.task-body')) return;
+    // Close any other open cards first
+    document.querySelectorAll('.task-card.expanded').forEach(c => {
+      if (c !== card) c.classList.remove('expanded');
+    });
+    card.classList.toggle('expanded');
   });
 
   return card;
