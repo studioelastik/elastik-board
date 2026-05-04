@@ -350,8 +350,8 @@ body {
 }
 .drag-handle {
   display: none;
-  position: absolute; top: 50%; right: 10px;
-  transform: translateY(-50%);
+  position: absolute; bottom: 8px; right: 10px;
+  top: auto; transform: none;
   color: var(--border-strong); cursor: grab;
   padding: 6px 4px; touch-action: none;
   z-index: 2;
@@ -1552,7 +1552,7 @@ function makeTaskCard(t) {
     <div class="task-project-bar" style="background:${color}"></div>
     <div class="task-name">${t.name}</div>
     <div class="task-meta">
-      ${showBadge ? `<span class="project-badge" style="background:${color}18;color:${color}">${shortName}</span>` : ''}
+      ${showBadge ? `<span class="project-badge" style="background:${color};color:#fff">${shortName}</span>` : ''}
       ${dueHtml}
     </div>
     <div class="task-actions">
@@ -1645,6 +1645,7 @@ function startTouchDrag(card, touch) {
   `;
   document.body.appendChild(touchDragCloneEl);
   card.style.opacity = '0.25';
+  card.classList.add('dragging');
   dragPlaceholder = document.createElement('div');
   dragPlaceholder.className = 'task-card drag-placeholder';
   dragPlaceholder.style.height = rect.height + 'px';
@@ -1657,6 +1658,25 @@ function moveTouchDrag(touch) {
   const w = touchDragCloneEl.offsetWidth;
   touchDragCloneEl.style.left = (touch.clientX - w / 2) + 'px';
   touchDragCloneEl.style.top  = (touch.clientY - 36) + 'px';
+
+  // Auto-scroll swimlane-cols when near horizontal edges
+  touchDragCloneEl.style.visibility = 'hidden';
+  const edgeEl = document.elementFromPoint(touch.clientX, touch.clientY);
+  touchDragCloneEl.style.visibility = '';
+  if (edgeEl) {
+    const scroller = edgeEl.closest('.swimlane-cols');
+    if (scroller) {
+      const rect = scroller.getBoundingClientRect();
+      const zone = 80; // px from edge to trigger scroll
+      const speed = 14;
+      if (touch.clientX < rect.left + zone) {
+        scroller.scrollLeft -= speed;
+      } else if (touch.clientX > rect.right - zone) {
+        scroller.scrollLeft += speed;
+      }
+    }
+  }
+
   touchDragCloneEl.style.visibility = 'hidden';
   const el = document.elementFromPoint(touch.clientX, touch.clientY);
   touchDragCloneEl.style.visibility = '';
@@ -1676,7 +1696,7 @@ function endTouchDrag() {
   touchIsDragging = false;
   if (touchDragCloneEl) { touchDragCloneEl.remove(); touchDragCloneEl = null; }
   const origCard = draggedId ? document.querySelector(`.task-card[data-id="${draggedId}"]`) : null;
-  if (origCard) origCard.style.opacity = '';
+  if (origCard) { origCard.style.opacity = ''; origCard.classList.remove('dragging'); }
   const list = dragPlaceholder ? dragPlaceholder.closest('.task-list') : null;
   if (list && draggedId) {
     const task = getTask(draggedId);
