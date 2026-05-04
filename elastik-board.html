@@ -312,7 +312,9 @@ body {
   display: flex; align-items: center; gap: 7px;
   margin-bottom: 10px; padding: 0 2px;
 }
-.col-title { font-size: 12px; font-weight: 500; letter-spacing: .04em; text-transform: uppercase; color: var(--text-2); }
+.col-title { font-size: 12px; font-weight: 500; letter-spacing: .04em; text-transform: uppercase; color: var(--text-2); cursor: pointer; }
+.col-title:hover { color: var(--text-1); }
+.col-title-edit { background: transparent; border: none; outline: 1px solid var(--accent); border-radius: 3px; padding: 1px 4px; width: 90px; }
 .col-count { font-size: 11px; color: var(--text-3); background: var(--surface2); padding: 1px 6px; border-radius: 8px; }
 .col-indicator { width: 3px; height: 14px; border-radius: 2px; }
 
@@ -1045,7 +1047,8 @@ body {
 <script>
 const COLORS = ['#C8501A','#534AB7','#0F6E56','#C03F6E','#185FA5','#BA7517','#888780','#1D9E75','#D85A30','#C0913A','#2D9CDB','#8E44AD'];
 const STATUSES = ['next','wip','done','block','nosched'];
-const STATUS_LABELS = {next:'Up next',wip:'In progress',done:'Done',block:'Blocked',nosched:'No schedule'};
+const STATUS_LABELS_DEFAULT = {wip:'In progress',next:'Up next',nosched:'No schedule',done:'Done',block:'Blocked'};
+function statusLabel(s) { return (state && state.colLabels && state.colLabels[s]) || STATUS_LABELS_DEFAULT[s] || s; }
 const STATUS_COLS_ORDER = ['wip','next','nosched','done','block'];
 function defaultSections() {
   return [
@@ -1060,6 +1063,7 @@ function load() {
   if (raw) {
     raw.projects.forEach(p => { if (!p.section) p.section = 'studio'; });
     if (!raw.sections) raw.sections = defaultSections();
+    if (!raw.colLabels) raw.colLabels = {...STATUS_LABELS_DEFAULT};
     return raw;
   }
   return defaultData();
@@ -1099,7 +1103,8 @@ function defaultData() {
     ],
     filterSection: null,
     filterProject: null,
-    view: 'kanban'
+    view: 'kanban',
+    colLabels: {...STATUS_LABELS_DEFAULT}
   };
 }
 
@@ -1226,6 +1231,27 @@ function renderSidebar() {
   document.getElementById('nav-list').className   = 'sidebar-item'+(currentView==='list'?' active':'');
 }
 
+function editColTitle(e, status) {
+  const span = e.currentTarget;
+  const current = statusLabel(status);
+  const input = document.createElement('input');
+  input.value = current;
+  input.className = 'col-title col-title-edit';
+  span.replaceWith(input);
+  input.focus(); input.select();
+  function commit() {
+    const val = input.value.trim() || current;
+    state.colLabels[status] = val;
+    save();
+    renderKanban();
+  }
+  input.onblur = commit;
+  input.onkeydown = ev => {
+    if (ev.key === 'Enter') { ev.preventDefault(); commit(); }
+    if (ev.key === 'Escape') { input.value = current; commit(); }
+  };
+}
+
 // ── Render kanban ──
 function renderKanban() {
   const el = document.getElementById('kanban-view');
@@ -1265,7 +1291,7 @@ function renderKanban() {
       col.innerHTML = `
         <div class="col-header">
           <div class="col-indicator" style="background:${colColors[status]}"></div>
-          <span class="col-title">${STATUS_LABELS[status]}</span>
+          <span class="col-title" onclick="editColTitle(event,'${status}')" title="Click to rename">${statusLabel(status)}</span>
           <span class="col-count">${colTasks.length}</span>
         </div>`;
 
@@ -1433,7 +1459,7 @@ function renderList() {
                 <div class="list-task-check ${isDone?'done':''}" onclick="quickToggle(event,'${t.id}')">${isDone?'<svg width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M1.5 4.5l2 2 4-4" stroke="#3B6D11" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>':''}</div>
                 <span>${t.name}</span>
               </div></td>
-              <td><span class="status-pill s-${t.status}">${STATUS_LABELS[t.status]}</span></td>
+              <td><span class="status-pill s-${t.status}">${statusLabel(t.status)}</span></td>
             </tr>`;
           }).join('')}
         </table></div>`;
