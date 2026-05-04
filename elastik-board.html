@@ -2200,8 +2200,24 @@ function applyZoom() {
     main.style.zoom   = uiScale;
     main.style.width  = (100 / uiScale) + '%';
     main.style.height = (100 / uiScale) + '%';
+    // Measure actual safe-area-inset-bottom so we can compensate for zoom
+    const probe = document.createElement('div');
+    probe.style.cssText = 'position:fixed;bottom:0;left:0;width:0;height:env(safe-area-inset-bottom,0px);pointer-events:none;visibility:hidden;';
+    document.body.appendChild(probe);
+    const safeBottom = probe.offsetHeight || 0;
+    probe.remove();
+    // The padding inside the zoomed #main must shrink so it looks like (bnav + safe area) outside
+    const pb = Math.ceil((58 + safeBottom) / uiScale) + 'px';
+    ['kanban-view', 'list-view'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.paddingBottom = pb;
+    });
   } else {
     main.style.zoom = main.style.width = main.style.height = '';
+    ['kanban-view', 'list-view'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.paddingBottom = '';
+    });
   }
   const disp = document.getElementById('zoom-display');
   if (disp) disp.textContent = Math.round(uiScale * 100) + '%';
