@@ -1806,6 +1806,7 @@ function makeTaskCard(t) {
         <svg class="card-date-icon" width="13" height="13" viewBox="0 0 14 14" fill="none"><rect x="1" y="2.5" width="12" height="11" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M1 6h12M5 1v3M9 1v3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
         <input class="card-field-due" type="date" value="${t.dueDate||''}">
       </label>
+      <select class="card-field card-field-project"></select>
       <textarea class="card-field card-field-notes" placeholder="Notes…">${t.notes||''}</textarea>
       <div class="card-body-row">
         <button class="card-body-save">Save</button>
@@ -1868,12 +1869,17 @@ function makeTaskCard(t) {
   }
 
   // Inline editor wiring
-  const nameInput  = card.querySelector('.card-field-name');
-  const dueInput   = card.querySelector('.card-field-due');
-  const notesInput = card.querySelector('.card-field-notes');
-  const saveBtn    = card.querySelector('.card-body-save');
-  const delBtn     = card.querySelector('.card-body-delete');
-  const closeBtn   = card.querySelector('.card-body-close');
+  const nameInput    = card.querySelector('.card-field-name');
+  const dueInput     = card.querySelector('.card-field-due');
+  const projSelect   = card.querySelector('.card-field-project');
+  const notesInput   = card.querySelector('.card-field-notes');
+  const saveBtn      = card.querySelector('.card-body-save');
+  const delBtn       = card.querySelector('.card-body-delete');
+  const closeBtn     = card.querySelector('.card-body-close');
+
+  // Populate project dropdown
+  buildProjectSelect(projSelect);
+  projSelect.value = t.pid || '_todos';
 
   saveBtn.addEventListener('click', e => {
     e.stopPropagation();
@@ -1883,6 +1889,7 @@ function makeTaskCard(t) {
       if (newName) task.name = newName;
       task.dueDate = dueInput.value;
       task.notes   = notesInput.value;
+      if (projSelect.value) task.pid = projSelect.value;
       save();
     }
     card.classList.remove('expanded');
