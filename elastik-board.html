@@ -517,7 +517,11 @@ body {
 }
 .card-field::placeholder { color: var(--text-3); }
 .card-field-name { font-weight: 500; font-size: 13px; margin-bottom: 4px; }
-.card-field-notes { min-height: 52px; resize: none; line-height: 1.5; }
+.card-field-notes {
+  min-height: 36px; resize: none; line-height: 1.5;
+  overflow: hidden;          /* no scrollbar — height grows instead */
+  field-sizing: content;     /* modern browsers: auto-height natively */
+}
 
 /* Action row — always a single horizontal line */
 .card-body-row {
@@ -1881,6 +1885,14 @@ function makeTaskCard(t) {
   buildProjectSelect(projSelect);
   projSelect.value = t.pid || '_todos';
 
+  // Auto-resize notes textarea to fit content (fallback for browsers
+  // that don't support field-sizing:content yet)
+  function fitNotes() {
+    notesInput.style.height = 'auto';
+    notesInput.style.height = notesInput.scrollHeight + 'px';
+  }
+  notesInput.addEventListener('input', fitNotes);
+
   saveBtn.addEventListener('click', e => {
     e.stopPropagation();
     const task = getTask(t.id);
@@ -1919,7 +1931,10 @@ function makeTaskCard(t) {
     document.querySelectorAll('.task-card.expanded').forEach(c => {
       if (c !== card) c.classList.remove('expanded');
     });
+    const opening = !card.classList.contains('expanded');
     card.classList.toggle('expanded');
+    // Size textarea to existing content as soon as the body is visible
+    if (opening) requestAnimationFrame(fitNotes);
   });
 
   return card;
