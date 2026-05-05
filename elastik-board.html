@@ -11,20 +11,28 @@
 <title>Elastik Board</title>
 <script>
 (function(){
-  function makeIcon(size) {
-    var c=document.createElement('canvas');
-    c.width=c.height=size;
+  // Apple touch icon: opaque black bg (iOS requires it)
+  function makeAppIcon(size) {
+    var c=document.createElement('canvas'); c.width=c.height=size;
     var ctx=c.getContext('2d');
-    ctx.fillStyle='#1a1a1a';
-    ctx.fillRect(0,0,size,size);
-    ctx.font=Math.round(size*0.61)+'px serif';
-    ctx.textAlign='center';
-    ctx.textBaseline='middle';
-    ctx.fillText('✌🏽',size/2,size*0.53);
+    ctx.fillStyle='#1a1a1a'; ctx.fillRect(0,0,size,size);
+    ctx.font=Math.round(size*0.72)+'px serif';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('✌🏽',size/2,size*0.54);
     return c.toDataURL('image/png');
   }
-  document.getElementById('apple-touch-icon').href=makeIcon(180);
-  document.getElementById('favicon').href=makeIcon(64);
+  // Favicon: transparent bg, emoji fills almost all space
+  function makeFavicon(size) {
+    var c=document.createElement('canvas'); c.width=c.height=size;
+    var ctx=c.getContext('2d');
+    // No background fill — transparent
+    ctx.font=Math.round(size*0.9)+'px serif';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('✌🏽',size/2,size*0.54);
+    return c.toDataURL('image/png');
+  }
+  document.getElementById('apple-touch-icon').href=makeAppIcon(180);
+  document.getElementById('favicon').href=makeFavicon(64);
 })();
 </script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
