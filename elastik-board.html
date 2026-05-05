@@ -7,19 +7,24 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Elastik">
 <link id="apple-touch-icon" rel="apple-touch-icon" sizes="180x180">
+<link id="favicon" rel="icon" type="image/png">
 <title>Elastik Board</title>
 <script>
 (function(){
-  var c=document.createElement('canvas');
-  c.width=c.height=180;
-  var ctx=c.getContext('2d');
-  ctx.fillStyle='#1a1a1a';
-  ctx.fillRect(0,0,180,180);
-  ctx.font='110px serif';
-  ctx.textAlign='center';
-  ctx.textBaseline='middle';
-  ctx.fillText('✌🏽',90,95);
-  document.getElementById('apple-touch-icon').href=c.toDataURL('image/png');
+  function makeIcon(size) {
+    var c=document.createElement('canvas');
+    c.width=c.height=size;
+    var ctx=c.getContext('2d');
+    ctx.fillStyle='#1a1a1a';
+    ctx.fillRect(0,0,size,size);
+    ctx.font=Math.round(size*0.61)+'px serif';
+    ctx.textAlign='center';
+    ctx.textBaseline='middle';
+    ctx.fillText('✌🏽',size/2,size*0.53);
+    return c.toDataURL('image/png');
+  }
+  document.getElementById('apple-touch-icon').href=makeIcon(180);
+  document.getElementById('favicon').href=makeIcon(64);
 })();
 </script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
@@ -1002,13 +1007,14 @@ body {
   .bnav-btn.active { color: var(--accent); }
   .bnav-add {
     width: 48px; height: 48px; padding: 0; min-width: 0;
-    background: var(--accent); color: white;
+    background: #1a1a1a; color: white;
     border-radius: 50%; font-size: 0;
-    box-shadow: 0 4px 14px rgba(200,80,26,.4);
+    box-shadow: 0 4px 14px rgba(0,0,0,.35);
     justify-content: center;
   }
-  [data-theme="dark"] .bnav-add { box-shadow: 0 4px 14px rgba(217,101,48,.35); }
+  [data-theme="dark"] .bnav-add { background: #fff; color: #1a1a1a; box-shadow: 0 4px 14px rgba(0,0,0,.4); }
   .bnav-add.active { color: white; }
+  #add-task-main { display: none; }
 }
 
 @media (max-width: 400px) {
