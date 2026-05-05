@@ -361,11 +361,16 @@ body {
 /* ── Column filter bar ── */
 #col-filter-bar {
   display: none; /* shown only in kanban view */
-  gap: 5px; padding: 8px 20px;
+  gap: 5px; padding: 8px 16px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
 }
+#col-filter-bar::-webkit-scrollbar { display: none; }
 #col-filter-bar.visible { display: flex; }
 .col-filter-pill {
   padding: 3px 11px; border-radius: 20px;
@@ -373,6 +378,7 @@ body {
   background: var(--surface2); color: var(--text-3);
   border: none; cursor: pointer; font-family: inherit;
   transition: background .12s, color .12s;
+  flex-shrink: 0; white-space: nowrap;
 }
 .col-filter-pill.on {
   background: var(--accent-bg); color: var(--accent);
