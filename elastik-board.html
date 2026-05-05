@@ -2384,7 +2384,7 @@ function scheduleSyncToFirebase() {
   if (!firebaseURL) return;
   clearTimeout(syncTimer);
   setSyncStatus('syncing');
-  syncTimer = setTimeout(pushToFirebase, 900);
+  syncTimer = setTimeout(() => { syncTimer = null; pushToFirebase(); }, 900);
 }
 
 async function pushToFirebase() {
@@ -2448,8 +2448,10 @@ function startFirebaseStream() {
   firebaseStream = new EventSource(`${firebaseURL}/elastik.json`);
   let firstEvent = true;
   firebaseStream.addEventListener('put', e => {
-    if (firstEvent) { firstEvent = false; return; } // skip initial full load (already done)
-    if (isSendingToFirebase) return;
+    // Skip the very first event — data was already loaded by pullFromFirebase()
+    // Also skip on reconnect when there are local changes pending (syncTimer set)
+    if (firstEvent) { firstEvent = false; return; }
+    if (isSendingToFirebase || syncTimer) return;
     try {
       const remote = JSON.parse(e.data).data;
       if (!remote || !remote.tasks) return;
@@ -2577,6 +2579,29 @@ document.getElementById('settings-modal').addEventListener('click', e => {
 });
 
 window.addEventListener('resize', applyZoom);
+
+// ── Prevent data loss on page close / refresh ──
+// If there's a pending debounced push, flush it immediately before the page unloads.
+function flushPendingSync() {
+  if (!syncTimer || !firebaseURL) return;
+  clearTimeout(syncTimer);
+  syncTimer = null;
+  // Use keepalive fetch so the request survives page unload
+  const toSync = {...state, filterSection: null, filterProject: null};
+  try {
+    fetch(`${firebaseURL}/elastik.json`, {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(toSync),
+      keepalive: true
+    });
+  } catch(e) { /* best-effort */ }
+}
+window.addEventListener('beforeunload', flushPendingSync);
+// On mobile, beforeunload is unreliable — use visibilitychange instead
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') flushPendingSync();
+});
 
 // ── Init ──
 applyTheme(localStorage.getItem('elastik_theme') || 'light');
