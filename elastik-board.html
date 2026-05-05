@@ -1508,7 +1508,7 @@ function renderColFilterBar() {
   const bar = document.getElementById('col-filter-bar');
   if (!bar) return;
   bar.innerHTML = '';
-  STATUSES.forEach(s => {
+  STATUS_COLS_ORDER.forEach(s => {
     const btn = document.createElement('button');
     btn.className = 'col-filter-pill' + (hiddenStatuses.has(s) ? '' : ' on');
     btn.textContent = statusLabel(s);
