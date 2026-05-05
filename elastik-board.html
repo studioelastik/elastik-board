@@ -122,15 +122,21 @@ body {
 }
 #sidebar-logo span {
   font-family: 'DM Mono', monospace;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
-  letter-spacing: .04em;
+  letter-spacing: .12em;
+  text-transform: uppercase;
   color: var(--text);
 }
 #sidebar-logo .dot {
   width: 8px; height: 8px; border-radius: 50%;
-  background: var(--accent);
+  background: var(--text-3);          /* default: grey until sync state set */
+  flex-shrink: 0;
+  transition: background .3s;
 }
+#sidebar-logo .dot.synced  { background: #5DBB5D; }
+#sidebar-logo .dot.syncing { background: #E8A84B; animation: blink .9s infinite; }
+#sidebar-logo .dot.error   { background: #E86868; }
 #sidebar-views {
   padding: 12px 0;
   border-bottom: 1px solid var(--border);
@@ -1027,7 +1033,7 @@ body {
   <!-- Sidebar -->
   <nav id="sidebar">
     <div id="sidebar-logo">
-      <div class="dot"></div>
+      <div class="dot" id="sidebar-sync-dot"></div>
       <span>Elastik Board</span>
       <button id="sidebar-close-btn" onclick="closeDrawer()">
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
@@ -1596,7 +1602,6 @@ function renderKanban() {
       col.dataset.status = status;
       col.innerHTML = `
         <div class="col-header">
-          <div class="col-indicator" style="background:${colColors[status]}"></div>
           <span class="col-title" onclick="editColTitle(this,'${status}')" title="Click to rename">${statusLabel(status)}</span>
           <span class="col-count">${colTasks.length}</span>
         </div>`;
@@ -2258,6 +2263,9 @@ function setSyncStatus(s, msg) {
   dot.className = '';
   if (s === 'synced')  dot.classList.add('synced');
   if (s === 'syncing') dot.classList.add('syncing');
+  // Mirror state on the sidebar logo dot
+  const sideDot = document.getElementById('sidebar-sync-dot');
+  if (sideDot) { sideDot.className = 'dot' + (s ? ' ' + s : ''); }
   if (s === 'error')   dot.classList.add('error');
   const errEl = document.getElementById('sync-error-msg');
   if (errEl) errEl.textContent = (s === 'error' && msg) ? msg : '';
