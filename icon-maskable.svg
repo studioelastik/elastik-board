@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Maskable: safe zone is centre 80%, so add extra padding -->
+  <rect width="100" height="100" fill="#1a1a1a"/>
+  <!-- Left column -->
+  <circle cx="18" cy="26" r="4.8" fill="#C8501A"/>
+  <rect x="25" y="23.6" width="18" height="4.8" rx="2.4" fill="#464646"/>
+  <circle cx="18" cy="39" r="4.8" fill="#534AB7"/>
+  <rect x="25" y="36.6" width="13.8" height="4.8" rx="2.4" fill="#464646"/>
+  <circle cx="18" cy="52" r="4.8" fill="#0F6E56"/>
+  <rect x="25" y="49.6" width="16" height="4.8" rx="2.4" fill="#464646"/>
+  <circle cx="18" cy="65" r="4.8" fill="#C03F6E"/>
+  <rect x="25" y="62.6" width="11.5" height="4.8" rx="2.4" fill="#464646"/>
+  <!-- Divider -->
+  <rect x="53" y="18" width="1.2" height="64" fill="#2e2e2e"/>
+  <!-- Right column -->
+  <circle cx="61" cy="26" r="4.8" fill="#185FA5"/>
+  <rect x="68" y="23.6" width="13" height="4.8" rx="2.4" fill="#464646"/>
+  <circle cx="61" cy="39" r="4.8" fill="#BA7517"/>
+  <rect x="68" y="36.6" width="9.5" height="4.8" rx="2.4" fill="#464646"/>
+  <circle cx="61" cy="52" r="4.8" fill="#1D9E75"/>
+  <rect x="68" y="49.6" width="11" height="4.8" rx="2.4" fill="#464646"/>
+</svg>

@@ -6,6 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="DO IT">
+<link rel="manifest" href="manifest.json">
 <link id="apple-touch-icon" rel="apple-touch-icon" sizes="180x180">
 <link id="favicon" rel="icon" type="image/png">
 <title>DO IT</title>
@@ -89,6 +90,9 @@
   document.getElementById('apple-touch-icon').href = makeIcon(180);
   document.getElementById('favicon').href = makeIcon(64);
 })();
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js');
+}
 </script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
 <style>
