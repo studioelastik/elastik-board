@@ -1,4 +1,4 @@
-// DO IT — Service Worker
+// DO — Service Worker
 const CACHE = 'do-it-v1';
 const ASSETS = [
   './elastik-board.html',

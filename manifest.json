@@ -1,6 +1,6 @@
 {
-  "name": "DO IT",
-  "short_name": "DO IT",
+  "name": "DO",
+  "short_name": "DO",
   "description": "Personal kanban board",
   "start_url": "./elastik-board.html",
   "scope": "./",
