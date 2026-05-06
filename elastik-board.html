@@ -1140,6 +1140,191 @@ body {
 @media (max-width: 400px) {
   .kanban-col { width: 230px; }
 }
+
+/* ── Timer pill (header) ── */
+.timer-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 15px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text-2);
+  font-family: 'DM Mono', ui-monospace, monospace;
+  font-size: 12px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.timer-pill:hover { background: var(--surface2); color: var(--text); }
+.timer-pill.timer-running {
+  background: rgba(232,104,104,0.12);
+  border-color: rgba(232,104,104,0.45);
+  color: #E86868;
+}
+.timer-pill.timer-running #timer-pill-icon { display: none; }
+.timer-pill.timer-running::before {
+  content: '';
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: #E86868;
+  animation: timer-pulse 1.6s ease-in-out infinite;
+}
+@keyframes timer-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.45; transform: scale(0.78); }
+}
+#timer-pill-stop {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px;
+  margin-left: 2px; padding: 0;
+  border: none; background: transparent;
+  color: #E86868; cursor: pointer; border-radius: 4px;
+}
+#timer-pill-stop:hover { background: rgba(232,104,104,0.18); }
+#timer-pill-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 280px;
+}
+@media (max-width: 768px) {
+  .timer-pill { font-size: 11px; padding: 0 8px; height: 28px; gap: 5px; }
+  .timer-pill.timer-idle #timer-pill-label { display: none; }
+  #timer-pill-label { max-width: 150px; }
+}
+
+/* ── Time view ── */
+#time-view { flex: 1; padding: 20px 24px; overflow-y: auto; }
+@media (max-width: 768px) {
+  #time-view { padding: 14px 12px calc(72px + env(safe-area-inset-bottom)) 12px; overflow-y: auto; }
+}
+.time-toolbar {
+  display: flex; align-items: center; gap: 8px;
+  flex-wrap: wrap; margin-bottom: 16px;
+}
+.time-range-group {
+  display: inline-flex;
+  background: var(--surface2);
+  border-radius: 6px;
+  padding: 2px;
+}
+.time-range-btn {
+  background: transparent; border: none;
+  padding: 5px 10px; border-radius: 4px;
+  font-size: 12px; color: var(--text-2);
+  cursor: pointer; font-family: inherit;
+}
+.time-range-btn.active {
+  background: var(--surface); color: var(--text);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+}
+.time-toolbar-spacer { flex: 1; }
+.time-action-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: var(--surface2); border: none;
+  padding: 6px 11px; border-radius: 6px;
+  font-size: 12px; color: var(--text); cursor: pointer;
+  font-family: inherit;
+}
+.time-action-btn:hover { background: var(--border); }
+.time-action-primary {
+  background: var(--text); color: var(--surface);
+}
+.time-action-primary:hover { background: var(--text-2); }
+
+.time-totals {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  margin-bottom: 18px;
+}
+.time-total-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  min-width: 110px;
+}
+.time-total-label {
+  font-size: 11px; color: var(--text-3);
+  text-transform: uppercase; letter-spacing: 0.04em;
+  display: flex; align-items: center; gap: 6px;
+}
+.time-total-value {
+  font-size: 20px; font-weight: 500; color: var(--text);
+  font-family: 'DM Mono', ui-monospace, monospace;
+  margin-top: 4px;
+}
+.time-total-card.grand .time-total-value { font-size: 22px; }
+
+.time-day-group { margin-bottom: 18px; }
+.time-day-header {
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding: 6px 4px; margin-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+.time-day-label { font-size: 13px; font-weight: 500; color: var(--text); }
+.time-day-total { font-size: 12px; color: var(--text-2); font-family: 'DM Mono', ui-monospace, monospace; }
+
+.time-entry {
+  display: grid;
+  grid-template-columns: 100px auto 1fr 70px 24px;
+  gap: 12px; align-items: center;
+  padding: 10px 4px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.time-entry:hover { background: var(--surface2); }
+.time-entry-time {
+  font-size: 12px; color: var(--text-2);
+  font-family: 'DM Mono', ui-monospace, monospace;
+}
+.time-entry-client {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 13px; color: var(--text);
+}
+.time-entry-client .proj-dot { width: 8px; height: 8px; }
+.time-entry-task {
+  font-size: 12px; color: var(--text-2);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.time-entry-task .time-entry-note {
+  color: var(--text-3); font-style: italic; margin-left: 6px;
+}
+.time-entry-duration {
+  font-size: 13px; color: var(--text);
+  font-family: 'DM Mono', ui-monospace, monospace;
+  text-align: right;
+}
+.time-entry-delete {
+  background: transparent; border: none; padding: 4px;
+  color: var(--text-3); cursor: pointer; border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+}
+.time-entry-delete:hover { background: var(--surface2); color: #E86868; }
+
+.time-empty {
+  text-align: center; padding: 60px 20px;
+  color: var(--text-3); font-size: 13px;
+}
+
+@media (max-width: 768px) {
+  .time-entry {
+    grid-template-columns: auto 1fr auto;
+    grid-template-rows: auto auto;
+    gap: 4px 10px;
+  }
+  .time-entry-time { grid-row: 1; grid-column: 1; }
+  .time-entry-client { grid-row: 1; grid-column: 2; }
+  .time-entry-duration { grid-row: 1; grid-column: 3; text-align: right; }
+  .time-entry-task { grid-row: 2; grid-column: 1 / span 3; padding-left: 0; white-space: normal; }
+  .time-entry-delete { display: none; }
+  .time-total-card { min-width: 90px; padding: 8px 12px; }
+  .time-total-value { font-size: 17px; }
+}
 </style>
 </head>
 <body>
@@ -1162,6 +1347,10 @@ body {
       <div class="sidebar-item" onclick="setView('list')" id="nav-list">
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="2" width="12" height="1.5" rx=".75" fill="currentColor"/><rect x="1" y="6" width="12" height="1.5" rx=".75" fill="currentColor" opacity=".6"/><rect x="1" y="10" width="8" height="1.5" rx=".75" fill="currentColor" opacity=".4"/></svg>
         List
+      </div>
+      <div class="sidebar-item" onclick="setView('time')" id="nav-time">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7.5" r="5.5" stroke="currentColor" stroke-width="1.3"/><path d="M7 4.5V7.5l2 1.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Time
       </div>
     </div>
     <div id="sidebar-projects">
@@ -1192,6 +1381,16 @@ body {
         <span id="header-title-text">All projects</span>
       </div>
       <div id="header-spacer"></div>
+      <div id="timer-pill" class="timer-pill timer-idle" onclick="onTimerPillClick()">
+        <svg id="timer-pill-icon" width="13" height="13" viewBox="0 0 13 13" fill="none">
+          <circle cx="6.5" cy="7" r="5" stroke="currentColor" stroke-width="1.3"/>
+          <path d="M6.5 4.5V7l1.7 1.2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span id="timer-pill-label">Track time</span>
+        <button id="timer-pill-stop" onclick="event.stopPropagation();stopActiveTimer()" title="Stop timer" style="display:none">
+          <svg width="9" height="9" viewBox="0 0 9 9" fill="none"><rect x="1" y="1" width="7" height="7" rx="1" fill="currentColor"/></svg>
+        </button>
+      </div>
       <button id="reload-btn" onclick="location.reload()" title="Get latest version" style="font-size:16px; line-height:1;">↺</button>
       <button id="sync-btn" onclick="openSyncModal()" title="Cloud sync">
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M10.5 9.5a2.5 2.5 0 000-5 2.5 2.5 0 00-4.9-.5A2 2 0 103.5 8h.5M7 10l-1.5 1.5L7 13M7 10v4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -1204,6 +1403,7 @@ body {
       <div class="view-toggle">
         <button class="view-btn active" id="vbtn-kanban" onclick="setView('kanban')">Board</button>
         <button class="view-btn" id="vbtn-list" onclick="setView('list')">List</button>
+        <button class="view-btn" id="vbtn-time" onclick="setView('time')">Time</button>
       </div>
       <button id="add-task-main" onclick="openTaskModal()">
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg>
@@ -1214,6 +1414,7 @@ body {
     <div id="col-filter-bar"></div>
     <div id="kanban-view"></div>
     <div id="list-view" style="display:none"></div>
+    <div id="time-view" style="display:none"></div>
   </div>
 
   <!-- Bottom nav (mobile) -->
@@ -1232,6 +1433,10 @@ body {
     <button class="bnav-btn" id="bnav-list" onclick="setView('list')">
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="3" width="14" height="2" rx="1" fill="currentColor"/><rect x="2" y="8" width="14" height="2" rx="1" fill="currentColor" opacity=".6"/><rect x="2" y="13" width="9" height="2" rx="1" fill="currentColor" opacity=".4"/></svg>
       <span>List</span>
+    </button>
+    <button class="bnav-btn" id="bnav-time" onclick="setView('time')">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9.5" r="6.5" stroke="currentColor" stroke-width="1.5"/><path d="M9 5.5V9.5l2.5 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>Time</span>
     </button>
     <button class="bnav-btn" id="bnav-theme" onclick="toggleTheme()">
       <svg id="bnav-theme-sun" width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="3.5" stroke="currentColor" stroke-width="1.3"/><path d="M9 1.5V3M9 15v1.5M1.5 9H3M15 9h1.5M3.5 3.5l1 1M13.5 13.5l1 1M13.5 3.5l-1 1M3.5 13.5l1-1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
@@ -1452,6 +1657,84 @@ body {
   </div>
 </div>
 
+<!-- Timer Start Modal -->
+<div class="modal-overlay" id="timer-start-modal">
+  <div class="modal">
+    <h3>Start timer</h3>
+    <div class="form-group">
+      <label>Client</label>
+      <select id="timer-client-select"></select>
+    </div>
+    <div class="form-group">
+      <label>Task <span style="color:var(--text-3);font-weight:400">(optional)</span></label>
+      <select id="timer-task-select"></select>
+    </div>
+    <div class="form-group">
+      <label>Note <span style="color:var(--text-3);font-weight:400">(optional)</span></label>
+      <input type="text" id="timer-note-input" placeholder="What are you working on?">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeTimerStartModal()">Cancel</button>
+      <button class="btn-save" onclick="confirmStartTimer()">Start</button>
+    </div>
+  </div>
+</div>
+
+<!-- Timer Stop Modal -->
+<div class="modal-overlay" id="timer-stop-modal">
+  <div class="modal">
+    <h3>Stop timer</h3>
+    <div id="timer-stop-summary" style="font-size:13px;color:var(--text-2);line-height:1.55;margin-bottom:14px"></div>
+    <div class="form-group">
+      <label>Note</label>
+      <input type="text" id="timer-stop-note-input" placeholder="What did you work on?">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeTimerStopModal()">Keep running</button>
+      <button class="btn-save" onclick="confirmStopTimer()">Stop &amp; save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Manual Entry Modal -->
+<div class="modal-overlay" id="entry-modal">
+  <div class="modal">
+    <h3 id="entry-modal-title">New time entry</h3>
+    <div class="form-group">
+      <label>Client</label>
+      <select id="entry-client-select"></select>
+    </div>
+    <div class="form-group">
+      <label>Task <span style="color:var(--text-3);font-weight:400">(optional)</span></label>
+      <select id="entry-task-select"></select>
+    </div>
+    <div class="form-group">
+      <label>Date</label>
+      <input type="date" id="entry-date-input">
+    </div>
+    <div style="display:flex;gap:12px">
+      <div class="form-group" style="flex:1">
+        <label>Start</label>
+        <input type="time" id="entry-start-input">
+      </div>
+      <div class="form-group" style="flex:1">
+        <label>End</label>
+        <input type="time" id="entry-end-input">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Note</label>
+      <input type="text" id="entry-note-input" placeholder="Optional note">
+    </div>
+    <p id="entry-error-msg" style="font-size:12px;color:#E86868;margin-top:4px;min-height:16px;"></p>
+    <div class="modal-actions" id="entry-modal-actions">
+      <button class="btn-cancel" onclick="closeEntryModal()">Cancel</button>
+      <button class="btn-danger" id="entry-delete-btn" onclick="deleteEntryFromModal()" style="display:none">Delete</button>
+      <button class="btn-save" onclick="saveEntry()">Save</button>
+    </div>
+  </div>
+</div>
+
 <!-- Context menu -->
 <div id="ctx-menu">
   <div class="ctx-item" id="ctx-edit">
@@ -1486,6 +1769,8 @@ function load() {
     if (!raw.tasks)    raw.tasks    = [];
     if (!raw.sections) raw.sections = defaultSections();
     if (!raw.colLabels) raw.colLabels = {...STATUS_LABELS_DEFAULT};
+    if (!raw.timeEntries) raw.timeEntries = [];
+    if (!('activeTimer' in raw)) raw.activeTimer = null;
     raw.projects.forEach(p => { if (!p.section) p.section = 'studio'; });
     // ensure general section always exists
     if (!raw.sections.find(s => s.id === 'general'))
@@ -1533,7 +1818,9 @@ function defaultData() {
     filterSection: null,
     filterProject: null,
     view: 'kanban',
-    colLabels: {...STATUS_LABELS_DEFAULT}
+    colLabels: {...STATUS_LABELS_DEFAULT},
+    timeEntries: [],
+    activeTimer: null
   };
 }
 
@@ -2243,19 +2530,33 @@ function setView(v) {
   currentView = v; state.view = v; save();
   document.getElementById('kanban-view').style.display = v==='kanban' ? 'flex' : 'none';
   document.getElementById('list-view').style.display   = v==='list'   ? 'block' : 'none';
+  document.getElementById('time-view').style.display   = v==='time'   ? 'block' : 'none';
   document.getElementById('col-filter-bar')?.classList.toggle('visible', v==='kanban');
   document.getElementById('vbtn-kanban').className = 'view-btn'+(v==='kanban'?' active':'');
   document.getElementById('vbtn-list').className   = 'view-btn'+(v==='list'?' active':'');
+  document.getElementById('vbtn-time').className   = 'view-btn'+(v==='time'?' active':'');
   document.getElementById('nav-kanban').className  = 'sidebar-item'+(v==='kanban'?' active':'');
   document.getElementById('nav-list').className    = 'sidebar-item'+(v==='list'?' active':'');
+  document.getElementById('nav-time').className    = 'sidebar-item'+(v==='time'?' active':'');
   document.getElementById('bnav-board')?.classList.toggle('active', v==='kanban');
   document.getElementById('bnav-list')?.classList.toggle('active', v==='list');
-  if (v==='kanban') { renderColFilterBar(); renderKanban(); } else renderList();
+  document.getElementById('bnav-time')?.classList.toggle('active', v==='time');
+  // Hide the per-project header title and add-task button in time view
+  const headerTitle = document.getElementById('header-title');
+  if (headerTitle) headerTitle.style.visibility = v==='time' ? 'hidden' : '';
+  const addBtn = document.getElementById('add-task-main');
+  if (addBtn) addBtn.style.display = v==='time' ? 'none' : '';
+  if (v==='kanban') { renderColFilterBar(); renderKanban(); }
+  else if (v==='list') renderList();
+  else if (v==='time') renderTime();
 }
 
 function renderAll() {
   renderSidebar();
-  if (currentView==='kanban') { renderColFilterBar(); renderKanban(); } else renderList();
+  if (currentView==='kanban') { renderColFilterBar(); renderKanban(); }
+  else if (currentView==='list') renderList();
+  else if (currentView==='time') renderTime();
+  renderTimerPill();
 }
 
 // ── Task modal ──
@@ -2550,6 +2851,8 @@ async function pushToFirebase() {
 function migrateRemote(data) {
   if (!data.sections) data.sections = defaultSections();
   if (!data.colLabels) data.colLabels = {...STATUS_LABELS_DEFAULT};
+  if (!data.timeEntries) data.timeEntries = [];
+  if (!('activeTimer' in data)) data.activeTimer = null;
   data.projects.forEach(p => { if (!p.section) p.section = 'studio'; });
   // Ensure general section exists
   if (!data.sections.find(s => s.id === 'general'))
@@ -2776,6 +3079,501 @@ window.addEventListener('beforeunload', flushPendingSync);
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') flushPendingSync();
 });
+
+// ── Time tracking ──
+const TIMER_AUTO_STOP_MS = 10 * 60 * 60 * 1000; // 10 hours
+let timeRangeMode = localStorage.getItem('elastik_time_range') || 'week';
+let timerTickInterval = null;
+let editingEntryId = null;
+
+// ─ Helpers ─
+function formatDuration(ms) {
+  if (ms < 0) ms = 0;
+  const totalSec = Math.floor(ms / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  if (h > 0) return `${h}h ${String(m).padStart(2,'0')}m`;
+  if (m > 0) return `${m}m ${String(s).padStart(2,'0')}s`;
+  return `${s}s`;
+}
+function formatDurationLive(ms) {
+  if (ms < 0) ms = 0;
+  const totalSec = Math.floor(ms / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+function formatTimeShort(ts) {
+  const d = new Date(ts);
+  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+function entryDuration(entry) {
+  return Math.max(0, (entry.endedAt || Date.now()) - entry.startedAt);
+}
+function projectNameFor(pid) {
+  const p = state.projects.find(p => p.id === pid);
+  return p ? p.name : '(deleted)';
+}
+function projectColorFor(pid) {
+  const p = state.projects.find(p => p.id === pid);
+  return p ? p.color : '#888780';
+}
+function taskNameFor(tid) {
+  if (!tid) return '';
+  const t = state.tasks.find(t => t.id === tid);
+  return t ? t.name : '(deleted)';
+}
+function shortName(name) {
+  return name ? name.split('—')[0].trim() : name;
+}
+function escapeHTML(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// ─ Timer pill ─
+function renderTimerPill() {
+  const pill = document.getElementById('timer-pill');
+  const label = document.getElementById('timer-pill-label');
+  const stopBtn = document.getElementById('timer-pill-stop');
+  if (!pill) return;
+  const t = state.activeTimer;
+  if (t) {
+    pill.classList.remove('timer-idle');
+    pill.classList.add('timer-running');
+    const elapsed = Date.now() - t.startedAt;
+    const cName = shortName(projectNameFor(t.projectId));
+    const tName = taskNameFor(t.taskId);
+    const display = tName ? `${cName} — ${tName}` : cName;
+    label.textContent = `${display} · ${formatDurationLive(elapsed)}`;
+    stopBtn.style.display = '';
+    if (!timerTickInterval) startTimerTick();
+  } else {
+    pill.classList.add('timer-idle');
+    pill.classList.remove('timer-running');
+    label.textContent = 'Track time';
+    stopBtn.style.display = 'none';
+    if (timerTickInterval) { clearInterval(timerTickInterval); timerTickInterval = null; }
+  }
+}
+
+function tickTimer() {
+  if (!state.activeTimer) {
+    if (timerTickInterval) { clearInterval(timerTickInterval); timerTickInterval = null; }
+    return;
+  }
+  // Auto-stop after 10h
+  if (Date.now() - state.activeTimer.startedAt >= TIMER_AUTO_STOP_MS) {
+    autoStopTimer();
+    return;
+  }
+  // Just update the elapsed display, don't trigger a save
+  const label = document.getElementById('timer-pill-label');
+  if (!label) return;
+  const t = state.activeTimer;
+  const cName = shortName(projectNameFor(t.projectId));
+  const tName = taskNameFor(t.taskId);
+  const display = tName ? `${cName} — ${tName}` : cName;
+  label.textContent = `${display} · ${formatDurationLive(Date.now() - t.startedAt)}`;
+}
+function startTimerTick() {
+  if (timerTickInterval) clearInterval(timerTickInterval);
+  timerTickInterval = setInterval(tickTimer, 1000);
+}
+function autoStopTimer() {
+  const t = state.activeTimer;
+  if (!t) return;
+  const endedAt = t.startedAt + TIMER_AUTO_STOP_MS;
+  const note = (t.note ? t.note + ' ' : '') + '(auto-stopped at 10h)';
+  state.timeEntries = state.timeEntries || [];
+  state.timeEntries.push({
+    id: uid(),
+    projectId: t.projectId,
+    taskId: t.taskId || null,
+    startedAt: t.startedAt,
+    endedAt: endedAt,
+    note: note,
+    autoStopped: true
+  });
+  state.activeTimer = null;
+  save();
+  renderTimerPill();
+  if (currentView === 'time') renderTime();
+}
+
+function onTimerPillClick() {
+  if (state.activeTimer) openTimerStopModal();
+  else openTimerStartModal();
+}
+
+// ─ Select population ─
+function populateClientSelect(selectId, currentValue) {
+  const sel = document.getElementById(selectId);
+  if (!sel) return;
+  sel.innerHTML = '';
+  const projects = state.projects.filter(p => p.id !== '_todos');
+  projects.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.id;
+    opt.textContent = p.name;
+    sel.appendChild(opt);
+  });
+  if (currentValue) sel.value = currentValue;
+}
+function populateTaskSelect(selectId, projectId, currentValue) {
+  const sel = document.getElementById(selectId);
+  if (!sel) return;
+  sel.innerHTML = '';
+  const noOpt = document.createElement('option');
+  noOpt.value = ''; noOpt.textContent = '— No task —';
+  sel.appendChild(noOpt);
+  if (projectId) {
+    state.tasks.filter(t => t.pid === projectId).forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t.id; opt.textContent = t.name;
+      sel.appendChild(opt);
+    });
+  }
+  sel.value = currentValue || '';
+}
+
+// ─ Timer start modal ─
+function openTimerStartModal() {
+  populateClientSelect('timer-client-select');
+  const clientSel = document.getElementById('timer-client-select');
+  populateTaskSelect('timer-task-select', clientSel.value);
+  clientSel.onchange = () => populateTaskSelect('timer-task-select', clientSel.value);
+  document.getElementById('timer-note-input').value = '';
+  document.getElementById('timer-start-modal').classList.add('open');
+}
+function closeTimerStartModal() {
+  document.getElementById('timer-start-modal').classList.remove('open');
+}
+function confirmStartTimer() {
+  const projectId = document.getElementById('timer-client-select').value;
+  const taskId = document.getElementById('timer-task-select').value || null;
+  const note = document.getElementById('timer-note-input').value.trim();
+  if (!projectId) return;
+  state.activeTimer = { projectId, taskId, startedAt: Date.now(), note };
+  save();
+  closeTimerStartModal();
+  renderTimerPill();
+}
+
+// ─ Timer stop modal ─
+function openTimerStopModal() {
+  const t = state.activeTimer;
+  if (!t) return;
+  const elapsed = Date.now() - t.startedAt;
+  const cName = shortName(projectNameFor(t.projectId));
+  const tName = taskNameFor(t.taskId);
+  const display = tName ? `${cName} — ${tName}` : cName;
+  document.getElementById('timer-stop-summary').innerHTML =
+    `<strong>${escapeHTML(display)}</strong><br><span style="color:var(--text-3)">Elapsed: ${formatDurationLive(elapsed)}</span>`;
+  document.getElementById('timer-stop-note-input').value = t.note || '';
+  document.getElementById('timer-stop-modal').classList.add('open');
+}
+function closeTimerStopModal() {
+  document.getElementById('timer-stop-modal').classList.remove('open');
+}
+function stopActiveTimer() { openTimerStopModal(); }
+function confirmStopTimer() {
+  const t = state.activeTimer;
+  if (!t) { closeTimerStopModal(); return; }
+  const note = document.getElementById('timer-stop-note-input').value.trim();
+  state.timeEntries = state.timeEntries || [];
+  state.timeEntries.push({
+    id: uid(),
+    projectId: t.projectId,
+    taskId: t.taskId || null,
+    startedAt: t.startedAt,
+    endedAt: Date.now(),
+    note: note
+  });
+  state.activeTimer = null;
+  save();
+  closeTimerStopModal();
+  renderTimerPill();
+  if (currentView === 'time') renderTime();
+}
+
+// ─ Time range ─
+function getTimeRangeBounds(mode) {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  let from = today.getTime(), to = today.getTime() + 24*60*60*1000;
+  if (mode === 'week') {
+    const day = today.getDay() || 7;
+    from = today.getTime() - (day-1) * 24*60*60*1000;
+    to = from + 7 * 24*60*60*1000;
+  } else if (mode === 'month') {
+    from = new Date(today.getFullYear(), today.getMonth(), 1).getTime();
+    to = new Date(today.getFullYear(), today.getMonth()+1, 1).getTime();
+  } else if (mode === 'all') {
+    from = 0; to = Number.MAX_SAFE_INTEGER;
+  }
+  return {from, to};
+}
+function setTimeRange(mode) {
+  timeRangeMode = mode;
+  localStorage.setItem('elastik_time_range', mode);
+  renderTime();
+}
+
+// ─ Time view render ─
+function renderTime() {
+  const el = document.getElementById('time-view');
+  if (!el) return;
+  const entries = (state.timeEntries || []).slice();
+  const {from, to} = getTimeRangeBounds(timeRangeMode);
+  const visible = entries
+    .filter(e => e.startedAt < to && e.startedAt >= from)
+    .sort((a,b) => b.startedAt - a.startedAt);
+
+  // Totals
+  const totalMs = visible.reduce((s,e) => s + entryDuration(e), 0);
+  const byProject = {};
+  visible.forEach(e => {
+    byProject[e.projectId] = (byProject[e.projectId] || 0) + entryDuration(e);
+  });
+
+  // Group by day
+  const groups = {};
+  visible.forEach(e => {
+    const d = new Date(e.startedAt);
+    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(e);
+  });
+  const sortedDayKeys = Object.keys(groups).sort().reverse();
+
+  const ranges = [
+    {id:'today', label:'Today'},
+    {id:'week', label:'This week'},
+    {id:'month', label:'This month'},
+    {id:'all', label:'All'}
+  ];
+
+  let html = `
+    <div class="time-toolbar">
+      <div class="time-range-group">
+        ${ranges.map(r => `<button class="time-range-btn${timeRangeMode===r.id?' active':''}" onclick="setTimeRange('${r.id}')">${r.label}</button>`).join('')}
+      </div>
+      <div class="time-toolbar-spacer"></div>
+      <button class="time-action-btn" onclick="openEntryModal()">
+        <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M5.5 1v9M1 5.5h9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Add entry
+      </button>
+      <button class="time-action-btn time-action-primary" onclick="exportVisibleEntriesToICS()" ${visible.length===0?'disabled style="opacity:0.4;cursor:not-allowed"':''}>
+        Export to Calendar
+      </button>
+    </div>
+  `;
+
+  // Totals
+  const totalCards = [
+    `<div class="time-total-card grand"><div class="time-total-label">Total</div><div class="time-total-value">${formatDuration(totalMs)}</div></div>`
+  ];
+  Object.keys(byProject).forEach(pid => {
+    const dot = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${projectColorFor(pid)}"></span>`;
+    totalCards.push(
+      `<div class="time-total-card"><div class="time-total-label">${dot} ${escapeHTML(shortName(projectNameFor(pid)))}</div><div class="time-total-value">${formatDuration(byProject[pid])}</div></div>`
+    );
+  });
+  html += `<div class="time-totals">${totalCards.join('')}</div>`;
+
+  // Entries
+  if (visible.length === 0) {
+    html += `<div class="time-empty">No entries in this range. Tap <strong>Track time</strong> in the header to start, or <strong>Add entry</strong> to log past time.</div>`;
+  } else {
+    sortedDayKeys.forEach(key => {
+      const dayEntries = groups[key].sort((a,b) => b.startedAt - a.startedAt);
+      const dayTotal = dayEntries.reduce((s,e) => s + entryDuration(e), 0);
+      const [yy, mm, dd] = key.split('-').map(Number);
+      const d = new Date(yy, mm-1, dd);
+      const today = new Date(); today.setHours(0,0,0,0);
+      const yesterday = new Date(today.getTime() - 24*60*60*1000);
+      let dayLabel;
+      if (d.getTime() === today.getTime()) dayLabel = 'Today';
+      else if (d.getTime() === yesterday.getTime()) dayLabel = 'Yesterday';
+      else dayLabel = d.toLocaleDateString(undefined, {weekday:'short', day:'numeric', month:'short'});
+
+      html += `
+        <div class="time-day-group">
+          <div class="time-day-header">
+            <span class="time-day-label">${dayLabel}</span>
+            <span class="time-day-total">${formatDuration(dayTotal)}</span>
+          </div>
+          ${dayEntries.map(e => {
+            const cName = shortName(projectNameFor(e.projectId));
+            const tName = taskNameFor(e.taskId);
+            const taskTxt = tName ? escapeHTML(tName) : '<span style="color:var(--text-3)">No task</span>';
+            const noteTxt = e.note ? `<span class="time-entry-note">— ${escapeHTML(e.note)}</span>` : '';
+            const start = formatTimeShort(e.startedAt);
+            const end = formatTimeShort(e.endedAt || Date.now());
+            return `
+              <div class="time-entry" onclick="openEntryModal('${e.id}')">
+                <span class="time-entry-time">${start} – ${end}</span>
+                <span class="time-entry-client"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${projectColorFor(e.projectId)}"></span>${escapeHTML(cName)}</span>
+                <span class="time-entry-task">${taskTxt}${noteTxt}</span>
+                <span class="time-entry-duration">${formatDuration(entryDuration(e))}</span>
+                <button class="time-entry-delete" onclick="event.stopPropagation();deleteEntry('${e.id}')" title="Delete">
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 2.5h6M4 1.5h2M3.5 2.5v5h3v-5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+    });
+  }
+
+  el.innerHTML = html;
+}
+
+// ─ Manual entry modal ─
+function openEntryModal(entryId) {
+  editingEntryId = entryId || null;
+  const entry = entryId ? (state.timeEntries || []).find(e => e.id === entryId) : null;
+
+  document.getElementById('entry-modal-title').textContent = entry ? 'Edit entry' : 'New time entry';
+  document.getElementById('entry-delete-btn').style.display = entry ? '' : 'none';
+  document.getElementById('entry-error-msg').textContent = '';
+
+  populateClientSelect('entry-client-select', entry ? entry.projectId : null);
+  const clientSel = document.getElementById('entry-client-select');
+  populateTaskSelect('entry-task-select', clientSel.value, entry ? entry.taskId : null);
+  clientSel.onchange = () => populateTaskSelect('entry-task-select', clientSel.value);
+
+  const start = entry ? new Date(entry.startedAt) : new Date();
+  const end = entry ? new Date(entry.endedAt || Date.now()) : new Date(Date.now());
+  // Local date in YYYY-MM-DD
+  const ds = `${start.getFullYear()}-${String(start.getMonth()+1).padStart(2,'0')}-${String(start.getDate()).padStart(2,'0')}`;
+  document.getElementById('entry-date-input').value = ds;
+  document.getElementById('entry-start-input').value = `${String(start.getHours()).padStart(2,'0')}:${String(start.getMinutes()).padStart(2,'0')}`;
+  document.getElementById('entry-end-input').value = `${String(end.getHours()).padStart(2,'0')}:${String(end.getMinutes()).padStart(2,'0')}`;
+  document.getElementById('entry-note-input').value = entry ? (entry.note || '') : '';
+
+  document.getElementById('entry-modal').classList.add('open');
+}
+function closeEntryModal() {
+  document.getElementById('entry-modal').classList.remove('open');
+  editingEntryId = null;
+}
+function saveEntry() {
+  const projectId = document.getElementById('entry-client-select').value;
+  const taskId = document.getElementById('entry-task-select').value || null;
+  const dateStr = document.getElementById('entry-date-input').value;
+  const startStr = document.getElementById('entry-start-input').value;
+  const endStr = document.getElementById('entry-end-input').value;
+  const note = document.getElementById('entry-note-input').value.trim();
+  const errEl = document.getElementById('entry-error-msg');
+
+  if (!projectId || !dateStr || !startStr || !endStr) {
+    errEl.textContent = 'Please fill in client, date, start and end.';
+    return;
+  }
+  const startedAt = new Date(`${dateStr}T${startStr}`).getTime();
+  let endedAt = new Date(`${dateStr}T${endStr}`).getTime();
+  if (endedAt <= startedAt) endedAt += 24*60*60*1000; // crossed midnight
+  if (endedAt - startedAt > TIMER_AUTO_STOP_MS) {
+    errEl.textContent = 'Entry exceeds 10 hours. Please split it.';
+    return;
+  }
+
+  state.timeEntries = state.timeEntries || [];
+  if (editingEntryId) {
+    const e = state.timeEntries.find(e => e.id === editingEntryId);
+    if (e) {
+      e.projectId = projectId; e.taskId = taskId;
+      e.startedAt = startedAt; e.endedAt = endedAt;
+      e.note = note;
+    }
+  } else {
+    state.timeEntries.push({
+      id: uid(),
+      projectId, taskId,
+      startedAt, endedAt,
+      note
+    });
+  }
+  save();
+  closeEntryModal();
+  if (currentView === 'time') renderTime();
+}
+function deleteEntry(id) {
+  if (!confirm('Delete this time entry?')) return;
+  state.timeEntries = (state.timeEntries || []).filter(e => e.id !== id);
+  save();
+  if (currentView === 'time') renderTime();
+}
+function deleteEntryFromModal() {
+  if (!editingEntryId) { closeEntryModal(); return; }
+  if (!confirm('Delete this time entry?')) return;
+  state.timeEntries = (state.timeEntries || []).filter(e => e.id !== editingEntryId);
+  save();
+  closeEntryModal();
+  if (currentView === 'time') renderTime();
+}
+
+// ─ Modal overlay click-to-close ─
+document.getElementById('timer-start-modal').addEventListener('click', e => { if(e.target===e.currentTarget) closeTimerStartModal(); });
+document.getElementById('timer-stop-modal').addEventListener('click',  e => { if(e.target===e.currentTarget) closeTimerStopModal();  });
+document.getElementById('entry-modal').addEventListener('click',       e => { if(e.target===e.currentTarget) closeEntryModal();      });
+
+// ─ ICS export (option C — bulk download) ─
+function pad2(n) { return String(n).padStart(2,'0'); }
+function formatICSDate(ts) {
+  const d = new Date(ts);
+  return `${d.getUTCFullYear()}${pad2(d.getUTCMonth()+1)}${pad2(d.getUTCDate())}T${pad2(d.getUTCHours())}${pad2(d.getUTCMinutes())}${pad2(d.getUTCSeconds())}Z`;
+}
+function escapeICS(s) {
+  return String(s == null ? '' : s)
+    .replace(/\\/g,'\\\\').replace(/\r?\n/g,'\\n')
+    .replace(/,/g,'\\,').replace(/;/g,'\\;');
+}
+function exportEntriesToICS(entries) {
+  if (!entries.length) return;
+  const lines = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//DO Time Tracking//EN',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH'
+  ];
+  entries.forEach(e => {
+    const cName = shortName(projectNameFor(e.projectId));
+    const tName = taskNameFor(e.taskId);
+    const title = tName ? `${cName} — ${tName}` : cName;
+    lines.push('BEGIN:VEVENT');
+    lines.push(`UID:do-time-${e.id}@elastik-board`);
+    lines.push(`DTSTAMP:${formatICSDate(Date.now())}`);
+    lines.push(`DTSTART:${formatICSDate(e.startedAt)}`);
+    lines.push(`DTEND:${formatICSDate(e.endedAt || Date.now())}`);
+    lines.push(`SUMMARY:${escapeICS(title)}`);
+    if (e.note) lines.push(`DESCRIPTION:${escapeICS(e.note)}`);
+    lines.push('END:VEVENT');
+  });
+  lines.push('END:VCALENDAR');
+  const ics = lines.join('\r\n');
+  const blob = new Blob([ics], {type:'text/calendar;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `do-time-${new Date().toISOString().slice(0,10)}.ics`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+function exportVisibleEntriesToICS() {
+  const {from, to} = getTimeRangeBounds(timeRangeMode);
+  const visible = (state.timeEntries || []).filter(e => e.startedAt < to && e.startedAt >= from);
+  exportEntriesToICS(visible);
+}
 
 // ── Init ──
 applyTheme(localStorage.getItem('elastik_theme') || 'light');
