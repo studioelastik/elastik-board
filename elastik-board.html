@@ -1378,43 +1378,9 @@ body {
     <h3 id="sync-modal-title">Cloud Sync</h3>
 
     <div id="sync-panel-setup">
-      <p style="font-size:13px;color:var(--text-2);line-height:1.55;margin-bottom:4px">
-        Sync your board securely across devices — only you can access it with your password.
+      <p style="font-size:13px;color:var(--text-2);line-height:1.55;margin-bottom:14px">
+        Sign in to sync your board across devices.
       </p>
-      <div class="sync-steps">
-        <div class="sync-step">
-          <span class="sync-step-n">1</span>
-          <span>Go to <strong>console.firebase.google.com</strong> → <strong>Add project</strong> (disable Analytics)</span>
-        </div>
-        <div class="sync-step">
-          <span class="sync-step-n">2</span>
-          <span><strong>Build → Realtime Database → Create database</strong> → choose region → <strong>Start in locked mode</strong></span>
-        </div>
-        <div class="sync-step">
-          <span class="sync-step-n">3</span>
-          <span>In <strong>Realtime Database → Rules</strong>, set both <code>.read</code> and <code>.write</code> to <code>"auth != null"</code> → Publish</span>
-        </div>
-        <div class="sync-step">
-          <span class="sync-step-n">4</span>
-          <span><strong>Build → Authentication → Sign-in method → Email/Password → Enable</strong></span>
-        </div>
-        <div class="sync-step">
-          <span class="sync-step-n">5</span>
-          <span><strong>Authentication → Users → Add user</strong> → enter your email &amp; a password</span>
-        </div>
-        <div class="sync-step">
-          <span class="sync-step-n">6</span>
-          <span><strong>Project Settings</strong> (gear icon, top left) → copy the <strong>Web API Key</strong></span>
-        </div>
-      </div>
-      <div class="form-group" style="margin-top:16px">
-        <label>Database URL</label>
-        <input type="url" id="firebase-url-input" placeholder="https://your-app-default-rtdb.firebaseio.com" autocomplete="off" autocorrect="off" spellcheck="false">
-      </div>
-      <div class="form-group">
-        <label>Web API Key</label>
-        <input type="text" id="firebase-apikey-input" placeholder="AIzaSy..." autocomplete="off" autocorrect="off" spellcheck="false">
-      </div>
       <div class="form-group">
         <label>Email</label>
         <input type="email" id="firebase-email-input" placeholder="you@example.com" autocomplete="email">
@@ -1428,6 +1394,44 @@ body {
         <button class="btn-cancel" onclick="closeSyncModal()">Cancel</button>
         <button class="btn-save" id="btn-connect-firebase" onclick="connectFirebase()">Connect</button>
       </div>
+      <details style="margin-top:18px">
+        <summary style="font-size:11px;color:var(--text-3);cursor:pointer;user-select:none;list-style:none;display:flex;align-items:center;gap:5px">
+          <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M2 1l4 3-4 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Advanced / first-time setup
+        </summary>
+        <div style="margin-top:12px">
+          <div class="sync-steps">
+            <div class="sync-step">
+              <span class="sync-step-n">1</span>
+              <span>Go to <strong>console.firebase.google.com</strong> → <strong>Add project</strong></span>
+            </div>
+            <div class="sync-step">
+              <span class="sync-step-n">2</span>
+              <span><strong>Build → Realtime Database → Create database</strong> → <strong>locked mode</strong></span>
+            </div>
+            <div class="sync-step">
+              <span class="sync-step-n">3</span>
+              <span>Rules: set <code>.read</code> and <code>.write</code> to <code>"auth != null"</code> → Publish</span>
+            </div>
+            <div class="sync-step">
+              <span class="sync-step-n">4</span>
+              <span><strong>Authentication → Sign-in method → Email/Password → Enable</strong></span>
+            </div>
+            <div class="sync-step">
+              <span class="sync-step-n">5</span>
+              <span><strong>Authentication → Users → Add user</strong></span>
+            </div>
+          </div>
+          <div class="form-group" style="margin-top:12px">
+            <label>Database URL</label>
+            <input type="url" id="firebase-url-input" placeholder="https://your-app-default-rtdb.firebaseio.com" autocomplete="off" autocorrect="off" spellcheck="false">
+          </div>
+          <div class="form-group">
+            <label>Web API Key</label>
+            <input type="text" id="firebase-apikey-input" placeholder="AIzaSy..." autocomplete="off" autocorrect="off" spellcheck="false">
+          </div>
+        </div>
+      </details>
     </div>
 
     <div id="sync-panel-connected" style="display:none">
@@ -2441,8 +2445,10 @@ document.getElementById('section-modal').addEventListener('click', e => { if(e.t
 document.getElementById('sync-modal').addEventListener('click', e => { if(e.target===e.currentTarget) closeSyncModal(); });
 
 // ── Firebase Sync ──
-let firebaseURL = localStorage.getItem('elastik_firebase_url') || '';
-let firebaseAPIKey = localStorage.getItem('elastik_firebase_apikey') || '';
+const FIREBASE_DEFAULT_URL    = 'https://board-2cb94-default-rtdb.europe-west1.firebasedatabase.app';
+const FIREBASE_DEFAULT_APIKEY = 'AIzaSyDWJ2vWggtQiHIWkmAsATue4HLIyE1QM58';
+let firebaseURL    = localStorage.getItem('elastik_firebase_url')    || FIREBASE_DEFAULT_URL;
+let firebaseAPIKey = localStorage.getItem('elastik_firebase_apikey') || FIREBASE_DEFAULT_APIKEY;
 let firebaseToken = localStorage.getItem('elastik_firebase_token') || '';
 let firebaseRefreshToken = localStorage.getItem('elastik_firebase_refresh') || '';
 let syncTimer = null;
@@ -2597,10 +2603,18 @@ function startFirebaseStream() {
 }
 
 function openSyncModal() {
-  const connected = !!firebaseURL && !!firebaseAPIKey;
+  const connected = !!firebaseURL && !!firebaseAPIKey && !!firebaseToken;
   document.getElementById('sync-panel-setup').style.display     = connected ? 'none'  : 'block';
   document.getElementById('sync-panel-connected').style.display = connected ? 'block' : 'none';
-  if (connected) document.getElementById('sync-connected-url').textContent = firebaseURL;
+  if (connected) {
+    document.getElementById('sync-connected-url').textContent = firebaseURL;
+  } else {
+    // Pre-fill Advanced fields with defaults so user only needs email + password
+    const urlEl = document.getElementById('firebase-url-input');
+    const keyEl = document.getElementById('firebase-apikey-input');
+    if (urlEl && !urlEl.value) urlEl.value = FIREBASE_DEFAULT_URL;
+    if (keyEl && !keyEl.value) keyEl.value = FIREBASE_DEFAULT_APIKEY;
+  }
   document.getElementById('sync-modal').classList.add('open');
 }
 function closeSyncModal() { document.getElementById('sync-modal').classList.remove('open'); }
