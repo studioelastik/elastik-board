@@ -11,28 +11,83 @@
 <title>Elastik Board</title>
 <script>
 (function(){
-  // Apple touch icon: opaque black bg (iOS requires it)
-  function makeAppIcon(size) {
-    var c=document.createElement('canvas'); c.width=c.height=size;
-    var ctx=c.getContext('2d');
-    ctx.fillStyle='#1a1a1a'; ctx.fillRect(0,0,size,size);
-    ctx.font=Math.round(size*0.72)+'px serif';
-    ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('✌🏽',size/2,size*0.54);
+  // Draw a pill/rounded-rect (polyfill for ctx.roundRect)
+  function pill(ctx, x, y, w, h) {
+    var r = h / 2;
+    ctx.beginPath();
+    ctx.moveTo(x+r, y);
+    ctx.lineTo(x+w-r, y);
+    ctx.arcTo(x+w, y, x+w, y+r, r);
+    ctx.arcTo(x+w, y+h, x+w-r, y+h, r);
+    ctx.lineTo(x+r, y+h);
+    ctx.arcTo(x, y+h, x, y+r, r);
+    ctx.arcTo(x, y, x+r, y, r);
+    ctx.closePath();
+  }
+
+  function drawBoard(ctx, s) {
+    // Background
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fillRect(0, 0, s, s);
+
+    var pad   = s * 0.11;
+    var dotR  = s * 0.054;
+    var lineH = s * 0.055;
+    var gap   = s * 0.022;
+    var divW  = s * 0.013;
+
+    // Divider x — splits canvas ~54% left / 46% right
+    var divX = pad + (s - pad*2) * 0.545;
+
+    // Left column geometry
+    var lDX = pad + dotR;
+    var lLX = lDX + dotR + gap;
+    var lLMax = divX - lLX - gap;
+
+    // Right column geometry
+    var rDX = divX + divW + gap + dotR;
+    var rLX = rDX + dotR + gap;
+    var rLMax = (s - pad) - rLX;
+
+    // Row y positions (4 rows)
+    var rowY = [0.215, 0.375, 0.535, 0.695].map(function(f){ return s*f; });
+
+    // Left: 4 rows
+    var lColors = ['#C8501A','#534AB7','#0F6E56','#C03F6E'];
+    var lFrac   = [0.84, 0.64, 0.74, 0.54];
+    for (var i = 0; i < 4; i++) {
+      var y = rowY[i];
+      ctx.beginPath(); ctx.arc(lDX, y, dotR, 0, Math.PI*2);
+      ctx.fillStyle = lColors[i]; ctx.fill();
+      pill(ctx, lLX, y - lineH/2, lLMax * lFrac[i], lineH);
+      ctx.fillStyle = '#464646'; ctx.fill();
+    }
+
+    // Divider
+    ctx.fillStyle = '#2e2e2e';
+    ctx.fillRect(divX, pad * 0.7, divW, s - pad * 1.4);
+
+    // Right: 3 rows
+    var rColors = ['#185FA5','#BA7517','#1D9E75'];
+    var rFrac   = [0.78, 0.56, 0.67];
+    for (var j = 0; j < 3; j++) {
+      var ry = rowY[j];
+      ctx.beginPath(); ctx.arc(rDX, ry, dotR, 0, Math.PI*2);
+      ctx.fillStyle = rColors[j]; ctx.fill();
+      pill(ctx, rLX, ry - lineH/2, rLMax * rFrac[j], lineH);
+      ctx.fillStyle = '#464646'; ctx.fill();
+    }
+  }
+
+  function makeIcon(size) {
+    var c = document.createElement('canvas');
+    c.width = c.height = size;
+    drawBoard(c.getContext('2d'), size);
     return c.toDataURL('image/png');
   }
-  // Favicon: transparent bg, emoji fills almost all space
-  function makeFavicon(size) {
-    var c=document.createElement('canvas'); c.width=c.height=size;
-    var ctx=c.getContext('2d');
-    // No background fill — transparent
-    ctx.font=Math.round(size*0.9)+'px serif';
-    ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('✌🏽',size/2,size*0.54);
-    return c.toDataURL('image/png');
-  }
-  document.getElementById('apple-touch-icon').href=makeAppIcon(180);
-  document.getElementById('favicon').href=makeFavicon(64);
+
+  document.getElementById('apple-touch-icon').href = makeIcon(180);
+  document.getElementById('favicon').href = makeIcon(64);
 })();
 </script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
