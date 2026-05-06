@@ -2854,9 +2854,21 @@ function setSyncStatus(s, msg) {
 
 function scheduleSyncToFirebase() {
   if (!firebaseURL) return;
+  // Mark a pending write so we retry on next launch if this push never lands
+  try { localStorage.setItem('elastik_pending_sync', '1'); } catch(_) {}
   clearTimeout(syncTimer);
   setSyncStatus('syncing');
   syncTimer = setTimeout(() => { syncTimer = null; pushToFirebase(); }, 900);
+}
+
+// Bypass the 900ms debounce and push state immediately. Used after critical
+// actions (start/stop timer, save/delete time entry) where we cannot afford
+// to lose the change if the app is killed right after.
+function forceSyncNow() {
+  if (syncTimer) { clearTimeout(syncTimer); syncTimer = null; }
+  if (!firebaseURL || !firebaseAPIKey || !firebaseToken) return;
+  try { localStorage.setItem('elastik_pending_sync', '1'); } catch(_) {}
+  pushToFirebase();
 }
 
 async function pushToFirebase() {
@@ -2871,6 +2883,7 @@ async function pushToFirebase() {
     });
     if (!res.ok) { const t = await res.text(); throw new Error(`${res.status}: ${t}`); }
     setSyncStatus('synced');
+    try { localStorage.removeItem('elastik_pending_sync'); } catch(_) {}
   } catch(e) {
     console.error('Firebase push error:', e.message);
     setSyncStatus('error', e.message);
@@ -3089,11 +3102,16 @@ document.getElementById('settings-modal').addEventListener('click', e => {
 window.addEventListener('resize', applyZoom);
 
 // ── Prevent data loss on page close / refresh ──
-// If there's a pending debounced push, flush it immediately before the page unloads.
+// Flush any unsynced state to Firebase using a keepalive fetch so the
+// request survives page unload. Fires whenever there is either a pending
+// debounced push OR a pending-sync flag indicating a push that didn't
+// confirm — both belt and braces.
 function flushPendingSync() {
-  if (!syncTimer || !firebaseURL || !firebaseAPIKey || !firebaseToken) return;
-  clearTimeout(syncTimer);
-  syncTimer = null;
+  if (!firebaseURL || !firebaseAPIKey || !firebaseToken) return;
+  let pending = false;
+  try { pending = !!localStorage.getItem('elastik_pending_sync'); } catch(_) {}
+  if (!syncTimer && !pending) return;
+  if (syncTimer) { clearTimeout(syncTimer); syncTimer = null; }
   const toSync = {...state, filterSection: null, filterProject: null};
   try {
     fetch(`${firebaseURL}/elastik.json?auth=${firebaseToken}`, {
@@ -3101,11 +3119,17 @@ function flushPendingSync() {
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify(toSync),
       keepalive: true
-    });
+    }).then(res => {
+      if (res && res.ok) {
+        try { localStorage.removeItem('elastik_pending_sync'); } catch(_) {}
+      }
+    }).catch(() => {});
   } catch(e) { /* best-effort */ }
 }
+// pagehide is the most reliable lifecycle event on iOS PWAs (more than
+// beforeunload or visibilitychange). Listen on all three to cover every browser.
+window.addEventListener('pagehide', flushPendingSync);
 window.addEventListener('beforeunload', flushPendingSync);
-// On mobile, beforeunload is unreliable — use visibilitychange instead
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') flushPendingSync();
 });
@@ -3230,6 +3254,7 @@ function autoStopTimer() {
   });
   state.activeTimer = null;
   save();
+  forceSyncNow();
   renderTimerPill();
   if (currentView === 'time') renderTime();
 }
@@ -3339,6 +3364,7 @@ function confirmStartTimer() {
     note
   };
   save();
+  forceSyncNow();
   closeTimerStartModal();
   renderTimerPill();
 }
@@ -3375,6 +3401,7 @@ function confirmStopTimer() {
   });
   state.activeTimer = null;
   save();
+  forceSyncNow();
   closeTimerStopModal();
   renderTimerPill();
   if (currentView === 'time') renderTime();
@@ -3581,6 +3608,7 @@ function saveEntry() {
     });
   }
   save();
+  forceSyncNow();
   closeEntryModal();
   if (currentView === 'time') renderTime();
 }
@@ -3588,6 +3616,7 @@ function deleteEntry(id) {
   if (!confirm('Delete this time entry?')) return;
   state.timeEntries = (state.timeEntries || []).filter(e => e.id !== id);
   save();
+  forceSyncNow();
   if (currentView === 'time') renderTime();
 }
 function deleteEntryFromModal() {
@@ -3595,6 +3624,7 @@ function deleteEntryFromModal() {
   if (!confirm('Delete this time entry?')) return;
   state.timeEntries = (state.timeEntries || []).filter(e => e.id !== editingEntryId);
   save();
+  forceSyncNow();
   closeEntryModal();
   if (currentView === 'time') renderTime();
 }
