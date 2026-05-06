@@ -3620,7 +3620,7 @@ function exportEntriesToICS(entries) {
   const lines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//DO Time Tracking//EN',
+    'PRODID:-//Mission Control Time Tracking//EN',
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH'
   ];
@@ -3629,7 +3629,7 @@ function exportEntriesToICS(entries) {
     const tName = taskNameFor(e.taskId);
     const title = tName ? `${cName} — ${tName}` : cName;
     lines.push('BEGIN:VEVENT');
-    lines.push(`UID:do-time-${e.id}@elastik-board`);
+    lines.push(`UID:mission-control-${e.id}@elastik-board`);
     lines.push(`DTSTAMP:${formatICSDate(Date.now())}`);
     lines.push(`DTSTART:${formatICSDate(e.startedAt)}`);
     lines.push(`DTEND:${formatICSDate(e.endedAt || Date.now())}`);
@@ -3643,7 +3643,7 @@ function exportEntriesToICS(entries) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `do-time-${new Date().toISOString().slice(0,10)}.ics`;
+  a.download = `mission-control-${new Date().toISOString().slice(0,10)}.ics`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
