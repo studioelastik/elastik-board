@@ -1,5 +1,5 @@
 // DO — Service Worker
-const CACHE = 'do-it-v1';
+const CACHE = 'do-v2';
 const ASSETS = [
   './elastik-board.html',
   './manifest.json',
@@ -22,7 +22,11 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  // Network first, fall back to cache (keeps Firebase sync live)
+  const url = new URL(e.request.url);
+  // Bypass SW entirely for cross-origin requests (Firebase, Google APIs, fonts)
+  // — EventSource (live sync) and POST/PUT must hit the network directly.
+  if (url.origin !== self.location.origin) return;
+  // Same-origin: network first, fall back to cache when offline
   e.respondWith(
     fetch(e.request).catch(() => caches.match(e.request))
   );
