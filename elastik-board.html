@@ -5,11 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="DO">
+<meta name="apple-mobile-web-app-title" content="Mission Control">
 <link rel="manifest" href="manifest.json">
 <link id="apple-touch-icon" rel="apple-touch-icon" sizes="180x180">
 <link id="favicon" rel="icon" type="image/png">
-<title>DO</title>
+<title>Mission Control</title>
 <script>
 (function(){
   // Draw a pill/rounded-rect (polyfill for ctx.roundRect)
@@ -1141,6 +1141,24 @@ body {
   .kanban-col { width: 230px; }
 }
 
+/* ── Select with inline add button ── */
+.select-with-add { display: flex; gap: 6px; align-items: stretch; }
+.select-with-add select { flex: 1; min-width: 0; }
+.select-add-btn {
+  flex-shrink: 0;
+  width: 36px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text-2);
+  border-radius: var(--r);
+  font-size: 18px;
+  font-weight: 400;
+  cursor: pointer;
+  font-family: inherit;
+  line-height: 1;
+}
+.select-add-btn:hover { background: var(--surface2); color: var(--text); }
+
 /* ── Timer pill (header) ── */
 .timer-pill {
   display: inline-flex;
@@ -1333,7 +1351,7 @@ body {
   <nav id="sidebar">
     <div id="sidebar-logo">
       <div class="dot" id="sidebar-sync-dot"></div>
-      <span>DO</span>
+      <span>Mission Control</span>
       <button id="sidebar-close-btn" onclick="closeDrawer()">
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
       </button>
@@ -1437,11 +1455,6 @@ body {
     <button class="bnav-btn" id="bnav-time" onclick="setView('time')">
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9.5" r="6.5" stroke="currentColor" stroke-width="1.5"/><path d="M9 5.5V9.5l2.5 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
       <span>Time</span>
-    </button>
-    <button class="bnav-btn" id="bnav-theme" onclick="toggleTheme()">
-      <svg id="bnav-theme-sun" width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="3.5" stroke="currentColor" stroke-width="1.3"/><path d="M9 1.5V3M9 15v1.5M1.5 9H3M15 9h1.5M3.5 3.5l1 1M13.5 13.5l1 1M13.5 3.5l-1 1M3.5 13.5l1-1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
-      <svg id="bnav-theme-moon" width="18" height="18" viewBox="0 0 18 18" fill="none" style="display:none"><path d="M14.5 11.5A6.5 6.5 0 016.5 3.5c0-.5.06-1 .16-1.44A7 7 0 1015.94 12.84a6.5 6.5 0 01-1.44-.34z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
-      <span>Theme</span>
     </button>
   </nav>
 </div>
@@ -1663,16 +1676,23 @@ body {
     <h3>Start timer</h3>
     <div class="form-group">
       <label>Client</label>
-      <select id="timer-client-select"></select>
+      <div class="select-with-add">
+        <select id="timer-client-select"></select>
+        <button type="button" class="select-add-btn" onclick="quickAddClient('timer-client-select','timer-task-select')" title="New client">+</button>
+      </div>
     </div>
     <div class="form-group">
       <label>Task <span style="color:var(--text-3);font-weight:400">(optional)</span></label>
-      <select id="timer-task-select"></select>
+      <div class="select-with-add">
+        <select id="timer-task-select"></select>
+        <button type="button" class="select-add-btn" onclick="quickAddTask('timer-client-select','timer-task-select')" title="New task">+</button>
+      </div>
     </div>
     <div class="form-group">
       <label>Note <span style="color:var(--text-3);font-weight:400">(optional)</span></label>
       <input type="text" id="timer-note-input" placeholder="What are you working on?">
     </div>
+    <p style="font-size:11px;color:var(--text-3);margin-top:-4px;line-height:1.5">Start time rounds up to the nearest 15 minutes.</p>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeTimerStartModal()">Cancel</button>
       <button class="btn-save" onclick="confirmStartTimer()">Start</button>
@@ -3240,6 +3260,47 @@ function populateTaskSelect(selectId, projectId, currentValue) {
   sel.value = currentValue || '';
 }
 
+// ─ Round timestamp UP to next 15-minute boundary (or pass through if exactly on it)
+function roundUpToQuarterHour(ts) {
+  const d = new Date(ts);
+  const m = d.getMinutes();
+  const onMark = (m % 15 === 0) && d.getSeconds() === 0 && d.getMilliseconds() === 0;
+  if (onMark) return ts;
+  d.setMinutes(Math.ceil(m / 15) * 15, 0, 0); // setMinutes(60,…) rolls to next hour
+  return d.getTime();
+}
+
+// ─ Quick-add client / task from inside the timer modal ─
+function quickAddClient(clientSelectId, taskSelectId) {
+  const name = (prompt('New client name:') || '').trim();
+  if (!name) return;
+  // Pick a colour from the palette that's not already in use, fall back to random
+  const used = new Set(state.projects.map(p => p.color));
+  const free = COLORS.filter(c => !used.has(c));
+  const color = free.length ? free[0] : COLORS[Math.floor(Math.random() * COLORS.length)];
+  // Default new clients into the 'studio' section (or first available section)
+  const defaultSection = state.sections.find(s => s.id === 'studio') || state.sections[0];
+  const id = uid();
+  state.projects.push({ id, name, color, section: defaultSection.id });
+  save();
+  renderSidebar();
+  populateClientSelect(clientSelectId, id);
+  if (taskSelectId) populateTaskSelect(taskSelectId, id);
+}
+
+function quickAddTask(clientSelectId, taskSelectId) {
+  const projectId = document.getElementById(clientSelectId).value;
+  if (!projectId) { alert('Pick a client first.'); return; }
+  const name = (prompt('New task name:') || '').trim();
+  if (!name) return;
+  const id = uid();
+  state.tasks.push({ id, pid: projectId, name, status: 'wip', notes: '' });
+  save();
+  if (currentView === 'kanban') renderKanban();
+  else if (currentView === 'list') renderList();
+  populateTaskSelect(taskSelectId, projectId, id);
+}
+
 // ─ Timer start modal ─
 function openTimerStartModal() {
   populateClientSelect('timer-client-select');
@@ -3257,7 +3318,16 @@ function confirmStartTimer() {
   const taskId = document.getElementById('timer-task-select').value || null;
   const note = document.getElementById('timer-note-input').value.trim();
   if (!projectId) return;
-  state.activeTimer = { projectId, taskId, startedAt: Date.now(), note };
+  // startedAt is real wall-clock time (rounded up to next 15-min mark) and is
+  // the single source of truth — synced via Firebase, so other devices show
+  // the correct elapsed time as `Date.now() - startedAt` regardless of when
+  // they last received the update.
+  state.activeTimer = {
+    projectId,
+    taskId,
+    startedAt: roundUpToQuarterHour(Date.now()),
+    note
+  };
   save();
   closeTimerStartModal();
   renderTimerPill();

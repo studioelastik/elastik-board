@@ -1,5 +1,5 @@
-// DO — Service Worker
-const CACHE = 'do-v2';
+// Mission Control — Service Worker
+const CACHE = 'mission-control-v1';
 const ASSETS = [
   './elastik-board.html',
   './manifest.json',

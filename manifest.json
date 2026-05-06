@@ -1,6 +1,6 @@
 {
-  "name": "DO",
-  "short_name": "DO",
+  "name": "Mission Control",
+  "short_name": "Mission Control",
   "description": "Personal kanban board",
   "start_url": "./elastik-board.html",
   "scope": "./",
