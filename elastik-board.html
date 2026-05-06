@@ -1320,33 +1320,54 @@ body {
 
     <div id="sync-panel-setup">
       <p style="font-size:13px;color:var(--text-2);line-height:1.55;margin-bottom:4px">
-        Sync your board across iPhone and Mac in real time using Firebase — free, takes 3 minutes to set up.
+        Sync your board securely across devices — only you can access it with your password.
       </p>
       <div class="sync-steps">
         <div class="sync-step">
           <span class="sync-step-n">1</span>
-          <span>Go to <strong>console.firebase.google.com</strong> → <strong>Add project</strong> (name it anything, disable Analytics)</span>
+          <span>Go to <strong>console.firebase.google.com</strong> → <strong>Add project</strong> (disable Analytics)</span>
         </div>
         <div class="sync-step">
           <span class="sync-step-n">2</span>
-          <span>In the left menu: <strong>Build → Realtime Database → Create database</strong> → choose any region → <strong>Start in test mode</strong></span>
+          <span><strong>Build → Realtime Database → Create database</strong> → choose region → <strong>Start in locked mode</strong></span>
         </div>
         <div class="sync-step">
           <span class="sync-step-n">3</span>
-          <span>Copy the URL shown at the top of the database page — looks like <code>https://your-app-default-rtdb.firebaseio.com</code></span>
+          <span>In <strong>Realtime Database → Rules</strong>, set both <code>.read</code> and <code>.write</code> to <code>"auth != null"</code> → Publish</span>
         </div>
         <div class="sync-step">
           <span class="sync-step-n">4</span>
-          <span>Paste it below and tap <strong>Connect</strong></span>
+          <span><strong>Build → Authentication → Sign-in method → Email/Password → Enable</strong></span>
+        </div>
+        <div class="sync-step">
+          <span class="sync-step-n">5</span>
+          <span><strong>Authentication → Users → Add user</strong> → enter your email &amp; a password</span>
+        </div>
+        <div class="sync-step">
+          <span class="sync-step-n">6</span>
+          <span><strong>Project Settings</strong> (gear icon, top left) → copy the <strong>Web API Key</strong></span>
         </div>
       </div>
       <div class="form-group" style="margin-top:16px">
         <label>Database URL</label>
         <input type="url" id="firebase-url-input" placeholder="https://your-app-default-rtdb.firebaseio.com" autocomplete="off" autocorrect="off" spellcheck="false">
       </div>
+      <div class="form-group">
+        <label>Web API Key</label>
+        <input type="text" id="firebase-apikey-input" placeholder="AIzaSy..." autocomplete="off" autocorrect="off" spellcheck="false">
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="firebase-email-input" placeholder="you@example.com" autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="firebase-password-input" placeholder="Your password" autocomplete="current-password">
+      </div>
+      <p id="sync-setup-error" style="font-size:12px;color:#E86868;margin-top:4px;min-height:16px;"></p>
       <div class="modal-actions">
         <button class="btn-cancel" onclick="closeSyncModal()">Cancel</button>
-        <button class="btn-save" onclick="connectFirebase()">Connect</button>
+        <button class="btn-save" id="btn-connect-firebase" onclick="connectFirebase()">Connect</button>
       </div>
     </div>
 
@@ -2362,9 +2383,54 @@ document.getElementById('sync-modal').addEventListener('click', e => { if(e.targ
 
 // ── Firebase Sync ──
 let firebaseURL = localStorage.getItem('elastik_firebase_url') || '';
+let firebaseAPIKey = localStorage.getItem('elastik_firebase_apikey') || '';
+let firebaseToken = localStorage.getItem('elastik_firebase_token') || '';
+let firebaseRefreshToken = localStorage.getItem('elastik_firebase_refresh') || '';
 let syncTimer = null;
 let isSendingToFirebase = false;
 let firebaseStream = null;
+
+async function firebaseSignIn(email, password) {
+  const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${firebaseAPIKey}`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({email, password, returnSecureToken: true})
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error?.message || 'Sign-in failed');
+  firebaseToken = data.idToken;
+  firebaseRefreshToken = data.refreshToken;
+  localStorage.setItem('elastik_firebase_token', firebaseToken);
+  localStorage.setItem('elastik_firebase_refresh', firebaseRefreshToken);
+}
+
+async function firebaseRefreshAuth() {
+  if (!firebaseRefreshToken || !firebaseAPIKey) return false;
+  try {
+    const res = await fetch(`https://securetoken.googleapis.com/v1/token?key=${firebaseAPIKey}`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({grant_type: 'refresh_token', refresh_token: firebaseRefreshToken})
+    });
+    if (!res.ok) return false;
+    const data = await res.json();
+    firebaseToken = data.id_token;
+    firebaseRefreshToken = data.refresh_token;
+    localStorage.setItem('elastik_firebase_token', firebaseToken);
+    localStorage.setItem('elastik_firebase_refresh', firebaseRefreshToken);
+    return true;
+  } catch { return false; }
+}
+
+async function firebaseFetch(url, options = {}) {
+  const withAuth = u => `${u}${u.includes('?') ? '&' : '?'}auth=${firebaseToken}`;
+  let res = await fetch(withAuth(url), options);
+  if (res.status === 401) {
+    const ok = await firebaseRefreshAuth();
+    if (ok) res = await fetch(withAuth(url), options);
+  }
+  return res;
+}
 
 function setSyncStatus(s, msg) {
   const dot = document.getElementById('sync-dot');
@@ -2388,12 +2454,11 @@ function scheduleSyncToFirebase() {
 }
 
 async function pushToFirebase() {
-  if (!firebaseURL) return;
+  if (!firebaseURL || !firebaseAPIKey) return;
   isSendingToFirebase = true;
   try {
-    // Strip device-local state before syncing
     const toSync = {...state, filterSection: null, filterProject: null};
-    const res = await fetch(`${firebaseURL}/elastik.json`, {
+    const res = await firebaseFetch(`${firebaseURL}/elastik.json`, {
       method: 'PUT',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify(toSync)
@@ -2424,10 +2489,10 @@ function migrateRemote(data) {
 }
 
 async function pullFromFirebase() {
-  if (!firebaseURL) return;
+  if (!firebaseURL || !firebaseAPIKey) return;
   setSyncStatus('syncing');
   try {
-    const res = await fetch(`${firebaseURL}/elastik.json`);
+    const res = await firebaseFetch(`${firebaseURL}/elastik.json`);
     const data = await res.json();
     if (data && data.tasks) {
       state = migrateRemote(data);
@@ -2443,13 +2508,11 @@ async function pullFromFirebase() {
 }
 
 function startFirebaseStream() {
-  if (!firebaseURL) return;
+  if (!firebaseURL || !firebaseAPIKey || !firebaseToken) return;
   if (firebaseStream) firebaseStream.close();
-  firebaseStream = new EventSource(`${firebaseURL}/elastik.json`);
+  firebaseStream = new EventSource(`${firebaseURL}/elastik.json?auth=${firebaseToken}`);
   let firstEvent = true;
   firebaseStream.addEventListener('put', e => {
-    // Skip the very first event — data was already loaded by pullFromFirebase()
-    // Also skip on reconnect when there are local changes pending (syncTimer set)
     if (firstEvent) { firstEvent = false; return; }
     if (isSendingToFirebase || syncTimer) return;
     try {
@@ -2464,11 +2527,18 @@ function startFirebaseStream() {
       setSyncStatus('synced');
     } catch(err) { console.error('Firebase stream parse error', err); }
   });
-  firebaseStream.onerror = () => setSyncStatus('error');
+  firebaseStream.onerror = async () => {
+    if (firebaseStream) { firebaseStream.close(); firebaseStream = null; }
+    setSyncStatus('error');
+    if (firebaseAPIKey && firebaseRefreshToken) {
+      const ok = await firebaseRefreshAuth();
+      if (ok) setTimeout(startFirebaseStream, 3000);
+    }
+  };
 }
 
 function openSyncModal() {
-  const connected = !!firebaseURL;
+  const connected = !!firebaseURL && !!firebaseAPIKey;
   document.getElementById('sync-panel-setup').style.display     = connected ? 'none'  : 'block';
   document.getElementById('sync-panel-connected').style.display = connected ? 'block' : 'none';
   if (connected) document.getElementById('sync-connected-url').textContent = firebaseURL;
@@ -2476,21 +2546,43 @@ function openSyncModal() {
 }
 function closeSyncModal() { document.getElementById('sync-modal').classList.remove('open'); }
 
-function connectFirebase() {
+async function connectFirebase() {
   const url = document.getElementById('firebase-url-input').value.trim().replace(/\/+$/, '');
-  if (!url.startsWith('https://')) {
-    document.getElementById('firebase-url-input').focus(); return;
+  const apiKey = document.getElementById('firebase-apikey-input').value.trim();
+  const email = document.getElementById('firebase-email-input').value.trim();
+  const password = document.getElementById('firebase-password-input').value;
+  const errEl = document.getElementById('sync-setup-error');
+  const btn = document.getElementById('btn-connect-firebase');
+  if (!url.startsWith('https://') || !apiKey || !email || !password) {
+    if (errEl) errEl.textContent = 'Please fill in all fields.';
+    return;
   }
+  if (errEl) errEl.textContent = '';
+  if (btn) { btn.textContent = 'Connecting…'; btn.disabled = true; }
   firebaseURL = url;
+  firebaseAPIKey = apiKey;
   localStorage.setItem('elastik_firebase_url', url);
-  closeSyncModal();
-  pullFromFirebase().then(startFirebaseStream);
+  localStorage.setItem('elastik_firebase_apikey', apiKey);
+  try {
+    await firebaseSignIn(email, password);
+    closeSyncModal();
+    pullFromFirebase().then(startFirebaseStream);
+  } catch(e) {
+    if (errEl) errEl.textContent = e.message;
+    if (btn) { btn.textContent = 'Connect'; btn.disabled = false; }
+  }
 }
 
 function disconnectFirebase() {
   if (firebaseStream) { firebaseStream.close(); firebaseStream = null; }
   firebaseURL = '';
+  firebaseAPIKey = '';
+  firebaseToken = '';
+  firebaseRefreshToken = '';
   localStorage.removeItem('elastik_firebase_url');
+  localStorage.removeItem('elastik_firebase_apikey');
+  localStorage.removeItem('elastik_firebase_token');
+  localStorage.removeItem('elastik_firebase_refresh');
   setSyncStatus('');
   closeSyncModal();
 }
@@ -2583,13 +2675,12 @@ window.addEventListener('resize', applyZoom);
 // ── Prevent data loss on page close / refresh ──
 // If there's a pending debounced push, flush it immediately before the page unloads.
 function flushPendingSync() {
-  if (!syncTimer || !firebaseURL) return;
+  if (!syncTimer || !firebaseURL || !firebaseAPIKey || !firebaseToken) return;
   clearTimeout(syncTimer);
   syncTimer = null;
-  // Use keepalive fetch so the request survives page unload
   const toSync = {...state, filterSection: null, filterProject: null};
   try {
-    fetch(`${firebaseURL}/elastik.json`, {
+    fetch(`${firebaseURL}/elastik.json?auth=${firebaseToken}`, {
       method: 'PUT',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify(toSync),
@@ -2611,10 +2702,8 @@ if (sidebarCollapsed && window.innerWidth > 768)
   document.getElementById('app').classList.add('sidebar-collapsed');
 renderAll();
 setView(currentView);
-if (firebaseURL) {
+if (firebaseURL && firebaseAPIKey) {
   setSyncStatus('syncing');
-  // Push local state first so Firebase is always seeded with latest data,
-  // then pull (to get changes from other devices) and start live stream.
   pushToFirebase().then(() => pullFromFirebase().then(startFirebaseStream));
 }
 </script>
