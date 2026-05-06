@@ -1047,16 +1047,19 @@ body {
   #main { margin-left: 0; max-width: 100vw; }
 
   #header {
-    padding: 0 14px; gap: 8px;
+    padding: 0 10px; gap: 5px;
     height: auto;
     padding-top: max(env(safe-area-inset-top), 50px);
     padding-bottom: 10px;
     align-items: center;
   }
-  #menu-btn { display: flex; }
-  #reload-btn { display: flex; }
+  #menu-btn { display: flex; width: 28px; height: 28px; }
+  #reload-btn { display: flex; width: 26px; height: 26px; }
+  #sync-btn { width: 26px; height: 26px; }
+  #theme-toggle { width: 26px; height: 26px; }
   .view-toggle { display: none; }
   #header-title { font-size: 14px; }
+  #header-spacer { min-width: 4px; }
 
   #add-task-main { width: 34px; height: 34px; padding: 0; border-radius: 50%; }
   #add-task-main .btn-label { display: none; }
@@ -1210,9 +1213,16 @@ body {
   max-width: 280px;
 }
 @media (max-width: 768px) {
-  .timer-pill { font-size: 11px; padding: 0 8px; height: 28px; gap: 5px; }
+  .timer-pill {
+    font-size: 11px;
+    padding: 0 7px;
+    height: 26px;
+    gap: 4px;
+    border-radius: 13px;
+  }
+  .timer-pill.timer-idle { padding: 0; width: 26px; justify-content: center; }
   .timer-pill.timer-idle #timer-pill-label { display: none; }
-  #timer-pill-label { max-width: 150px; }
+  #timer-pill-label { max-width: 130px; }
 }
 
 /* ── Time view ── */
