@@ -1702,7 +1702,7 @@ body {
       <label>Note <span style="color:var(--text-3);font-weight:400">(optional)</span></label>
       <input type="text" id="timer-note-input" placeholder="What are you working on?">
     </div>
-    <p style="font-size:11px;color:var(--text-3);margin-top:-4px;line-height:1.5">Start time rounds up to the nearest 15 minutes.</p>
+    <p style="font-size:11px;color:var(--text-3);margin-top:-4px;line-height:1.5">Start time snaps down to the previous 15-minute mark.</p>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeTimerStartModal()">Cancel</button>
       <button class="btn-save" onclick="confirmStartTimer()">Start</button>
@@ -3295,13 +3295,13 @@ function populateTaskSelect(selectId, projectId, currentValue) {
   sel.value = currentValue || '';
 }
 
-// ─ Round timestamp UP to next 15-minute boundary (or pass through if exactly on it)
-function roundUpToQuarterHour(ts) {
+// Round timestamp DOWN to the previous 15-minute boundary (or pass through
+// if exactly on one). Rounding down means the timer ticks immediately —
+// no dead window — while still snapping recorded times to 15-min marks
+// for clean calendar entries.
+function roundDownToQuarterHour(ts) {
   const d = new Date(ts);
-  const m = d.getMinutes();
-  const onMark = (m % 15 === 0) && d.getSeconds() === 0 && d.getMilliseconds() === 0;
-  if (onMark) return ts;
-  d.setMinutes(Math.ceil(m / 15) * 15, 0, 0); // setMinutes(60,…) rolls to next hour
+  d.setMinutes(Math.floor(d.getMinutes() / 15) * 15, 0, 0);
   return d.getTime();
 }
 
@@ -3360,7 +3360,7 @@ function confirmStartTimer() {
   state.activeTimer = {
     projectId,
     taskId,
-    startedAt: roundUpToQuarterHour(Date.now()),
+    startedAt: roundDownToQuarterHour(Date.now()),
     note
   };
   save();
