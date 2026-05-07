@@ -537,11 +537,79 @@ body {
 }
 .task-card.expanded .task-body {
   display: block;
-  animation: card-expand .14s ease;
 }
-@keyframes card-expand {
-  from { opacity: 0; transform: translateY(-3px); }
-  to   { opacity: 1; transform: translateY(0); }
+
+/* ── Fullscreen card overlay ── */
+#card-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.32);
+  backdrop-filter: blur(8px) saturate(1.1);
+  -webkit-backdrop-filter: blur(8px) saturate(1.1);
+  z-index: 220;
+  opacity: 0; pointer-events: none;
+  transition: opacity .18s ease;
+}
+#card-backdrop.open { opacity: 1; pointer-events: all; }
+[data-theme="dark"] #card-backdrop { background: rgba(0,0,0,.5); }
+
+/* When a task card is expanded, promote it to a centered fullscreen sheet */
+.task-card.expanded {
+  position: fixed;
+  top: 24px; left: 50%;
+  width: min(720px, calc(100vw - 48px));
+  height: calc(100vh - 48px);
+  max-height: calc(100vh - 48px);
+  transform: translateX(-50%);
+  z-index: 230;
+  cursor: default;
+  padding: 28px 32px 0;
+  overflow: hidden;
+  display: flex; flex-direction: column;
+  border-radius: 14px;
+  box-shadow: 0 24px 60px rgba(0,0,0,.22), 0 4px 12px rgba(0,0,0,.08);
+  animation: card-fullscreen-in .22s cubic-bezier(.2,.8,.2,1);
+}
+.task-card.expanded .task-body {
+  display: flex; flex-direction: column;
+  flex: 1; min-height: 0;
+  padding: 0;
+}
+.task-card.expanded .card-field-notes {
+  flex: 1; min-height: 0;
+  overflow: auto;
+  field-sizing: auto;
+}
+.task-card.expanded .card-body-row {
+  margin-top: 12px;
+  padding: 12px 0 16px;
+  background: var(--surface);
+  position: sticky; bottom: 0;
+}
+.task-card.expanded .task-project-bar { display: none; }
+
+@keyframes card-fullscreen-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(8px) scale(.985); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+
+/* Body scroll lock when a card is open */
+body.card-open { overflow: hidden; }
+
+/* Mobile: full viewport, no rounded corners */
+@media (max-width: 700px) {
+  .task-card.expanded {
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    max-height: 100vh;
+    transform: none;
+    border-radius: 0;
+    padding: 16px 16px 0;
+  }
+  @keyframes card-fullscreen-in {
+    from { opacity: 0; transform: translateY(12px) scale(.99); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .task-card.expanded { animation: card-fullscreen-in .22s cubic-bezier(.2,.8,.2,1); }
 }
 
 /* Hide drag handle while editing — it overlaps the button row */
@@ -1330,6 +1398,7 @@ body {
 </style>
 </head>
 <body>
+<div id="card-backdrop"></div>
 <div id="app">
   <!-- Sidebar -->
   <nav id="sidebar">
@@ -2032,6 +2101,54 @@ function editColTitle(el, status) {
   };
 }
 
+// ── Card fullscreen overlay ──
+let openCardId = null;
+
+function openCard(id, {pushHistory = true} = {}) {
+  // Close any other open cards
+  document.querySelectorAll('.task-card.expanded').forEach(c => {
+    if (c.dataset.id !== id) c.classList.remove('expanded');
+  });
+  // Find target card in the live DOM (escape id for selector safety)
+  const card = document.querySelector(`.task-card[data-id="${CSS.escape(id)}"]`);
+  if (!card) return;
+  card.classList.add('expanded');
+  document.body.classList.add('card-open');
+  document.getElementById('card-backdrop').classList.add('open');
+  openCardId = id;
+  if (pushHistory) {
+    const newHash = `#task-${id}`;
+    if (location.hash !== newHash) history.pushState({card: id}, '', newHash);
+  }
+}
+
+function closeCard({popHistory = true} = {}) {
+  document.querySelectorAll('.task-card.expanded').forEach(c => c.classList.remove('expanded'));
+  document.body.classList.remove('card-open');
+  document.getElementById('card-backdrop').classList.remove('open');
+  const wasOpen = openCardId !== null;
+  openCardId = null;
+  if (popHistory && wasOpen && location.hash.startsWith('#task-')) {
+    history.back();
+  }
+}
+
+// Global listeners (registered once)
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && openCardId) {
+    e.preventDefault();
+    closeCard();
+  }
+});
+window.addEventListener('popstate', () => {
+  if (location.hash.startsWith('#task-')) {
+    openCard(location.hash.slice(6), {pushHistory: false});
+  } else if (openCardId) {
+    closeCard({popHistory: false});
+  }
+});
+document.getElementById('card-backdrop').addEventListener('click', () => closeCard());
+
 // ── Render kanban ──
 function renderKanban() {
   const el = document.getElementById('kanban-view');
@@ -2305,7 +2422,7 @@ function makeTaskCard(t) {
       if (projSelect.value) task.pid = projSelect.value;
       save();
     }
-    card.classList.remove('expanded');
+    closeCard();
     renderAll();
   });
 
@@ -2316,7 +2433,7 @@ function makeTaskCard(t) {
 
   closeBtn.addEventListener('click', e => {
     e.stopPropagation();
-    card.classList.remove('expanded');
+    closeCard();
   });
 
   // Stop body interactions from bubbling to the card toggle
@@ -2328,14 +2445,9 @@ function makeTaskCard(t) {
     if (e.target.closest('.task-actions')) return;
     if (e.target.closest('.task-link')) return;
     if (e.target.closest('.task-body')) return;
-    // Close any other open cards first
-    document.querySelectorAll('.task-card.expanded').forEach(c => {
-      if (c !== card) c.classList.remove('expanded');
-    });
-    const opening = !card.classList.contains('expanded');
-    card.classList.toggle('expanded');
-    // Size textarea to existing content as soon as the body is visible
-    if (opening) requestAnimationFrame(fitNotes);
+    if (card.classList.contains('expanded')) return;
+    openCard(t.id);
+    requestAnimationFrame(fitNotes);
   });
 
   return card;
@@ -2561,6 +2673,12 @@ function renderAll() {
   else if (currentView==='list') renderList();
   else if (currentView==='time') renderTime();
   renderTimerPill();
+  // Re-apply fullscreen state if a card was open during re-render
+  if (openCardId) {
+    const card = document.querySelector(`.task-card[data-id="${CSS.escape(openCardId)}"]`);
+    if (card) card.classList.add('expanded');
+    else closeCard({popHistory: false});
+  }
 }
 
 // ── Task modal ──
