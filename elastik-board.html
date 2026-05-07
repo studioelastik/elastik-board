@@ -1702,7 +1702,7 @@ body {
       <label>Note <span style="color:var(--text-3);font-weight:400">(optional)</span></label>
       <input type="text" id="timer-note-input" placeholder="What are you working on?">
     </div>
-    <p style="font-size:11px;color:var(--text-3);margin-top:-4px;line-height:1.5">Start time snaps down to the previous 15-minute mark.</p>
+    <p style="font-size:11px;color:var(--text-3);margin-top:-4px;line-height:1.5">Duration is rounded up to the next 15 minutes when you stop.</p>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeTimerStartModal()">Cancel</button>
       <button class="btn-save" onclick="confirmStartTimer()">Start</button>
@@ -3295,14 +3295,13 @@ function populateTaskSelect(selectId, projectId, currentValue) {
   sel.value = currentValue || '';
 }
 
-// Round timestamp DOWN to the previous 15-minute boundary (or pass through
-// if exactly on one). Rounding down means the timer ticks immediately —
-// no dead window — while still snapping recorded times to 15-min marks
-// for clean calendar entries.
-function roundDownToQuarterHour(ts) {
-  const d = new Date(ts);
-  d.setMinutes(Math.floor(d.getMinutes() / 15) * 15, 0, 0);
-  return d.getTime();
+// Round a duration (ms) UP to the next 15-minute multiple. Used when
+// stopping a timer so calendar entries snap to clean 15-min blocks while
+// the live timer still shows real elapsed time.
+const FIFTEEN_MIN_MS = 15 * 60 * 1000;
+function roundDurationUpToQuarter(ms) {
+  if (ms <= 0) return FIFTEEN_MIN_MS;
+  return Math.ceil(ms / FIFTEEN_MIN_MS) * FIFTEEN_MIN_MS;
 }
 
 // ─ Quick-add client / task from inside the timer modal ─
@@ -3360,7 +3359,7 @@ function confirmStartTimer() {
   state.activeTimer = {
     projectId,
     taskId,
-    startedAt: roundDownToQuarterHour(Date.now()),
+    startedAt: Date.now(),
     note
   };
   save();
@@ -3374,11 +3373,14 @@ function openTimerStopModal() {
   const t = state.activeTimer;
   if (!t) return;
   const elapsed = Date.now() - t.startedAt;
+  const rounded = roundDurationUpToQuarter(elapsed);
   const cName = shortName(projectNameFor(t.projectId));
   const tName = taskNameFor(t.taskId);
   const display = tName ? `${cName} — ${tName}` : cName;
   document.getElementById('timer-stop-summary').innerHTML =
-    `<strong>${escapeHTML(display)}</strong><br><span style="color:var(--text-3)">Elapsed: ${formatDurationLive(elapsed)}</span>`;
+    `<strong>${escapeHTML(display)}</strong>` +
+    `<br><span style="color:var(--text-3)">Elapsed: ${formatDurationLive(elapsed)}</span>` +
+    `<br><span style="color:var(--text-3)">Will save: ${formatDuration(rounded)} (rounded up to 15 min)</span>`;
   document.getElementById('timer-stop-note-input').value = t.note || '';
   document.getElementById('timer-stop-modal').classList.add('open');
 }
@@ -3390,13 +3392,17 @@ function confirmStopTimer() {
   const t = state.activeTimer;
   if (!t) { closeTimerStopModal(); return; }
   const note = document.getElementById('timer-stop-note-input').value.trim();
+  // The live timer always shows real elapsed time. The SAVED entry rounds the
+  // duration UP to the next 15-min increment so calendar exports are clean.
+  const elapsed = Date.now() - t.startedAt;
+  const endedAt = t.startedAt + roundDurationUpToQuarter(elapsed);
   state.timeEntries = state.timeEntries || [];
   state.timeEntries.push({
     id: uid(),
     projectId: t.projectId,
     taskId: t.taskId || null,
     startedAt: t.startedAt,
-    endedAt: Date.now(),
+    endedAt: endedAt,
     note: note
   });
   state.activeTimer = null;
