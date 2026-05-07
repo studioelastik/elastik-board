@@ -1,10 +1,15 @@
 // Mission Control — Service Worker
-const CACHE = 'mission-control-v1';
+const CACHE = 'mission-control-v4';
+const QUILL_URLS = [
+  'https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.snow.css',
+  'https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.min.js'
+];
 const ASSETS = [
   './elastik-board.html',
   './manifest.json',
   './icon.svg',
-  './icon-maskable.svg'
+  './icon-maskable.svg',
+  ...QUILL_URLS
 ];
 
 self.addEventListener('install', e => {
@@ -23,8 +28,12 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
-  // Bypass SW entirely for cross-origin requests (Firebase, Google APIs, fonts)
-  // — EventSource (live sync) and POST/PUT must hit the network directly.
+  // Quill CDN: cache-first (precached at install), fall back to network
+  if (QUILL_URLS.includes(url.href)) {
+    e.respondWith(caches.match(e.request).then(r => r || fetch(e.request)));
+    return;
+  }
+  // Other cross-origin (Firebase, Google APIs, fonts): bypass SW entirely
   if (url.origin !== self.location.origin) return;
   // Same-origin: network first, fall back to cache when offline
   e.respondWith(
