@@ -27,56 +27,30 @@
   }
 
   function drawBoard(ctx, s) {
-    // Background
-    ctx.fillStyle = '#1a1a1a';
+    // Light background
+    ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(0, 0, s, s);
 
     var pad   = s * 0.11;
-    var dotR  = s * 0.054;
-    var lineH = s * 0.055;
+    var dotR  = s * 0.05;
+    var lineH = s * 0.05;
     var gap   = s * 0.022;
-    var divW  = s * 0.013;
 
-    // Divider x — splits canvas ~54% left / 46% right
-    var divX = pad + (s - pad*2) * 0.545;
+    var dotX   = pad + dotR;
+    var lineX  = dotX + dotR + gap;
+    var lineMax = (s - pad) - lineX;
 
-    // Left column geometry
-    var lDX = pad + dotR;
-    var lLX = lDX + dotR + gap;
-    var lLMax = divX - lLX - gap;
+    // 5 evenly-spaced rows
+    var rowY  = [0.22, 0.36, 0.50, 0.64, 0.78].map(function(f){ return s*f; });
+    var colors = ['#C8501A','#534AB7','#0F6E56','#C03F6E','#185FA5'];
+    var frac   = [0.88, 0.65, 0.78, 0.58, 0.72];
 
-    // Right column geometry
-    var rDX = divX + divW + gap + dotR;
-    var rLX = rDX + dotR + gap;
-    var rLMax = (s - pad) - rLX;
-
-    // Row y positions (4 rows)
-    var rowY = [0.215, 0.375, 0.535, 0.695].map(function(f){ return s*f; });
-
-    // Left: 4 rows
-    var lColors = ['#C8501A','#534AB7','#0F6E56','#C03F6E'];
-    var lFrac   = [0.84, 0.64, 0.74, 0.54];
-    for (var i = 0; i < 4; i++) {
+    for (var i = 0; i < rowY.length; i++) {
       var y = rowY[i];
-      ctx.beginPath(); ctx.arc(lDX, y, dotR, 0, Math.PI*2);
-      ctx.fillStyle = lColors[i]; ctx.fill();
-      pill(ctx, lLX, y - lineH/2, lLMax * lFrac[i], lineH);
-      ctx.fillStyle = '#464646'; ctx.fill();
-    }
-
-    // Divider
-    ctx.fillStyle = '#2e2e2e';
-    ctx.fillRect(divX, pad * 0.7, divW, s - pad * 1.4);
-
-    // Right: 3 rows
-    var rColors = ['#185FA5','#BA7517','#1D9E75'];
-    var rFrac   = [0.78, 0.56, 0.67];
-    for (var j = 0; j < 3; j++) {
-      var ry = rowY[j];
-      ctx.beginPath(); ctx.arc(rDX, ry, dotR, 0, Math.PI*2);
-      ctx.fillStyle = rColors[j]; ctx.fill();
-      pill(ctx, rLX, ry - lineH/2, rLMax * rFrac[j], lineH);
-      ctx.fillStyle = '#464646'; ctx.fill();
+      ctx.beginPath(); ctx.arc(dotX, y, dotR, 0, Math.PI*2);
+      ctx.fillStyle = colors[i]; ctx.fill();
+      pill(ctx, lineX, y - lineH/2, lineMax * frac[i], lineH);
+      ctx.fillStyle = '#D8D8D8'; ctx.fill();
     }
   }
 
