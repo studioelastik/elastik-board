@@ -636,70 +636,152 @@ body.card-open { overflow: hidden; }
 }
 .card-field::placeholder { color: var(--text-3); }
 .card-field-name { font-weight: 500; font-size: 13px; margin-bottom: 4px; }
-/* Quill slot: lives inside .task-body, fills remaining height in fullscreen */
-.quill-slot { display: none; }
-.task-card.expanded .quill-slot {
+/* Editor slot: lives inside .task-body, fills remaining height in fullscreen */
+.editor-slot { display: none; }
+.task-card.expanded .editor-slot {
   display: flex; flex-direction: column;
   flex: 1; min-height: 0;
   margin-top: 18px;
-  padding-top: 4px;
+  padding-top: 8px;
   border-top: 1px solid var(--border);
+  overflow-y: auto;
 }
-.task-card.expanded .quill-slot > #quill-host {
-  flex: 1; min-height: 0;
-  display: flex; flex-direction: column;
+.editor-host {
+  width: 100%;
 }
 
-/* Quill (snow theme) overrides — match the whiteish sheet */
-.ql-toolbar.ql-snow {
-  border: none !important;
-  border-bottom: 1px solid var(--border) !important;
-  padding: 8px 0 10px !important;
-  background: var(--surface);
-  position: sticky; top: 0; z-index: 2;
-}
-.ql-container.ql-snow {
-  border: none !important;
+/* EditorJS theme — match the whiteish sheet */
+.codex-editor {
   font-family: inherit;
-  font-size: 14px;
-  flex: 1; min-height: 0;
-  overflow: auto;
-}
-.ql-editor {
-  padding: 16px 0;
   color: var(--text);
-  line-height: 1.6;
 }
-.ql-editor.ql-blank::before {
-  font-style: normal;
+.codex-editor__redactor {
+  padding-bottom: 80px !important;
+  /* Leave room on the left for the +/settings toolbar buttons to render */
+  padding-left: 50px !important;
+}
+/* Make content fill the available width (after the 50px left gutter for toolbar) */
+.ce-block__content,
+.ce-toolbar__content {
+  max-width: none !important;
+  margin-right: 0 !important;
+  margin-left: 0 !important;
+}
+.ce-paragraph {
+  font-size: 14px;
+  line-height: 1.65;
+  padding: 4px 0;
+}
+.ce-paragraph[data-placeholder]:empty::before {
   color: var(--text-3);
-  left: 0; right: 0;
+  font-style: normal;
 }
-.ql-editor h1 { font-size: 22px; font-weight: 600; margin: 18px 0 8px; line-height: 1.3; }
-.ql-editor h2 { font-size: 18px; font-weight: 600; margin: 16px 0 6px; line-height: 1.35; }
-.ql-editor h3 { font-size: 15px; font-weight: 600; margin: 14px 0 6px; }
-.ql-editor p  { margin: 0 0 6px; }
-.ql-editor ul, .ql-editor ol { margin: 4px 0 8px; }
-.ql-editor a  { color: var(--accent); }
-.ql-editor blockquote {
-  border-left: 3px solid var(--border-strong);
-  padding-left: 12px; color: var(--text-2); margin: 8px 0;
+.ce-header {
+  padding: 8px 0 4px;
+  font-weight: 600;
+}
+h1.ce-header { font-size: 22px; line-height: 1.3; }
+h2.ce-header { font-size: 18px; line-height: 1.35; }
+h3.ce-header { font-size: 15px; }
+.cdx-block { padding: 4px 0; }
+
+/* Inline toolbar (popup on selection) */
+.ce-inline-toolbar,
+.ce-conversion-toolbar,
+.ce-toolbar__plus,
+.ce-toolbar__settings-btn,
+.ce-popover {
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  color: var(--text) !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,.08) !important;
+}
+.ce-inline-tool,
+.ce-toolbar__plus,
+.ce-toolbar__settings-btn {
+  color: var(--text-2) !important;
+}
+.ce-inline-tool:hover,
+.ce-toolbar__plus:hover,
+.ce-toolbar__settings-btn:hover,
+.ce-popover-item:hover,
+.ce-popover-item--active {
+  background: var(--surface2) !important;
+  color: var(--text) !important;
+}
+.ce-inline-tool--active { color: var(--accent) !important; }
+
+/* Lists */
+.cdx-list { padding-left: 24px; }
+.cdx-list__item { padding: 4px 0; line-height: 1.6; }
+
+/* Checklist */
+.cdx-checklist__item-checkbox {
+  border: 1.5px solid var(--border-strong) !important;
+  border-radius: 4px !important;
+}
+.cdx-checklist__item--checked .cdx-checklist__item-checkbox {
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
 }
 
-/* Dark-mode toolbar icons + popovers */
-[data-theme="dark"] .ql-snow .ql-stroke { stroke: var(--text-2); }
-[data-theme="dark"] .ql-snow .ql-fill { fill: var(--text-2); }
-[data-theme="dark"] .ql-snow .ql-picker { color: var(--text-2); }
-[data-theme="dark"] .ql-snow .ql-picker-options {
-  background: var(--surface2); border-color: var(--border);
+/* Quote */
+.cdx-quote {
+  border-left: 3px solid var(--border-strong);
+  padding-left: 12px;
+  color: var(--text-2);
+  margin: 8px 0;
 }
-[data-theme="dark"] .ql-snow .ql-tooltip {
-  background: var(--surface2); color: var(--text);
-  border-color: var(--border); box-shadow: 0 2px 8px rgba(0,0,0,.4);
+
+/* Code */
+.ce-code__textarea {
+  background: var(--surface2) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--r) !important;
+  font-family: 'DM Mono', ui-monospace, monospace !important;
+  font-size: 13px !important;
 }
-[data-theme="dark"] .ql-snow .ql-tooltip input[type=text] {
-  background: var(--bg); color: var(--text); border-color: var(--border);
+.cdx-marker {
+  background: rgba(255, 215, 0, .35);
+  padding: 0 2px;
 }
+.inline-code {
+  background: var(--surface2);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-family: 'DM Mono', ui-monospace, monospace;
+  font-size: 13px;
+}
+
+/* Tables (EditorJS @editorjs/table) */
+.tc-wrap, .tc-table {
+  --color-border: var(--border-strong);
+  --color-background: var(--surface);
+  --color-text-secondary: var(--text-3);
+}
+.tc-cell, .tc-row, .tc-table {
+  border-color: var(--border-strong) !important;
+}
+.tc-cell {
+  padding: 6px 10px !important;
+  color: var(--text);
+  font-size: 14px;
+}
+.tc-toolbox--row, .tc-toolbox--column,
+.tc-popover {
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  color: var(--text) !important;
+}
+.tc-popover__item:hover { background: var(--surface2) !important; }
+
+/* Dark-mode adjustments */
+[data-theme="dark"] .ce-paragraph[data-placeholder]:empty::before { color: var(--text-3); }
+[data-theme="dark"] .codex-editor svg path,
+[data-theme="dark"] .codex-editor svg rect,
+[data-theme="dark"] .codex-editor svg circle,
+[data-theme="dark"] .codex-editor svg line { stroke: var(--text-2); }
 
 
 /* Action row — always a single horizontal line */
@@ -1458,12 +1540,20 @@ body.card-open { overflow: hidden; }
   .time-total-value { font-size: 17px; }
 }
 </style>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.snow.css">
-<script src="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.min.js"></script>
+<!-- EditorJS core + block tools (rich-text notes editor) -->
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/editorjs@2.30.6"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/header@2.8.1"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/list@2.0.6"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/checklist@1.6.0"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/table@2.4.2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/quote@2.7.4"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/code@2.9.3"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/inline-code@1.5.1"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/marker@1.4.0"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/underline@1.2.1"></script>
 </head>
 <body>
 <div id="card-backdrop"></div>
-<div id="quill-host" style="display:none"><div id="quill-editor"></div></div>
 <div id="app">
   <!-- Sidebar -->
   <nav id="sidebar">
@@ -2166,70 +2256,109 @@ function editColTitle(el, status) {
   };
 }
 
-// ── Card fullscreen overlay + Quill editor ──
+// ── Card fullscreen overlay + EditorJS notes editor ──
 let openCardId = null;
-let quillInstance = null;
-let quillLoadedFor = null;  // task id whose contents are currently loaded in Quill
+let editorInstance = null;
+let editorLoadedFor = null;  // task id whose contents are currently loaded
 
-// One-time Quill init
-function initQuill() {
-  if (quillInstance) return;
-  if (typeof Quill === 'undefined') {
-    console.error('[notes] Quill global is not defined — script failed to load');
+// Serialize editor ops so rapid open/close don't race on save/destroy
+let _editorChain = Promise.resolve();
+function queueEditorOp(fn) {
+  const next = _editorChain.catch(() => {}).then(fn);
+  _editorChain = next;
+  return next;
+}
+
+function editorTools() {
+  const t = {};
+  if (window.Header)     t.header    = { class: window.Header, inlineToolbar: true, config: { levels: [1, 2, 3], defaultLevel: 2 } };
+  const ListTool = window.EditorjsList || window.NestedList || window.List;
+  if (ListTool)          t.list      = { class: ListTool, inlineToolbar: true };
+  if (window.Checklist)  t.checklist = { class: window.Checklist, inlineToolbar: true };
+  if (window.Table)      t.table     = { class: window.Table, inlineToolbar: true, config: { rows: 3, cols: 3 } };
+  if (window.Quote)      t.quote     = { class: window.Quote, inlineToolbar: true };
+  if (window.CodeTool)   t.code      = window.CodeTool;
+  if (window.InlineCode) t.inlineCode = window.InlineCode;
+  if (window.Marker)     t.marker    = window.Marker;
+  if (window.Underline)  t.underline = window.Underline;
+  return t;
+}
+
+function getInitialEditorData(task) {
+  if (task.noteEJ && Array.isArray(task.noteEJ.blocks)) return task.noteEJ;
+  // Fallback: build from plain text (also handles legacy Quill Delta → text)
+  let plainText = task.notes || '';
+  if (!plainText && task.noteDoc && Array.isArray(task.noteDoc.ops)) {
+    plainText = task.noteDoc.ops
+      .map(op => typeof op.insert === 'string' ? op.insert : '')
+      .join('').trim();
+  }
+  if (!plainText) return { blocks: [] };
+  const paragraphs = plainText.split(/\n{2,}/).map(p => p.trim()).filter(Boolean);
+  return { blocks: paragraphs.map(text => ({ type: 'paragraph', data: { text } })) };
+}
+
+function extractPlainText(data) {
+  if (!data || !Array.isArray(data.blocks)) return '';
+  const stripHTML = s => (s || '').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&');
+  return data.blocks.map(b => {
+    const d = b.data || {};
+    switch (b.type) {
+      case 'paragraph':
+      case 'header':
+      case 'quote':
+        return stripHTML(d.text || '');
+      case 'list':
+        return (d.items || []).map(item => typeof item === 'string'
+          ? stripHTML(item)
+          : stripHTML(item.content || item.text || '')
+        ).join('\n');
+      case 'checklist':
+        return (d.items || []).map(item => stripHTML(item.text || '')).join('\n');
+      case 'table':
+        return (d.content || []).map(row => row.map(c => stripHTML(c)).join('\t')).join('\n');
+      case 'code':
+        return d.code || '';
+      default:
+        return '';
+    }
+  }).filter(Boolean).join('\n\n');
+}
+
+async function mountEditorInto(card, task) {
+  await destroyEditor();
+  const slot = card.querySelector('.editor-slot');
+  if (!slot) return;
+  slot.innerHTML = '<div class="editor-host"></div>';
+  const host = slot.querySelector('.editor-host');
+  if (typeof EditorJS === 'undefined') {
+    console.error('[notes] EditorJS global not loaded — CDN blocked or failed');
     return;
   }
   try {
-    quillInstance = createQuillInstance();
-    console.log('[notes] Quill ready (v' + (Quill.version || '?') + ')');
+    editorInstance = new EditorJS({
+      holder: host,
+      placeholder: 'Write your notes…',
+      data: getInitialEditorData(task),
+      tools: editorTools()
+    });
+    await editorInstance.isReady;
+    editorLoadedFor = task.id;
+    console.log('[notes] EditorJS ready for task', task.id);
   } catch (e) {
-    console.error('[notes] Quill init failed:', e);
-    return;
+    console.error('[notes] EditorJS init failed:', e);
+    editorInstance = null;
   }
 }
 
-function createQuillInstance() {
-  return new Quill('#quill-editor', {
-    theme: 'snow',
-    placeholder: 'Notes…',
-    modules: {
-      toolbar: [
-        [{ header: [1, 2, 3, false] }],
-        ['bold', 'italic', 'underline', 'strike'],
-        [{ list: 'ordered' }, { list: 'bullet' }, { list: 'check' }],
-        ['link', 'blockquote', 'code-block'],
-        ['clean']
-      ]
-    }
-  });
+async function destroyEditor() {
+  if (!editorInstance) return;
+  try { await editorInstance.destroy(); } catch (e) { console.warn('[notes] destroy:', e); }
+  editorInstance = null;
+  editorLoadedFor = null;
 }
 
-// Move the Quill DOM into a card's slot and load that task's contents
-function mountEditorInto(card, task) {
-  initQuill();
-  const slot = card.querySelector('.quill-slot');
-  if (!slot) return;
-  const host = document.getElementById('quill-host');
-  host.style.display = 'flex';
-  slot.appendChild(host);
-  if (!quillInstance) return;  // Quill failed to load — leave slot empty
-  if (task.noteDoc) {
-    quillInstance.setContents(task.noteDoc, 'silent');
-  } else {
-    quillInstance.setText(task.notes || '', 'silent');
-  }
-  quillLoadedFor = task.id;
-}
-
-// Move the Quill DOM back to the body root and hide it
-function unmountEditor() {
-  const host = document.getElementById('quill-host');
-  host.style.display = 'none';
-  if (host.parentElement !== document.body) document.body.appendChild(host);
-  quillLoadedFor = null;
-}
-
-// Read the open card's editable fields into the underlying task and persist
-function commitOpenCardEdits() {
+async function commitOpenCardEdits() {
   if (!openCardId) return;
   const card = document.querySelector(`.task-card[data-id="${CSS.escape(openCardId)}"]`);
   const task = getTask(openCardId);
@@ -2243,41 +2372,46 @@ function commitOpenCardEdits() {
   }
   if (dueInput) task.dueDate = dueInput.value;
   if (projSelect && projSelect.value) task.pid = projSelect.value;
-  if (quillInstance && quillLoadedFor === openCardId) {
-    task.noteDoc = quillInstance.getContents();
-    task.notes   = quillInstance.getText().trim();
+  if (editorInstance && editorLoadedFor === openCardId) {
+    try {
+      const data = await editorInstance.save();
+      task.noteEJ = data;
+      task.notes  = extractPlainText(data);
+    } catch (e) { console.error('[notes] editor.save failed:', e); }
   }
   save();
 }
 
-function openCard(id, {pushHistory = true} = {}) {
-  // Close any other open cards (and persist their edits first)
+function openCard(id, opts) { return queueEditorOp(() => _openCard(id, opts || {})); }
+function closeCard(opts)    { return queueEditorOp(() => _closeCard(opts || {})); }
+
+async function _openCard(id, { pushHistory = true } = {}) {
   if (openCardId && openCardId !== id) {
-    commitOpenCardEdits();
-    unmountEditor();
+    await commitOpenCardEdits();
+    await destroyEditor();
   }
   document.querySelectorAll('.task-card.expanded').forEach(c => {
     if (c.dataset.id !== id) c.classList.remove('expanded');
   });
-  // Find target card in the live DOM (escape id for selector safety)
   const card = document.querySelector(`.task-card[data-id="${CSS.escape(id)}"]`);
   if (!card) return;
   card.classList.add('expanded');
   document.body.classList.add('card-open');
   document.getElementById('card-backdrop').classList.add('open');
   openCardId = id;
-  const task = getTask(id);
-  if (task) mountEditorInto(card, task);
   if (pushHistory) {
     const newHash = `#task-${id}`;
-    if (location.hash !== newHash) history.pushState({card: id}, '', newHash);
+    if (location.hash !== newHash) history.pushState({ card: id }, '', newHash);
   }
+  const task = getTask(id);
+  if (task) await mountEditorInto(card, task);
 }
 
-function closeCard({popHistory = true} = {}) {
-  // Persist any in-flight edits, then unmount editor before DOM changes
-  commitOpenCardEdits();
-  unmountEditor();
+async function _closeCard({ popHistory = true } = {}) {
+  if (!openCardId) return;
+  // Save first while DOM is still intact
+  await commitOpenCardEdits();
+  // Optimistically tear down UI before destroying the editor
   document.querySelectorAll('.task-card.expanded').forEach(c => c.classList.remove('expanded'));
   document.body.classList.remove('card-open');
   document.getElementById('card-backdrop').classList.remove('open');
@@ -2286,6 +2420,7 @@ function closeCard({popHistory = true} = {}) {
   if (popHistory && wasOpen && location.hash.startsWith('#task-')) {
     history.back();
   }
+  await destroyEditor();
   if (wasOpen) renderAll();
 }
 
@@ -2485,7 +2620,7 @@ function makeTaskCard(t) {
         <input class="card-field-due" type="date" value="${t.dueDate||''}">
       </label>
       <select class="card-field card-field-project"></select>
-      <div class="quill-slot"></div>
+      <div class="editor-slot"></div>
       <div class="card-body-row">
         <button class="card-body-save">Save</button>
         <button class="card-body-delete">
@@ -2802,22 +2937,19 @@ function setView(v) {
 }
 
 function renderAll() {
-  // Preserve in-flight Quill edits across DOM rebuild (sync, etc.)
-  const captured = (openCardId && quillInstance && quillLoadedFor === openCardId)
-    ? quillInstance.getContents() : null;
   renderSidebar();
   if (currentView==='kanban') { renderColFilterBar(); renderKanban(); }
   else if (currentView==='list') renderList();
   else if (currentView==='time') renderTime();
   renderTimerPill();
-  // Re-apply fullscreen state and re-mount editor if a card was open
+  // If a card was open during re-render, re-apply expanded class and remount
+  // the editor (queued so it doesn't race with any in-flight save/destroy)
   if (openCardId) {
     const card = document.querySelector(`.task-card[data-id="${CSS.escape(openCardId)}"]`);
     const task = getTask(openCardId);
     if (card && task) {
       card.classList.add('expanded');
-      mountEditorInto(card, task);
-      if (captured) quillInstance.setContents(captured, 'silent');
+      queueEditorOp(() => mountEditorInto(card, task));
     } else {
       closeCard({popHistory: false});
     }

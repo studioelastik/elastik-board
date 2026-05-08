@@ -1,15 +1,23 @@
 // Mission Control — Service Worker
-const CACHE = 'mission-control-v4';
-const QUILL_URLS = [
-  'https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.snow.css',
-  'https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.min.js'
+const CACHE = 'mission-control-v5';
+const EDITOR_URLS = [
+  'https://cdn.jsdelivr.net/npm/@editorjs/editorjs@2.30.6',
+  'https://cdn.jsdelivr.net/npm/@editorjs/header@2.8.1',
+  'https://cdn.jsdelivr.net/npm/@editorjs/list@2.0.6',
+  'https://cdn.jsdelivr.net/npm/@editorjs/checklist@1.6.0',
+  'https://cdn.jsdelivr.net/npm/@editorjs/table@2.4.2',
+  'https://cdn.jsdelivr.net/npm/@editorjs/quote@2.7.4',
+  'https://cdn.jsdelivr.net/npm/@editorjs/code@2.9.3',
+  'https://cdn.jsdelivr.net/npm/@editorjs/inline-code@1.5.1',
+  'https://cdn.jsdelivr.net/npm/@editorjs/marker@1.4.0',
+  'https://cdn.jsdelivr.net/npm/@editorjs/underline@1.2.1'
 ];
 const ASSETS = [
   './elastik-board.html',
   './manifest.json',
   './icon.svg',
   './icon-maskable.svg',
-  ...QUILL_URLS
+  ...EDITOR_URLS
 ];
 
 self.addEventListener('install', e => {
@@ -28,8 +36,8 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
-  // Quill CDN: cache-first (precached at install), fall back to network
-  if (QUILL_URLS.includes(url.href)) {
+  // EditorJS CDN: cache-first (precached at install), fall back to network
+  if (EDITOR_URLS.includes(url.href)) {
     e.respondWith(caches.match(e.request).then(r => r || fetch(e.request)));
     return;
   }
