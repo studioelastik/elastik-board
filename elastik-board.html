@@ -552,6 +552,20 @@ body {
 #card-backdrop.open { opacity: 1; pointer-events: all; }
 [data-theme="dark"] #card-backdrop { background: rgba(0,0,0,.45); }
 
+/* When the EditorJS block-picker popover is open, lift the overflow clip on
+   the card and slot so the popover can render at full height.
+   :has() is supported on iOS 16+ / Safari 15.4+.
+   Also cap the popover's own max-height to the available viewport space. */
+.ce-popover {
+  max-height: min(70vh, 480px) !important;
+}
+.task-card.expanded:has(.ce-popover) {
+  overflow: visible !important;
+}
+.task-card.expanded:has(.ce-popover) .editor-slot {
+  overflow: visible !important;
+}
+
 /* When a task card is expanded, promote it to a centered fullscreen sheet */
 .task-card.expanded {
   position: fixed;
@@ -2318,52 +2332,7 @@ function queueEditorOp(fn) {
   return next;
 }
 
-// ── Popover portal ──────────────────────────────────────────────────────────
-// EditorJS popovers are position:absolute inside the editor-slot scroll
-// container, which clips them at the bottom. We portal each popover to
-// <body> with position:fixed using the coordinates from getBoundingClientRect
-// (viewport-relative). The same DOM node reference keeps EditorJS's own
-// event listeners and contains() checks working correctly.
-let _popoverPortalObs = null;
 
-function startPopoverPortal(host) {
-  stopPopoverPortal();
-  _popoverPortalObs = new MutationObserver(muts => {
-    for (const m of muts) {
-      if (m.type !== 'childList') continue;
-      for (const node of m.addedNodes) {
-        if (node.nodeType === 1 && node.classList.contains('ce-popover')) {
-          _portalToBody(node);
-        }
-      }
-    }
-  });
-  _popoverPortalObs.observe(host, { childList: true, subtree: true });
-}
-
-function _portalToBody(el) {
-  // One rAF lets EditorJS finish its own positioning before we read the rect
-  requestAnimationFrame(() => {
-    if (!el.isConnected || el.parentElement === document.body) return;
-    const r = el.getBoundingClientRect();
-    document.body.appendChild(el);
-    el.style.position = 'fixed';
-    el.style.top      = r.top  + 'px';
-    el.style.left     = r.left + 'px';
-    el.style.zIndex   = '9999';
-    // EditorJS calculated max-height before the portal (against the clipped
-    // slot), so it's too small. Recalculate against the real viewport height.
-    const availH = window.innerHeight - r.top - 12;
-    el.style.maxHeight = availH + 'px';
-    el.style.setProperty('--popover-height', availH + 'px');
-  });
-}
-
-function stopPopoverPortal() {
-  if (_popoverPortalObs) { _popoverPortalObs.disconnect(); _popoverPortalObs = null; }
-  // Remove any portaled popover nodes left behind in <body>
-  document.querySelectorAll('body > .ce-popover').forEach(n => n.remove());
-}
 
 function editorTools() {
   const t = {};
@@ -2442,7 +2411,6 @@ async function mountEditorInto(card, task) {
     });
     await editorInstance.isReady;
     editorLoadedFor = task.id;
-    startPopoverPortal(host);
   } catch (e) {
     console.error('[notes] EditorJS init failed:', e);
     editorInstance = null;
@@ -2461,7 +2429,6 @@ function renderEditorFallback(slot, task) {
 
 async function destroyEditor() {
   if (!editorInstance) return;
-  stopPopoverPortal();
   try { await editorInstance.destroy(); } catch (e) { console.warn('[notes] destroy:', e); }
   editorInstance = null;
   editorLoadedFor = null;
