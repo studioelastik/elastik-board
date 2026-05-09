@@ -563,7 +563,7 @@ body {
   z-index: 230;
   cursor: default;
   padding: 32px 44px 0;
-  overflow: hidden;
+  overflow: visible;
   display: flex; flex-direction: column;
   border-radius: 14px;
   background: var(--surface);
@@ -1594,7 +1594,6 @@ h3.ce-header { font-size: 15px; }
 <script src="https://cdn.jsdelivr.net/npm/@editorjs/editorjs@2.30.6"></script>
 <script src="https://cdn.jsdelivr.net/npm/@editorjs/header@2.8.1"></script>
 <script src="https://cdn.jsdelivr.net/npm/@editorjs/list@2.0.6"></script>
-<script src="https://cdn.jsdelivr.net/npm/@editorjs/checklist@1.6.0"></script>
 <script src="https://cdn.jsdelivr.net/npm/@editorjs/table@2.4.2"></script>
 <script src="https://cdn.jsdelivr.net/npm/@editorjs/quote@2.7.4"></script>
 <script src="https://cdn.jsdelivr.net/npm/@editorjs/code@2.9.3"></script>
@@ -2324,7 +2323,8 @@ function editorTools() {
   if (window.Header)     t.header    = { class: window.Header, inlineToolbar: true, config: { levels: [1, 2, 3], defaultLevel: 2 } };
   const ListTool = window.EditorjsList || window.NestedList || window.List;
   if (ListTool)          t.list      = { class: ListTool, inlineToolbar: true };
-  if (window.Checklist)  t.checklist = { class: window.Checklist, inlineToolbar: true };
+  // Note: @editorjs/list v2 already exposes Unordered List, Ordered List and Checklist
+  // as three separate toolbar entries, so the standalone Checklist plugin is not needed.
   if (window.Table)      t.table     = { class: window.Table, inlineToolbar: true, config: { rows: 3, cols: 3 } };
   if (window.Quote)      t.quote     = { class: window.Quote, inlineToolbar: true };
   if (window.CodeTool)   t.code      = window.CodeTool;
