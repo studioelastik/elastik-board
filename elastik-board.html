@@ -735,18 +735,6 @@ h2.ce-header { font-size: 18px; line-height: 1.35; }
 h3.ce-header { font-size: 15px; }
 .cdx-block { padding: 4px 0; }
 
-/* Popovers + inline toolbar must use position:fixed so they escape the
-   editor-slot's overflow-y:auto clip. Works because body.card-open sets
-   overflow:hidden → pageYOffset is always 0, so EditorJS's
-   getBoundingClientRect coordinates equal viewport coordinates. */
-.ce-popover,
-.ce-popover__container,
-.ce-inline-toolbar,
-.ce-conversion-toolbar {
-  position: fixed !important;
-  z-index: 9999 !important;
-}
-
 /* Inline toolbar (popup on selection) */
 .ce-inline-toolbar,
 .ce-conversion-toolbar,
@@ -2330,6 +2318,48 @@ function queueEditorOp(fn) {
   return next;
 }
 
+// ── Popover portal ──────────────────────────────────────────────────────────
+// EditorJS popovers are position:absolute inside the editor-slot scroll
+// container, which clips them at the bottom. We portal each popover to
+// <body> with position:fixed using the coordinates from getBoundingClientRect
+// (viewport-relative). The same DOM node reference keeps EditorJS's own
+// event listeners and contains() checks working correctly.
+let _popoverPortalObs = null;
+
+function startPopoverPortal(host) {
+  stopPopoverPortal();
+  _popoverPortalObs = new MutationObserver(muts => {
+    for (const m of muts) {
+      if (m.type !== 'childList') continue;
+      for (const node of m.addedNodes) {
+        if (node.nodeType === 1 && node.classList.contains('ce-popover')) {
+          _portalToBody(node);
+        }
+      }
+    }
+  });
+  _popoverPortalObs.observe(host, { childList: true, subtree: true });
+}
+
+function _portalToBody(el) {
+  // One rAF lets EditorJS finish its own positioning before we read the rect
+  requestAnimationFrame(() => {
+    if (!el.isConnected || el.parentElement === document.body) return;
+    const r = el.getBoundingClientRect();
+    document.body.appendChild(el);
+    el.style.position = 'fixed';
+    el.style.top      = r.top  + 'px';
+    el.style.left     = r.left + 'px';
+    el.style.zIndex   = '9999';
+  });
+}
+
+function stopPopoverPortal() {
+  if (_popoverPortalObs) { _popoverPortalObs.disconnect(); _popoverPortalObs = null; }
+  // Remove any portaled popover nodes left behind in <body>
+  document.querySelectorAll('body > .ce-popover').forEach(n => n.remove());
+}
+
 function editorTools() {
   const t = {};
   if (window.Header)     t.header    = { class: window.Header, inlineToolbar: true, config: { levels: [1, 2, 3], defaultLevel: 2 } };
@@ -2407,6 +2437,7 @@ async function mountEditorInto(card, task) {
     });
     await editorInstance.isReady;
     editorLoadedFor = task.id;
+    startPopoverPortal(host);
   } catch (e) {
     console.error('[notes] EditorJS init failed:', e);
     editorInstance = null;
@@ -2425,6 +2456,7 @@ function renderEditorFallback(slot, task) {
 
 async function destroyEditor() {
   if (!editorInstance) return;
+  stopPopoverPortal();
   try { await editorInstance.destroy(); } catch (e) { console.warn('[notes] destroy:', e); }
   editorInstance = null;
   editorLoadedFor = null;
