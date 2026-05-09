@@ -2351,6 +2351,11 @@ function _portalToBody(el) {
     el.style.top      = r.top  + 'px';
     el.style.left     = r.left + 'px';
     el.style.zIndex   = '9999';
+    // EditorJS calculated max-height before the portal (against the clipped
+    // slot), so it's too small. Recalculate against the real viewport height.
+    const availH = window.innerHeight - r.top - 12;
+    el.style.maxHeight = availH + 'px';
+    el.style.setProperty('--popover-height', availH + 'px');
   });
 }
 
