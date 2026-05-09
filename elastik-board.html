@@ -720,15 +720,15 @@ body.card-open { overflow: hidden; }
 .codex-editor__redactor {
   padding-bottom: 80px !important;
 }
-/* Block content fills full available width */
+/* Both block content and toolbar content share the same left offset so
+   text starts exactly where the gutter ends — Notion-style layout.
+   The + and settings buttons (combined ~52px) sit in the 4px–56px gutter
+   and never overlap the text. */
 .ce-block__content {
   max-width: none !important;
-  margin: 0 !important;
+  margin-left: 56px !important;
+  margin-right: 0 !important;
 }
-/* Toolbar content needs a left margin so the actions div
-   (.ce-toolbar__actions, right:100%) stays within the slot's
-   visible area (slot clips at x=0 due to overflow-y:auto).
-   With margin-left:56px the + button lands at ~x=4px — safe. */
 .ce-toolbar__content {
   max-width: none !important;
   margin-left: 56px !important;
