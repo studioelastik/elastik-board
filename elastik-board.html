@@ -1499,6 +1499,87 @@ h3.ce-header { font-size: 15px; }
 @media (max-width: 768px) {
   #time-view { padding: 14px 12px calc(72px + env(safe-area-inset-bottom)) 12px; overflow-y: auto; }
 }
+
+/* ── Today view ── */
+#today-view {
+  flex: 1; overflow-y: auto;
+  padding: 48px 48px 40px;
+}
+.today-eyebrow {
+  font-size: 11px; font-weight: 600;
+  letter-spacing: .1em; text-transform: uppercase;
+  color: var(--text-3); margin-bottom: 6px;
+}
+.today-date {
+  font-size: 24px; font-weight: 700; color: var(--text);
+  margin: 0 0 36px; line-height: 1.2;
+}
+.today-slots {
+  list-style: none; padding: 0; margin: 0;
+  border-top: 1px solid var(--border);
+}
+.today-slot {
+  display: flex; align-items: center; gap: 14px;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--border);
+}
+.today-slot-num {
+  width: 18px; flex-shrink: 0;
+  font-size: 11px; font-weight: 600;
+  color: var(--text-3); font-variant-numeric: tabular-nums;
+}
+.today-slot-inner {
+  flex: 1; display: flex; align-items: center;
+  gap: 10px; min-width: 0; cursor: pointer;
+}
+.today-proj-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+}
+.today-task-name {
+  font-size: 16px; font-weight: 500; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  transition: color .12s;
+}
+.today-slot-inner:hover .today-task-name { color: var(--accent); }
+.today-slot-empty .today-slot-inner { cursor: default; }
+.today-slot-empty .today-task-name {
+  color: var(--text-3); font-weight: 400; font-size: 14px;
+}
+.today-slot-empty .today-slot-inner:hover .today-task-name { color: var(--text-3); }
+.today-unpin {
+  background: none; border: none; cursor: pointer;
+  color: var(--border-strong); font-size: 12px; line-height: 1;
+  padding: 4px 6px; border-radius: 4px; flex-shrink: 0;
+  transition: color .1s, background .1s;
+}
+.today-unpin:hover { color: var(--text); background: var(--surface2); }
+.today-hint {
+  margin-top: 28px; font-size: 12px; color: var(--text-3); line-height: 1.5;
+}
+@media (max-width: 768px) {
+  #today-view { padding: 28px 20px calc(72px + env(safe-area-inset-bottom)) 20px; }
+  .today-date { font-size: 20px; margin-bottom: 24px; }
+  .today-task-name { font-size: 15px; }
+}
+
+/* ── Pin dot — task-card meta ── */
+.pin-dot {
+  width: 14px; height: 14px; border-radius: 50%;
+  border: 1.5px solid var(--border-strong);
+  background: none; cursor: pointer; flex-shrink: 0;
+  padding: 0; color: inherit;
+  transition: border-color .12s, background .12s;
+}
+.pin-dot.pinned { background: var(--accent); border-color: var(--accent); }
+/* Desktop: ghost until hovered or pinned */
+@media (pointer: fine) {
+  .task-card:not(.expanded) .pin-dot:not(.pinned) { opacity: 0; transition: opacity .12s; }
+  .task-card:not(.expanded):hover .pin-dot:not(.pinned) { opacity: 1; }
+}
+/* Touch: hide unpinned dots — too cluttered on small cards */
+@media (pointer: coarse) {
+  .pin-dot:not(.pinned) { display: none; }
+}
 .time-toolbar {
   display: flex; align-items: center; gap: 8px;
   flex-wrap: wrap; margin-bottom: 16px;
@@ -1661,6 +1742,10 @@ h3.ce-header { font-size: 15px; }
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7.5" r="5.5" stroke="currentColor" stroke-width="1.3"/><path d="M7 4.5V7.5l2 1.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
         Time
       </div>
+      <div class="sidebar-item" onclick="setView('today')" id="nav-today">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="2.5" cy="3.5" r="1" fill="currentColor"/><path d="M5 3.5h7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="2.5" cy="7" r="1" fill="currentColor"/><path d="M5 7h7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="2.5" cy="10.5" r="1" fill="currentColor"/><path d="M5 10.5h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        Today
+      </div>
     </div>
     <div id="sidebar-projects">
       <div class="sidebar-section-label">Projects</div>
@@ -1713,6 +1798,7 @@ h3.ce-header { font-size: 15px; }
         <button class="view-btn active" id="vbtn-kanban" onclick="setView('kanban')">Board</button>
         <button class="view-btn" id="vbtn-list" onclick="setView('list')">List</button>
         <button class="view-btn" id="vbtn-time" onclick="setView('time')">Time</button>
+        <button class="view-btn" id="vbtn-today" onclick="setView('today')">Today</button>
       </div>
       <button id="add-task-main" onclick="openTaskModal()">
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg>
@@ -1724,6 +1810,7 @@ h3.ce-header { font-size: 15px; }
     <div id="kanban-view"></div>
     <div id="list-view" style="display:none"></div>
     <div id="time-view" style="display:none"></div>
+    <div id="today-view" style="display:none"></div>
   </div>
 
   <!-- Bottom nav (mobile) -->
@@ -2208,6 +2295,43 @@ function closeDrawer() {
   document.body.style.overflow = '';
 }
 
+// ── Today pins — daily focus list (3 slots, resets each morning) ──
+const TODAY_KEY = 'elastik_today_v1';
+function _todayDateStr() {
+  // Returns 'YYYY-MM-DD' in local time (not UTC) so it flips at midnight locally
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function loadTodayPins() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(TODAY_KEY));
+    if (raw?.date === _todayDateStr()) return raw.pins; // same day — keep
+  } catch (_) {}
+  return [null, null, null]; // new day or first run
+}
+let todayPins = loadTodayPins();
+function saveTodayPins() {
+  localStorage.setItem(TODAY_KEY, JSON.stringify({ date: _todayDateStr(), pins: todayPins }));
+}
+function isPinned(id) { return todayPins.includes(id); }
+function togglePin(id) {
+  if (isPinned(id)) {
+    todayPins = todayPins.map(p => p === id ? null : p);
+  } else {
+    const slot = todayPins.indexOf(null);
+    if (slot === -1) return; // all 3 full — quiet refusal
+    todayPins = todayPins.slice();
+    todayPins[slot] = id;
+  }
+  saveTodayPins();
+  // Sync pin-dot state on all visible cards without full re-render
+  document.querySelectorAll('.task-card[data-id]').forEach(card => {
+    const dot = card.querySelector('.pin-dot');
+    if (dot) dot.classList.toggle('pinned', isPinned(card.dataset.id));
+  });
+  if (currentView === 'today') renderToday();
+}
+
 // ── Column visibility filter ──
 let hiddenStatuses = new Set(JSON.parse(localStorage.getItem('elastik_hidden_statuses') || '[]'));
 function toggleStatusFilter(s) {
@@ -2304,7 +2428,8 @@ function renderSidebar() {
   }
 
   document.getElementById('nav-kanban').className = 'sidebar-item'+(currentView==='kanban'?' active':'');
-  document.getElementById('nav-list').className   = 'sidebar-item'+(currentView==='list'?' active':'');
+  document.getElementById('nav-list').className   = 'sidebar-item'+(currentView==='list'  ?' active':'');
+  document.getElementById('nav-today').className  = 'sidebar-item'+(currentView==='today' ?' active':'');
 }
 
 function toggleLane(id) {
@@ -2720,6 +2845,7 @@ function makeTaskCard(t) {
       ${showBadge ? `<span class="project-badge" style="background:${color};color:${pillTextColor(color)}">${shortName}</span>` : ''}
       <span class="task-meta-spacer"></span>
       ${dueHtml}
+      <button class="pin-dot${isPinned(t.id)?' pinned':''}" title="Pin to Today" onclick="event.stopPropagation();togglePin('${t.id}')"></button>
       <div class="drag-handle" title="Drag to move"><span></span><span></span><span></span></div>
     </div>
     <div class="task-body">
@@ -3052,37 +3178,94 @@ function quickToggle(e, id) {
   save(); renderAll();
 }
 
+// ── Today view ──
+function renderToday() {
+  const el = document.getElementById('today-view');
+  if (!el) return;
+
+  // Evict any pinned task IDs that no longer exist in state
+  let changed = false;
+  todayPins = todayPins.map(id => {
+    if (id && !getTask(id)) { changed = true; return null; }
+    return id;
+  });
+  if (changed) saveTodayPins();
+
+  const day = new Date().toLocaleDateString('en-US', {
+    weekday: 'long', month: 'long', day: 'numeric'
+  });
+  const filledCount = todayPins.filter(Boolean).length;
+
+  const slotsHtml = todayPins.map((id, i) => {
+    const task = id ? getTask(id) : null;
+    if (!task) {
+      return `<li class="today-slot today-slot-empty" aria-label="Empty slot ${i+1}">
+        <span class="today-slot-num">${i+1}</span>
+        <div class="today-slot-inner">
+          <span class="today-task-name">—</span>
+        </div>
+      </li>`;
+    }
+    const proj  = getProject(task.pid);
+    const color = proj ? proj.color : 'var(--text-3)';
+    const name  = (task.name || 'Untitled').replace(/&/g,'&amp;').replace(/</g,'&lt;');
+    return `<li class="today-slot">
+      <span class="today-slot-num">${i+1}</span>
+      <div class="today-slot-inner" onclick="openCard('${task.id}')">
+        <span class="today-proj-dot" style="background:${color}"></span>
+        <span class="today-task-name">${name}</span>
+      </div>
+      <button class="today-unpin" onclick="togglePin('${task.id}')" title="Remove from today">✕</button>
+    </li>`;
+  }).join('');
+
+  const hintHtml = filledCount < 3
+    ? `<p class="today-hint">Pin up to ${3 - filledCount} more task${3-filledCount===1?'':'s'} from the board using the ◉ on each card.</p>`
+    : '';
+
+  el.innerHTML = `
+    <div class="today-eyebrow">Today</div>
+    <h1 class="today-date">${day}</h1>
+    <ol class="today-slots">${slotsHtml}</ol>
+    ${hintHtml}`;
+}
+
 // ── View switching ──
 function setView(v) {
   currentView = v; state.view = v; save();
-  document.getElementById('kanban-view').style.display = v==='kanban' ? 'flex' : 'none';
+  document.getElementById('kanban-view').style.display = v==='kanban' ? 'flex'  : 'none';
   document.getElementById('list-view').style.display   = v==='list'   ? 'block' : 'none';
   document.getElementById('time-view').style.display   = v==='time'   ? 'block' : 'none';
+  document.getElementById('today-view').style.display  = v==='today'  ? 'block' : 'none';
   document.getElementById('col-filter-bar')?.classList.toggle('visible', v==='kanban');
   document.getElementById('vbtn-kanban').className = 'view-btn'+(v==='kanban'?' active':'');
-  document.getElementById('vbtn-list').className   = 'view-btn'+(v==='list'?' active':'');
-  document.getElementById('vbtn-time').className   = 'view-btn'+(v==='time'?' active':'');
+  document.getElementById('vbtn-list').className   = 'view-btn'+(v==='list'  ?' active':'');
+  document.getElementById('vbtn-time').className   = 'view-btn'+(v==='time'  ?' active':'');
+  document.getElementById('vbtn-today').className  = 'view-btn'+(v==='today' ?' active':'');
   document.getElementById('nav-kanban').className  = 'sidebar-item'+(v==='kanban'?' active':'');
-  document.getElementById('nav-list').className    = 'sidebar-item'+(v==='list'?' active':'');
-  document.getElementById('nav-time').className    = 'sidebar-item'+(v==='time'?' active':'');
+  document.getElementById('nav-list').className    = 'sidebar-item'+(v==='list'  ?' active':'');
+  document.getElementById('nav-time').className    = 'sidebar-item'+(v==='time'  ?' active':'');
+  document.getElementById('nav-today').className   = 'sidebar-item'+(v==='today' ?' active':'');
   document.getElementById('bnav-board')?.classList.toggle('active', v==='kanban');
   document.getElementById('bnav-list')?.classList.toggle('active', v==='list');
   document.getElementById('bnav-time')?.classList.toggle('active', v==='time');
-  // Hide the per-project header title and add-task button in time view
+  // Hide per-project title and add-task button in time / today views
   const headerTitle = document.getElementById('header-title');
-  if (headerTitle) headerTitle.style.visibility = v==='time' ? 'hidden' : '';
+  if (headerTitle) headerTitle.style.visibility = (v==='time'||v==='today') ? 'hidden' : '';
   const addBtn = document.getElementById('add-task-main');
-  if (addBtn) addBtn.style.display = v==='time' ? 'none' : '';
+  if (addBtn) addBtn.style.display = (v==='time'||v==='today') ? 'none' : '';
   if (v==='kanban') { renderColFilterBar(); renderKanban(); }
-  else if (v==='list') renderList();
-  else if (v==='time') renderTime();
+  else if (v==='list')  renderList();
+  else if (v==='time')  renderTime();
+  else if (v==='today') renderToday();
 }
 
 function renderAll() {
   renderSidebar();
   if (currentView==='kanban') { renderColFilterBar(); renderKanban(); }
-  else if (currentView==='list') renderList();
-  else if (currentView==='time') renderTime();
+  else if (currentView==='list')  renderList();
+  else if (currentView==='time')  renderTime();
+  else if (currentView==='today') renderToday();
   renderTimerPill();
   // If a card was open during re-render, ensure it stays in the sheet.
   // renderKanban() will have created a fresh duplicate in the kanban — move
