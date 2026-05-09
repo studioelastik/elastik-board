@@ -559,6 +559,15 @@ body {
 .ce-popover {
   max-height: min(70vh, 480px) !important;
 }
+.ce-popover,
+.ce-popover__container {
+  scrollbar-width: none !important;       /* Firefox */
+  -ms-overflow-style: none !important;    /* IE/Edge */
+}
+.ce-popover::-webkit-scrollbar,
+.ce-popover__container::-webkit-scrollbar {
+  display: none !important;               /* Chrome/Safari/WebKit */
+}
 .task-card.expanded:has(.ce-popover) {
   overflow: visible !important;
 }
