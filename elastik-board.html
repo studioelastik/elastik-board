@@ -645,27 +645,77 @@ body.card-open { overflow: hidden; }
   padding-top: 8px;
   border-top: 1px solid var(--border);
   overflow-y: auto;
+  overflow-x: hidden;
 }
 .editor-host {
   width: 100%;
+  min-height: 200px;
+}
+.editor-fallback {
+  width: 100%; min-height: 280px;
+  border: none; outline: none;
+  background: transparent;
+  font-family: inherit; font-size: 14px; line-height: 1.6;
+  color: var(--text); resize: none;
+  padding: 8px 0;
+}
+
+/* Force EditorJS toolbar (+ and settings) to always be visible */
+.ce-toolbar,
+.ce-toolbar__actions,
+.ce-toolbar__plus,
+.ce-toolbar__settings-btn {
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+}
+.ce-toolbar__plus,
+.ce-toolbar__settings-btn {
+  display: flex !important;
+  width: 26px !important;
+  height: 26px !important;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-2);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.ce-toolbar__plus:hover,
+.ce-toolbar__settings-btn:hover {
+  background: var(--surface2);
+  color: var(--text);
 }
 
 /* EditorJS theme — match the whiteish sheet */
 .codex-editor {
   font-family: inherit;
   color: var(--text);
+  /* No padding-left here — the left gutter is created by the toolbar
+     content margin below so the + button stays on-screen */
+  padding-right: 8px !important;
 }
 .codex-editor__redactor {
   padding-bottom: 80px !important;
-  /* Leave room on the left for the +/settings toolbar buttons to render */
-  padding-left: 50px !important;
 }
-/* Make content fill the available width (after the 50px left gutter for toolbar) */
-.ce-block__content,
+/* Block content fills full available width */
+.ce-block__content {
+  max-width: none !important;
+  margin: 0 !important;
+}
+/* Toolbar content needs a left margin so the actions div
+   (.ce-toolbar__actions, right:100%) stays within the slot's
+   visible area (slot clips at x=0 due to overflow-y:auto).
+   With margin-left:56px the + button lands at ~x=4px — safe. */
 .ce-toolbar__content {
   max-width: none !important;
+  margin-left: 56px !important;
   margin-right: 0 !important;
-  margin-left: 0 !important;
+}
+/* Always show the toolbar (+ and settings buttons) instead of only on hover */
+.ce-toolbar {
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
 }
 .ce-paragraph {
   font-size: 14px;
@@ -2333,6 +2383,7 @@ async function mountEditorInto(card, task) {
   const host = slot.querySelector('.editor-host');
   if (typeof EditorJS === 'undefined') {
     console.error('[notes] EditorJS global not loaded — CDN blocked or failed');
+    renderEditorFallback(slot, task);
     return;
   }
   try {
@@ -2344,11 +2395,20 @@ async function mountEditorInto(card, task) {
     });
     await editorInstance.isReady;
     editorLoadedFor = task.id;
-    console.log('[notes] EditorJS ready for task', task.id);
   } catch (e) {
     console.error('[notes] EditorJS init failed:', e);
     editorInstance = null;
+    renderEditorFallback(slot, task);
   }
+}
+
+// If EditorJS fails to load, give the user a plain-text fallback so notes
+// still work. Saved as task.notes; clears any rich noteEJ to avoid mixing.
+function renderEditorFallback(slot, task) {
+  slot.innerHTML = '<textarea class="editor-fallback" placeholder="Notes…"></textarea>';
+  const ta = slot.querySelector('textarea');
+  ta.value = task.notes || '';
+  ta.addEventListener('input', () => { task.notes = ta.value; });
 }
 
 async function destroyEditor() {
