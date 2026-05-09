@@ -2487,6 +2487,10 @@ async function _openCard(id, { pushHistory = true } = {}) {
   });
   const card = document.querySelector(`.task-card[data-id="${CSS.escape(id)}"]`);
   if (!card) return;
+  // Move card to <body> so it escapes any -webkit-overflow-scrolling:touch
+  // ancestor (swimlane-cols) which creates a compositing layer on iOS and
+  // breaks position:fixed children by making them relative to that layer.
+  document.body.appendChild(card);
   card.classList.add('expanded');
   document.body.classList.add('card-open');
   document.getElementById('card-backdrop').classList.add('open');
@@ -2504,7 +2508,8 @@ async function _closeCard({ popHistory = true } = {}) {
   // Save first while DOM is still intact
   await commitOpenCardEdits();
   // Optimistically tear down UI before destroying the editor
-  document.querySelectorAll('.task-card.expanded').forEach(c => c.classList.remove('expanded'));
+  // Remove the body-mounted expanded card; renderAll() will recreate it in the board
+  document.querySelectorAll('.task-card.expanded').forEach(c => c.remove());
   document.body.classList.remove('card-open');
   document.getElementById('card-backdrop').classList.remove('open');
   const wasOpen = openCardId !== null;
