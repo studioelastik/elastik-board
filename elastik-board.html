@@ -372,7 +372,6 @@ body {
   display: flex; gap: 0;
   overflow-x: scroll; overflow-y: hidden;
   padding-bottom: 4px;
-  -webkit-overflow-scrolling: touch;
   overscroll-behavior-x: contain;
 }
 .swimlane-cols::-webkit-scrollbar { height: 4px; }
@@ -575,15 +574,31 @@ body {
   overflow: visible !important;
 }
 
-/* When a task card is expanded, promote it to a centered fullscreen sheet */
-.task-card.expanded {
+/* ── Card sheet — permanent body child, position:fixed from birth ──
+   The card is rendered INSIDE this container so it never needs to escape
+   any overflow/compositing ancestor (iOS -webkit-overflow-scrolling etc.).  */
+#card-sheet {
+  display: none;
   position: fixed;
-  top: 56px; left: 56px; right: 56px;
-  width: auto;
-  height: calc(100vh - 112px);
-  max-height: calc(100vh - 112px);
-  transform: none;
+  top: 56px; left: 56px; right: 56px; bottom: 56px;
   z-index: 230;
+}
+#card-sheet.open { display: block; }
+
+@media (max-width: 700px) {
+  /* Full viewport on mobile — no margins */
+  #card-sheet { top: 0; left: 0; right: 0; bottom: 0; }
+}
+
+/* When a task card is expanded, it fills the card-sheet container.
+   No position:fixed needed — the sheet handles placement. */
+.task-card.expanded {
+  position: relative;          /* stays in normal flow inside card-sheet */
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  max-height: none;
+  transform: none;
   cursor: default;
   padding: 32px 44px 0;
   overflow: hidden;
@@ -591,7 +606,7 @@ body {
   border-radius: 14px;
   background: var(--surface);
   box-shadow: 0 24px 60px rgba(0,0,0,.22), 0 4px 12px rgba(0,0,0,.08);
-  animation: card-fullscreen-in .22s cubic-bezier(.2,.8,.2,1);
+  animation: card-fullscreen-in .22s cubic-bezier(.2,.8,.2,1) both;
 }
 /* Keep the editor whiteish — no grey focus tint inside the fullscreen sheet */
 .task-card.expanded .card-field:focus {
@@ -620,24 +635,12 @@ body {
 /* Body scroll lock when a card is open */
 body.card-open { overflow: hidden; }
 
-/* Mobile: full viewport, no rounded corners */
+/* Mobile: no rounded corners, slightly different animation */
 @media (max-width: 700px) {
   .task-card.expanded {
-    /* Explicitly reset all four edges so the base right:56px is overridden */
-    top: 0; left: 0; right: 0;
-    width: 100%;
-    height: 100vh;         /* fallback */
-    height: 100dvh;        /* iOS Safari: excludes address bar */
-    max-height: none;
-    transform: none;
     border-radius: 0;
     padding: 16px 16px 0;
   }
-  @keyframes card-fullscreen-in {
-    from { opacity: 0; transform: translateY(12px) scale(.99); }
-    to   { opacity: 1; transform: translateY(0) scale(1); }
-  }
-  .task-card.expanded { animation: card-fullscreen-in .22s cubic-bezier(.2,.8,.2,1); }
 }
 
 /* Hide drag handle while editing — it overlaps the button row */
@@ -1633,6 +1636,7 @@ h3.ce-header { font-size: 15px; }
 </head>
 <body>
 <div id="card-backdrop"></div>
+<div id="card-sheet"></div>
 <div id="app">
   <!-- Sidebar -->
   <nav id="sidebar">
@@ -2478,20 +2482,26 @@ function openCard(id, opts) { return queueEditorOp(() => _openCard(id, opts || {
 function closeCard(opts)    { return queueEditorOp(() => _closeCard(opts || {})); }
 
 async function _openCard(id, { pushHistory = true } = {}) {
+  const sheet = document.getElementById('card-sheet');
   if (openCardId && openCardId !== id) {
     await commitOpenCardEdits();
     await destroyEditor();
+    // Flush old card out of the sheet so the kanban can re-claim it on renderAll
+    sheet.innerHTML = '';
+    sheet.classList.remove('open');
   }
   document.querySelectorAll('.task-card.expanded').forEach(c => {
     if (c.dataset.id !== id) c.classList.remove('expanded');
   });
+  // Card may be in the kanban or already in the sheet (re-opening same card)
   const card = document.querySelector(`.task-card[data-id="${CSS.escape(id)}"]`);
   if (!card) return;
-  // Move card to <body> so it escapes any -webkit-overflow-scrolling:touch
-  // ancestor (swimlane-cols) which creates a compositing layer on iOS and
-  // breaks position:fixed children by making them relative to that layer.
-  document.body.appendChild(card);
+  // Move card into #card-sheet — a permanent body child with position:fixed
+  // set from page-load. This avoids any overflow/compositing ancestor issues
+  // (e.g. -webkit-overflow-scrolling:touch on .swimlane-cols on iOS).
+  sheet.appendChild(card);
   card.classList.add('expanded');
+  sheet.classList.add('open');
   document.body.classList.add('card-open');
   document.getElementById('card-backdrop').classList.add('open');
   openCardId = id;
@@ -2507,9 +2517,11 @@ async function _closeCard({ popHistory = true } = {}) {
   if (!openCardId) return;
   // Save first while DOM is still intact
   await commitOpenCardEdits();
-  // Optimistically tear down UI before destroying the editor
-  // Remove the body-mounted expanded card; renderAll() will recreate it in the board
-  document.querySelectorAll('.task-card.expanded').forEach(c => c.remove());
+  // Hide the card sheet and remove the card it contains;
+  // renderAll() will recreate the card in the kanban board.
+  const sheet = document.getElementById('card-sheet');
+  sheet.classList.remove('open');
+  sheet.innerHTML = '';
   document.body.classList.remove('card-open');
   document.getElementById('card-backdrop').classList.remove('open');
   const wasOpen = openCardId !== null;
@@ -3072,13 +3084,22 @@ function renderAll() {
   else if (currentView==='list') renderList();
   else if (currentView==='time') renderTime();
   renderTimerPill();
-  // If a card was open during re-render, re-apply expanded class and remount
-  // the editor (queued so it doesn't race with any in-flight save/destroy)
+  // If a card was open during re-render, ensure it stays in the sheet.
+  // renderKanban() will have created a fresh duplicate in the kanban — move
+  // the right one into the sheet (by ID), remove the kanban duplicate.
   if (openCardId) {
-    const card = document.querySelector(`.task-card[data-id="${CSS.escape(openCardId)}"]`);
+    const sheet = document.getElementById('card-sheet');
+    // Remove any kanban duplicates of the open card
+    document.querySelectorAll(
+      `#app .task-card[data-id="${CSS.escape(openCardId)}"]`
+    ).forEach(c => c.remove());
+    // The card should already be in the sheet; if missing (e.g. first load),
+    // try to find it and re-open properly.
+    const card = sheet.querySelector(`.task-card[data-id="${CSS.escape(openCardId)}"]`);
     const task = getTask(openCardId);
     if (card && task) {
       card.classList.add('expanded');
+      sheet.classList.add('open');
       queueEditorOp(() => mountEditorInto(card, task));
     } else {
       closeCard({popHistory: false});
