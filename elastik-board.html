@@ -2865,7 +2865,11 @@ function endTouchDrag() {
   const list = dragPlaceholder ? dragPlaceholder.closest('.task-list') : null;
   if (list && draggedId) {
     const task = getTask(draggedId);
-    if (task) { task.status = list.dataset.status; save(); }
+    if (task) {
+      task.status = list.dataset.status;
+      applyDropOrder(list, draggedId);
+      save();
+    }
   }
   if (dragPlaceholder) { dragPlaceholder.remove(); dragPlaceholder = null; }
   document.querySelectorAll('.task-list').forEach(l => l.classList.remove('drag-over'));
@@ -2899,8 +2903,37 @@ function setupDropZone(list) {
     const task = getTask(draggedId);
     if (!task) return;
     task.status = list.dataset.status;
+    applyDropOrder(list, draggedId);
+    if (dragPlaceholder) { dragPlaceholder.remove(); dragPlaceholder = null; }
+    draggedId = null;
     save(); renderAll();
   });
+}
+
+// Re-order state.tasks so the dragged card ends up where the placeholder is.
+// Reads the current DOM children of `list`, finds the placeholder, and does
+// an in-place substitution so the relative order of all other tasks is kept.
+function applyDropOrder(list, draggedTaskId) {
+  const children = [...list.children];
+  const phIdx = children.findIndex(c => c.classList.contains('drag-placeholder'));
+
+  const before = children
+    .slice(0, phIdx === -1 ? children.length : phIdx)
+    .filter(c => c.dataset.id && c.dataset.id !== draggedTaskId)
+    .map(c => c.dataset.id);
+  const after = children
+    .slice(phIdx === -1 ? children.length : phIdx + 1)
+    .filter(c => c.dataset.id && c.dataset.id !== draggedTaskId)
+    .map(c => c.dataset.id);
+
+  const newOrder = [...before, draggedTaskId, ...after];
+  const orderMap = Object.fromEntries(newOrder.map((id, i) => [id, i]));
+
+  // Sort the affected tasks and substitute them back into state.tasks in-place
+  const colTasks = state.tasks.filter(t => orderMap[t.id] !== undefined);
+  colTasks.sort((a, b) => orderMap[a.id] - orderMap[b.id]);
+  let ci = 0;
+  state.tasks = state.tasks.map(t => orderMap[t.id] !== undefined ? colTasks[ci++] : t);
 }
 
 function getDragAfterElement(container, y) {
