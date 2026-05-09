@@ -563,7 +563,7 @@ body {
   z-index: 230;
   cursor: default;
   padding: 32px 44px 0;
-  overflow: visible;
+  overflow: hidden;
   display: flex; flex-direction: column;
   border-radius: 14px;
   background: var(--surface);
@@ -734,6 +734,18 @@ h1.ce-header { font-size: 22px; line-height: 1.3; }
 h2.ce-header { font-size: 18px; line-height: 1.35; }
 h3.ce-header { font-size: 15px; }
 .cdx-block { padding: 4px 0; }
+
+/* Popovers + inline toolbar must use position:fixed so they escape the
+   editor-slot's overflow-y:auto clip. Works because body.card-open sets
+   overflow:hidden → pageYOffset is always 0, so EditorJS's
+   getBoundingClientRect coordinates equal viewport coordinates. */
+.ce-popover,
+.ce-popover__container,
+.ce-inline-toolbar,
+.ce-conversion-toolbar {
+  position: fixed !important;
+  z-index: 9999 !important;
+}
 
 /* Inline toolbar (popup on selection) */
 .ce-inline-toolbar,
