@@ -1789,6 +1789,98 @@ h3.ce-header { font-size: 15px; }
   outline: 2.5px dashed var(--accent);
   outline-offset: -3px;
 }
+
+/* ── Video thumbnails in gallery ── */
+.attach-block.is-video { max-width: 220px; }
+.attach-block.is-video video {
+  display: block; max-width: 220px; max-height: 160px; object-fit: cover; pointer-events: none;
+}
+.attach-play-overlay {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,.18);
+}
+
+/* ── Lightbox ── */
+#attach-lightbox {
+  display: none; position: fixed; inset: 0; z-index: 500;
+  flex-direction: column; align-items: center; justify-content: center;
+  padding: 16px;
+}
+#attach-lightbox.open { display: flex; }
+#attach-lb-backdrop {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,.88);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+#attach-lb-close {
+  position: absolute; top: 16px; right: 16px; z-index: 2;
+  width: 36px; height: 36px; padding: 0;
+  background: rgba(255,255,255,.14); border: none; border-radius: 50%;
+  color: #fff; font-size: 18px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .15s;
+}
+#attach-lb-close:hover { background: rgba(255,255,255,.28); }
+#attach-lb-prev, #attach-lb-next {
+  position: absolute; top: 50%; transform: translateY(-50%); z-index: 2;
+  width: 44px; height: 44px; padding: 0;
+  background: rgba(255,255,255,.14); border: none; border-radius: 50%;
+  color: #fff; font-size: 26px; line-height: 1; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .15s;
+}
+#attach-lb-prev:hover, #attach-lb-next:hover { background: rgba(255,255,255,.28); }
+#attach-lb-prev { left: 16px; }
+#attach-lb-next { right: 16px; }
+#attach-lb-content {
+  position: relative; z-index: 1;
+  display: flex; align-items: center; justify-content: center;
+  width: 100%; max-width: 1100px;
+  flex: 1; min-height: 0;
+}
+#attach-lb-content img {
+  max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 6px;
+}
+#attach-lb-content video {
+  max-width: 100%; max-height: 100%; border-radius: 6px;
+}
+#attach-lb-content iframe {
+  width: 100%; height: 100%; border: none; border-radius: 6px; background: #fff;
+}
+.lb-loading { color: rgba(255,255,255,.5); font-size: 14px; }
+.lb-file-card {
+  text-align: center; color: #fff;
+}
+.lb-file-icon { font-size: 72px; margin-bottom: 16px; }
+.lb-file-name { font-size: 16px; font-weight: 500; margin-bottom: 6px; word-break: break-all; }
+.lb-file-size { font-size: 13px; opacity: .55; margin-bottom: 24px; }
+.lb-save-btn {
+  display: inline-block; padding: 10px 28px;
+  background: #fff; color: #111; border-radius: 8px;
+  font-size: 13px; font-weight: 500; text-decoration: none;
+  transition: opacity .15s;
+}
+.lb-save-btn:hover { opacity: .82; }
+.lb-missing { color: rgba(255,255,255,.45); font-size: 14px; text-align: center; }
+#attach-lb-footer {
+  position: relative; z-index: 1;
+  display: flex; align-items: center; gap: 14px;
+  width: 100%; max-width: 1100px;
+  padding: 12px 0 0;
+}
+#attach-lb-caption {
+  flex: 1; color: rgba(255,255,255,.65); font-size: 13px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+#attach-lb-counter { color: rgba(255,255,255,.4); font-size: 12px; white-space: nowrap; }
+#attach-lb-dl {
+  color: rgba(255,255,255,.7); font-size: 12px; text-decoration: none;
+  background: rgba(255,255,255,.1); padding: 6px 14px; border-radius: 6px;
+  white-space: nowrap; transition: background .15s;
+}
+#attach-lb-dl:hover { background: rgba(255,255,255,.2); color: #fff; }
 </style>
 <!-- EditorJS core + block tools (rich-text notes editor) -->
 <script src="https://cdn.jsdelivr.net/npm/@editorjs/editorjs@2.30.6"></script>
@@ -1804,6 +1896,18 @@ h3.ce-header { font-size: 15px; }
 <body>
 <div id="card-backdrop"></div>
 <div id="card-sheet"></div>
+<div id="attach-lightbox">
+  <div id="attach-lb-backdrop" onclick="closeLightbox()"></div>
+  <button id="attach-lb-close" onclick="closeLightbox()">✕</button>
+  <button id="attach-lb-prev" onclick="lbNav(-1)">‹</button>
+  <button id="attach-lb-next" onclick="lbNav(1)">›</button>
+  <div id="attach-lb-content"></div>
+  <div id="attach-lb-footer">
+    <span id="attach-lb-caption"></span>
+    <span id="attach-lb-counter"></span>
+    <a id="attach-lb-dl" download="">⬇ Save</a>
+  </div>
+</div>
 <div id="app">
   <!-- Sidebar -->
   <nav id="sidebar">
@@ -2788,6 +2892,12 @@ async function _closeCard({ popHistory = true } = {}) {
 
 // Global listeners (registered once)
 document.addEventListener('keydown', e => {
+  if (document.getElementById('attach-lightbox')?.classList.contains('open')) {
+    if (e.key === 'Escape')      { e.preventDefault(); closeLightbox(); return; }
+    if (e.key === 'ArrowLeft')   { lbNav(-1); return; }
+    if (e.key === 'ArrowRight')  { lbNav(1);  return; }
+    return;
+  }
   if (e.key === 'Escape' && openCardId) {
     e.preventDefault();
     closeCard();
@@ -4636,7 +4746,81 @@ async function deleteAttachFile(id) {
 function _attachIcon(name) {
   const e = (name.split('.').pop() || '').toLowerCase();
   return {pdf:'📄',doc:'📝',docx:'📝',xls:'📊',xlsx:'📊',ppt:'📑',pptx:'📑',
-          zip:'🗜',rar:'🗜',mp4:'🎬',mov:'🎬',mp3:'🎵',wav:'🎵',ai:'🎨',psd:'🎨',fig:'🎨'}[e] || '📎';
+          zip:'🗜',rar:'🗜',mp4:'🎬',mov:'🎬',webm:'🎬',m4v:'🎬',mp3:'🎵',
+          wav:'🎵',aac:'🎵',ai:'🎨',psd:'🎨',fig:'🎨',sketch:'🎨'}[e] || '📎';
+}
+const _isImg = n => /\.(jpe?g|png|gif|webp|svg|heic|heif|bmp)$/i.test(n);
+const _isVid = n => /\.(mp4|mov|webm|m4v|ogg|ogv)$/i.test(n);
+const _isPdf = n => /\.pdf$/i.test(n);
+
+// ── LIGHTBOX ──────────────────────────────────────────────────────────────────
+let _lbTask = null, _lbIdx = 0;
+const _lbUrls = {};
+
+async function openLightbox(task, idx) {
+  _lbTask = task; _lbIdx = idx;
+  await _renderLightbox();
+  document.getElementById('attach-lightbox').classList.add('open');
+}
+function closeLightbox() {
+  document.getElementById('attach-lightbox').classList.remove('open');
+  const vid = document.querySelector('#attach-lb-content video');
+  if (vid) { vid.pause(); vid.src = ''; }
+}
+async function lbNav(dir) {
+  const n = (_lbTask?.attachments || []).length;
+  const next = _lbIdx + dir;
+  if (next < 0 || next >= n) return;
+  const vid = document.querySelector('#attach-lb-content video');
+  if (vid) { vid.pause(); vid.src = ''; }
+  _lbIdx = next;
+  await _renderLightbox();
+}
+async function _renderLightbox() {
+  const atts = _lbTask?.attachments || [];
+  const att  = atts[_lbIdx];
+  if (!att) return;
+
+  const content = document.getElementById('attach-lb-content');
+  content.innerHTML = '<div class="lb-loading">Loading…</div>';
+
+  if (!_lbUrls[att.id]) {
+    const f = await readAttachFile(att.id);
+    if (f) _lbUrls[att.id] = URL.createObjectURL(f);
+  }
+  const url = _lbUrls[att.id] || null;
+  content.innerHTML = '';
+
+  if (_isImg(att.name) && url) {
+    const img = document.createElement('img');
+    img.src = url;
+    content.appendChild(img);
+  } else if (_isVid(att.name) && url) {
+    const vid = document.createElement('video');
+    vid.src = url; vid.controls = true; vid.autoplay = true;
+    content.appendChild(vid);
+  } else if (_isPdf(att.name) && url) {
+    const fr = document.createElement('iframe');
+    fr.src = url;
+    content.appendChild(fr);
+  } else if (url) {
+    content.innerHTML = `<div class="lb-file-card">
+      <div class="lb-file-icon">${_attachIcon(att.name)}</div>
+      <div class="lb-file-name">${att.name}</div>
+      <div class="lb-file-size">${_fmtSize(att.size)}</div>
+      <a href="${url}" download="${att.name}" class="lb-save-btn">⬇ Save file</a>
+    </div>`;
+  } else {
+    content.innerHTML = '<div class="lb-missing">File not found in this browser\'s storage.</div>';
+  }
+
+  document.getElementById('attach-lb-caption').textContent = att.name;
+  document.getElementById('attach-lb-counter').textContent = atts.length > 1 ? `${_lbIdx + 1} / ${atts.length}` : '';
+  const dl = document.getElementById('attach-lb-dl');
+  if (url) { dl.href = url; dl.download = att.name; dl.style.display = ''; }
+  else dl.style.display = 'none';
+  document.getElementById('attach-lb-prev').style.visibility = _lbIdx > 0 ? '' : 'hidden';
+  document.getElementById('attach-lb-next').style.visibility = _lbIdx < atts.length - 1 ? '' : 'hidden';
 }
 function _fmtSize(b) {
   if (!b) return '';
@@ -4648,19 +4832,59 @@ function _fmtSize(b) {
 async function renderAttachGallery(task, galleryEl) {
   const atts = task.attachments || [];
   galleryEl.innerHTML = '';
-  for (const att of atts) {
-    const isImg = /\.(jpe?g|png|gif|webp|svg|heic|heif|bmp)$/i.test(att.name);
+  for (let i = 0; i < atts.length; i++) {
+    const att = atts[i];
     const block = document.createElement('div');
     block.className = 'attach-block';
+    block.addEventListener('click', () => openLightbox(task, i));
 
     const file = await readAttachFile(att.id);
-    const url = file ? URL.createObjectURL(file) : null;
+    const url  = file ? URL.createObjectURL(file) : null;
 
-    // Delete button
+    if (_isImg(att.name)) {
+      block.classList.add('is-image');
+      const img = document.createElement('img');
+      img.alt = att.name;
+      if (url) img.src = url;
+      else img.style.cssText = 'width:120px;height:80px;object-fit:cover;opacity:.35';
+      block.appendChild(img);
+
+    } else if (_isVid(att.name)) {
+      block.classList.add('is-video');
+      if (url) {
+        const vid = document.createElement('video');
+        vid.src = url; vid.muted = true; vid.preload = 'metadata';
+        block.appendChild(vid);
+      }
+      const play = document.createElement('div');
+      play.className = 'attach-play-overlay';
+      play.innerHTML = `<svg width="40" height="40" viewBox="0 0 40 40"><circle cx="20" cy="20" r="20" fill="rgba(255,255,255,.82)"/><polygon points="16,12 30,20 16,28" fill="#222"/></svg>`;
+      block.appendChild(play);
+
+    } else {
+      block.classList.add('is-file');
+      const icon = document.createElement('span');
+      icon.className = 'attach-file-icon';
+      icon.textContent = _attachIcon(att.name);
+      const info = document.createElement('div');
+      info.className = 'attach-file-info';
+      const nameEl = document.createElement('div');
+      nameEl.className = 'attach-file-name'; nameEl.title = att.name; nameEl.textContent = att.name;
+      const sizeEl = document.createElement('div');
+      sizeEl.className = 'attach-file-size'; sizeEl.textContent = _fmtSize(att.size);
+      info.append(nameEl, sizeEl);
+      block.append(icon, info);
+    }
+
+    if (url) {
+      const dl = document.createElement('a');
+      dl.className = 'attach-dl'; dl.href = url; dl.download = att.name; dl.title = 'Save to disk'; dl.textContent = '⬇';
+      dl.addEventListener('click', e => e.stopPropagation());
+      block.appendChild(dl);
+    }
+
     const del = document.createElement('button');
-    del.className = 'attach-del';
-    del.textContent = '✕';
-    del.title = 'Remove';
+    del.className = 'attach-del'; del.textContent = '✕'; del.title = 'Remove';
     del.addEventListener('click', async e => {
       e.stopPropagation();
       if (!confirm(`Remove "${att.name}"?`)) return;
@@ -4671,45 +4895,6 @@ async function renderAttachGallery(task, galleryEl) {
       document.querySelectorAll(`.task-card[data-id="${CSS.escape(task.id)}"] .attach-count`)
         .forEach(el => { const n = task.attachments.length; el.textContent = n ? '📎 '+n : ''; el.style.display = n ? '' : 'none'; });
     });
-
-    if (isImg) {
-      block.classList.add('is-image');
-      const img = document.createElement('img');
-      img.alt = att.name;
-      if (url) { img.src = url; block.addEventListener('click', () => window.open(url, '_blank')); }
-      else { img.style.cssText = 'width:120px;height:80px;object-fit:cover;opacity:.35'; }
-      block.appendChild(img);
-    } else {
-      block.classList.add('is-file');
-      const icon = document.createElement('span');
-      icon.className = 'attach-file-icon';
-      icon.textContent = _attachIcon(att.name);
-      const info = document.createElement('div');
-      info.className = 'attach-file-info';
-      const nameEl = document.createElement('div');
-      nameEl.className = 'attach-file-name';
-      nameEl.title = att.name;
-      nameEl.textContent = att.name;
-      const sizeEl = document.createElement('div');
-      sizeEl.className = 'attach-file-size';
-      sizeEl.textContent = _fmtSize(att.size);
-      info.append(nameEl, sizeEl);
-      block.append(icon, info);
-      if (url) block.addEventListener('click', () => window.open(url, '_blank'));
-    }
-
-    // Download button — saves the file to wherever the user chooses (e.g. iCloud Drive)
-    if (url) {
-      const dl = document.createElement('a');
-      dl.className = 'attach-dl';
-      dl.href = url;
-      dl.download = att.name;
-      dl.title = 'Save to disk';
-      dl.textContent = '⬇';
-      dl.addEventListener('click', e => e.stopPropagation());
-      block.appendChild(dl);
-    }
-
     block.appendChild(del);
     galleryEl.appendChild(block);
   }
