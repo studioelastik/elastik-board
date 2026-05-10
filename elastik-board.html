@@ -600,6 +600,7 @@ body {
   max-height: none;
   transform: none;
   cursor: default;
+  user-select: text;           /* task-card sets none; re-enable for editing */
   padding: 32px 44px 0;
   overflow: hidden;
   display: flex; flex-direction: column;
@@ -2632,6 +2633,7 @@ async function _openCard(id, { pushHistory = true } = {}) {
   // set from page-load. This avoids any overflow/compositing ancestor issues
   // (e.g. -webkit-overflow-scrolling:touch on .swimlane-cols on iOS).
   sheet.appendChild(card);
+  card.draggable = false;      // prevent drag hijacking text selection in editor
   card.classList.add('expanded');
   sheet.classList.add('open');
   document.body.classList.add('card-open');
@@ -2878,6 +2880,8 @@ function makeTaskCard(t) {
   let didDrag = false;
   let longPressed = false;
   card.addEventListener('dragstart', e => {
+    // Never drag while the card is the open fullscreen editor
+    if (card.classList.contains('expanded')) { e.preventDefault(); return; }
     didDrag = true;
     draggedId = t.id;
     setTimeout(()=>card.classList.add('dragging'), 0);
