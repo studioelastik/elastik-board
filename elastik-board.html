@@ -3567,11 +3567,25 @@ document.getElementById('sync-modal').addEventListener('click', e => { if(e.targ
 // ── Firebase Sync ──
 const FIREBASE_DEFAULT_URL    = 'https://board-2cb94-default-rtdb.europe-west1.firebasedatabase.app';
 const FIREBASE_DEFAULT_APIKEY = 'AIzaSyDWJ2vWggtQiHIWkmAsATue4HLIyE1QM58';
+
+// Decode a Firebase JWT without a secret (payload is just base64url JSON)
+function _uidFromJWT(token) {
+  try {
+    const b64 = token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');
+    const p = JSON.parse(atob(b64));
+    return p.user_id || p.sub || '';
+  } catch { return ''; }
+}
 let firebaseURL    = localStorage.getItem('elastik_firebase_url')    || FIREBASE_DEFAULT_URL;
 let firebaseAPIKey = localStorage.getItem('elastik_firebase_apikey') || FIREBASE_DEFAULT_APIKEY;
 let firebaseToken = localStorage.getItem('elastik_firebase_token') || '';
 let firebaseRefreshToken = localStorage.getItem('elastik_firebase_refresh') || '';
 let firebaseUID = localStorage.getItem('elastik_firebase_uid') || '';
+// Backfill UID from existing token for sessions that pre-date explicit UID storage
+if (!firebaseUID && firebaseToken) {
+  firebaseUID = _uidFromJWT(firebaseToken);
+  if (firebaseUID) localStorage.setItem('elastik_firebase_uid', firebaseUID);
+}
 let syncTimer = null;
 let isSendingToFirebase = false;
 let firebaseStream = null;
@@ -3751,7 +3765,7 @@ function openSyncModal() {
     // Populate secure rules block with the user's specific UID
     const rulesEl = document.getElementById('sync-rules-json');
     if (rulesEl) {
-      const uid = firebaseUID || '(sign out and back in to get your UID)';
+      const uid = firebaseUID || _uidFromJWT(firebaseToken) || '(sign out and back in to get your UID)';
       rulesEl.textContent = JSON.stringify({
         rules: { elastik: { '.read': `auth.uid === "${uid}"`, '.write': `auth.uid === "${uid}"` } }
       }, null, 2);
