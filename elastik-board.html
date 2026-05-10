@@ -1791,6 +1791,8 @@ h3.ce-header { font-size: 15px; }
 }
 
 /* ── Attachment reorder drag ── */
+.attach-block { cursor: grab; }
+.attach-block:active { cursor: grabbing; }
 .attach-block.att-dragging   { opacity: .35; }
 .attach-block.att-drop-before { box-shadow: -3px 0 0 var(--accent), 0 3px 12px rgba(0,0,0,.12); }
 .attach-block.att-drop-after  { box-shadow:  3px 0 0 var(--accent), 0 3px 12px rgba(0,0,0,.12); }
@@ -4854,6 +4856,7 @@ async function renderAttachGallery(task, galleryEl) {
       block.classList.add('is-image');
       const img = document.createElement('img');
       img.alt = att.name;
+      img.draggable = false; // prevent browser native image-drag from hijacking
       if (url) img.src = url;
       else img.style.cssText = 'width:120px;height:80px;object-fit:cover;opacity:.35';
       block.appendChild(img);
@@ -4863,6 +4866,7 @@ async function renderAttachGallery(task, galleryEl) {
       if (url) {
         const vid = document.createElement('video');
         vid.src = url; vid.muted = true; vid.preload = 'metadata';
+        vid.draggable = false; // prevent native video drag
         block.appendChild(vid);
       }
       const play = document.createElement('div');
@@ -4909,8 +4913,7 @@ async function renderAttachGallery(task, galleryEl) {
 
     // ── Reorder drag ──
     block.addEventListener('dragstart', e => {
-      if (e.dataTransfer.types?.includes('Files')) return;
-      e.stopPropagation(); // don't bubble to card's own dragstart handler
+      e.stopPropagation(); // must be first — prevents card's own expanded guard from cancelling
       _attDragSrc = i;
       e.dataTransfer.effectAllowed = 'move';
       e.dataTransfer.setData('text/plain', String(i));
