@@ -702,18 +702,12 @@ body.card-open { overflow: hidden; }
 .ce-toolbar__plus,
 .ce-toolbar__settings-btn {
   display: flex !important;
-  width: 26px !important;
-  height: 26px !important;
+  width: 24px !important;
+  height: 24px !important;
   align-items: center;
   justify-content: center;
-  color: var(--text-2);
-  border-radius: 6px;
+  border-radius: 5px;
   cursor: pointer;
-}
-.ce-toolbar__plus:hover,
-.ce-toolbar__settings-btn:hover {
-  background: var(--surface2);
-  color: var(--text);
 }
 
 /* EditorJS theme — match the whiteish sheet */
@@ -775,25 +769,30 @@ h2.ce-header { font-size: 18px; line-height: 1.35; }
 h3.ce-header { font-size: 15px; }
 .cdx-block { padding: 4px 0; }
 
-/* Inline toolbar (popup on selection) */
+/* Inline toolbar popup + popover — themed card with border + shadow */
 .ce-inline-toolbar,
 .ce-conversion-toolbar,
-.ce-toolbar__plus,
-.ce-toolbar__settings-btn,
 .ce-popover {
   background: var(--surface) !important;
   border: 1px solid var(--border) !important;
   color: var(--text) !important;
   box-shadow: 0 4px 16px rgba(0,0,0,.08) !important;
 }
-.ce-inline-tool,
+/* Gutter buttons (+ and ⠿) — ghost, no border or shadow */
 .ce-toolbar__plus,
 .ce-toolbar__settings-btn {
-  color: var(--text-2) !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: var(--text-3) !important;
 }
-.ce-inline-tool:hover,
 .ce-toolbar__plus:hover,
-.ce-toolbar__settings-btn:hover,
+.ce-toolbar__settings-btn:hover {
+  background: var(--surface2) !important;
+  color: var(--text) !important;
+}
+.ce-inline-tool { color: var(--text-2) !important; }
+.ce-inline-tool:hover,
 .ce-popover-item:hover,
 .ce-popover-item--active {
   background: var(--surface2) !important;
