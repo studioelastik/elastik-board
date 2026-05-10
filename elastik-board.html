@@ -1740,6 +1740,51 @@ h3.ce-header { font-size: 15px; }
   .time-total-card { min-width: 90px; padding: 8px 12px; }
   .time-total-value { font-size: 17px; }
 }
+
+/* ── File Attachments ── */
+.attachment-gallery {
+  display: flex; flex-wrap: wrap; gap: 10px;
+  padding: 14px 0 8px;
+}
+.attachment-gallery:empty { display: none; }
+.attach-block {
+  position: relative; border-radius: 8px; overflow: hidden;
+  border: 1px solid var(--border); cursor: pointer;
+  transition: box-shadow .15s; background: var(--surface2); flex-shrink: 0;
+}
+.attach-block:hover { box-shadow: 0 3px 12px rgba(0,0,0,.12); }
+.attach-block.is-image img {
+  display: block; max-width: 220px; max-height: 160px;
+  object-fit: cover;
+}
+.attach-block.is-file {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; min-width: 160px; max-width: 260px;
+}
+.attach-file-icon { font-size: 26px; line-height: 1; flex-shrink: 0; }
+.attach-file-info { min-width: 0; }
+.attach-file-name {
+  font-size: 12.5px; font-weight: 500; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.attach-file-size { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+.attach-del {
+  position: absolute; top: 4px; right: 4px;
+  width: 20px; height: 20px; padding: 0;
+  background: rgba(0,0,0,.55); color: #fff;
+  border: none; border-radius: 50%;
+  font-size: 10px; line-height: 20px; text-align: center;
+  display: none; align-items: center; justify-content: center; cursor: pointer;
+}
+.attach-block:hover .attach-del { display: flex; }
+.attach-count {
+  font-size: 10.5px; color: var(--text-3);
+  display: inline-flex; align-items: center; gap: 2px;
+}
+.task-card.expanded.file-drag-over {
+  outline: 2.5px dashed var(--accent);
+  outline-offset: -3px;
+}
 </style>
 <!-- EditorJS core + block tools (rich-text notes editor) -->
 <script src="https://cdn.jsdelivr.net/npm/@editorjs/editorjs@2.30.6"></script>
@@ -2690,6 +2735,31 @@ async function _openCard(id, { pushHistory = true } = {}) {
   }
   const task = getTask(id);
   if (task) await mountEditorInto(card, task);
+
+  // Attachment gallery — rendered above the editor in the expanded card
+  if (task) {
+    const taskBody = card.querySelector('.task-body');
+    const editorSlot = card.querySelector('.editor-slot');
+    let gallery = card.querySelector('.attachment-gallery');
+    if (!gallery) {
+      gallery = document.createElement('div');
+      gallery.className = 'attachment-gallery';
+      taskBody.insertBefore(gallery, editorSlot);
+    }
+    renderAttachGallery(task, gallery);
+
+    // File drag-drop — only triggers on actual files, not task reorder drags
+    card.addEventListener('dragover', e => {
+      if (e.dataTransfer.types.includes('Files')) {
+        e.preventDefault();
+        card.classList.add('file-drag-over');
+      }
+    });
+    card.addEventListener('dragleave', e => {
+      if (!card.contains(e.relatedTarget)) card.classList.remove('file-drag-over');
+    });
+    card.addEventListener('drop', e => handleCardFileDrop(e, task.id));
+  }
 }
 
 async function _closeCard({ popHistory = true } = {}) {
@@ -2898,6 +2968,7 @@ function makeTaskCard(t) {
     <div class="task-meta">
       ${showBadge ? `<span class="project-badge" style="background:${color};color:${pillTextColor(color)}">${shortName}</span>` : ''}
       <span class="task-meta-spacer"></span>
+      ${t.attachments?.length ? `<span class="attach-count">📎 ${t.attachments.length}</span>` : ''}
       ${dueHtml}
       <button class="pin-dot${isPinned(t.id)?' pinned':''}" title="Pin to Today" onclick="event.stopPropagation();togglePin('${t.id}')"></button>
       <div class="drag-handle" title="Drag to move"><span></span><span></span><span></span></div>
@@ -4512,6 +4583,175 @@ function exportVisibleEntriesToICS() {
   const {from, to} = getTimeRangeBounds(timeRangeMode);
   const visible = (state.timeEntries || []).filter(e => e.startedAt < to && e.startedAt >= from);
   exportEntriesToICS(visible);
+}
+
+// ── FILE ATTACHMENTS ─────────────────────────────────────────────────────────
+// Files are written to a user-chosen folder (e.g. iCloud Drive) via the
+// File System Access API. The directory handle is persisted in IndexedDB so
+// permission only needs to be granted once per browser session.
+
+let _attachDir = null;
+
+async function _openAttachDB() {
+  return new Promise((res, rej) => {
+    const req = indexedDB.open('elastik-attach-v1', 1);
+    req.onupgradeneeded = e => e.target.result.createObjectStore('h');
+    req.onsuccess = e => res(e.target.result);
+    req.onerror = () => rej(req.error);
+  });
+}
+async function _saveDirHandle(h) {
+  try { const db = await _openAttachDB(); db.transaction('h','readwrite').objectStore('h').put(h,'dir'); } catch {}
+}
+async function _loadDirHandle() {
+  try {
+    const db = await _openAttachDB();
+    return new Promise(res => {
+      const req = db.transaction('h','readonly').objectStore('h').get('dir');
+      req.onsuccess = () => res(req.result || null);
+      req.onerror = () => res(null);
+    });
+  } catch { return null; }
+}
+
+async function getAttachDir() {
+  if (_attachDir) {
+    const p = await _attachDir.queryPermission({mode:'readwrite'});
+    if (p === 'granted') return _attachDir;
+  }
+  const stored = await _loadDirHandle();
+  if (stored) {
+    const p = await stored.requestPermission({mode:'readwrite'});
+    if (p === 'granted') { _attachDir = stored; return stored; }
+  }
+  if (!window.showDirectoryPicker) {
+    alert('File attachments require Chrome, Edge, or Brave. Safari does not yet support folder access.');
+    return null;
+  }
+  try {
+    const h = await window.showDirectoryPicker({id:'elastik-attach', mode:'readwrite', startIn:'desktop'});
+    await _saveDirHandle(h);
+    _attachDir = h;
+    return h;
+  } catch { return null; }
+}
+
+async function saveAttachFile(file) {
+  const dir = await getAttachDir();
+  if (!dir) return null;
+  const safe = file.name.replace(/[^a-zA-Z0-9._\-]/g,'_');
+  const filename = `${Date.now()}_${safe}`;
+  const fh = await dir.getFileHandle(filename, {create:true});
+  const w = await fh.createWritable();
+  await w.write(file);
+  await w.close();
+  return filename;
+}
+async function readAttachFile(filename) {
+  const dir = await getAttachDir();
+  if (!dir) return null;
+  try { return await (await dir.getFileHandle(filename)).getFile(); } catch { return null; }
+}
+async function deleteAttachFile(filename) {
+  const dir = await getAttachDir();
+  if (!dir) return;
+  try { await dir.removeEntry(filename); } catch {}
+}
+
+function _attachIcon(name) {
+  const e = (name.split('.').pop() || '').toLowerCase();
+  return {pdf:'📄',doc:'📝',docx:'📝',xls:'📊',xlsx:'📊',ppt:'📑',pptx:'📑',
+          zip:'🗜',rar:'🗜',mp4:'🎬',mov:'🎬',mp3:'🎵',wav:'🎵',ai:'🎨',psd:'🎨',fig:'🎨'}[e] || '📎';
+}
+function _fmtSize(b) {
+  if (!b) return '';
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+  return (b/1048576).toFixed(1) + ' MB';
+}
+
+async function renderAttachGallery(task, galleryEl) {
+  const atts = task.attachments || [];
+  galleryEl.innerHTML = '';
+  for (const att of atts) {
+    const isImg = /\.(jpe?g|png|gif|webp|svg|heic|heif|bmp)$/i.test(att.name);
+    const block = document.createElement('div');
+    block.className = 'attach-block';
+
+    const del = document.createElement('button');
+    del.className = 'attach-del';
+    del.textContent = '✕';
+    del.title = 'Remove';
+    del.addEventListener('click', async e => {
+      e.stopPropagation();
+      if (!confirm(`Remove "${att.name}"?`)) return;
+      await deleteAttachFile(att.filename);
+      task.attachments = task.attachments.filter(a => a.id !== att.id);
+      save();
+      renderAttachGallery(task, galleryEl);
+      // refresh count badge on the kanban card (if still visible)
+      document.querySelectorAll(`.task-card[data-id="${CSS.escape(task.id)}"] .attach-count`)
+        .forEach(el => { const n = task.attachments.length; el.textContent = n ? '📎 '+n : ''; el.style.display = n ? '' : 'none'; });
+    });
+
+    const file = await readAttachFile(att.filename);
+    if (isImg) {
+      block.classList.add('is-image');
+      const img = document.createElement('img');
+      img.alt = att.name;
+      if (file) {
+        const url = URL.createObjectURL(file);
+        img.src = url;
+        block.addEventListener('click', () => window.open(url, '_blank'));
+      } else {
+        img.style.cssText = 'width:120px;height:80px;object-fit:cover;opacity:.35;background:var(--surface2)';
+      }
+      block.appendChild(img);
+    } else {
+      block.classList.add('is-file');
+      const nameEl = document.createElement('span');
+      nameEl.className = 'attach-file-name';
+      nameEl.title = att.name;
+      nameEl.textContent = att.name;
+      block.innerHTML = `<span class="attach-file-icon">${_attachIcon(att.name)}</span>`;
+      const info = document.createElement('div');
+      info.className = 'attach-file-info';
+      info.appendChild(nameEl);
+      const sizeEl = document.createElement('div');
+      sizeEl.className = 'attach-file-size';
+      sizeEl.textContent = _fmtSize(att.size);
+      info.appendChild(sizeEl);
+      block.appendChild(info);
+      if (file) {
+        const url = URL.createObjectURL(file);
+        block.addEventListener('click', () => window.open(url, '_blank'));
+      }
+    }
+    block.appendChild(del);
+    galleryEl.appendChild(block);
+  }
+}
+
+async function handleCardFileDrop(event, taskId) {
+  event.preventDefault();
+  event.stopPropagation();
+  event.currentTarget.classList.remove('file-drag-over');
+  const files = Array.from(event.dataTransfer.files);
+  if (!files.length) return;
+  const task = getTask(taskId);
+  if (!task) return;
+  if (!task.attachments) task.attachments = [];
+  for (const file of files) {
+    const filename = await saveAttachFile(file);
+    if (!filename) return;
+    task.attachments.push({id:uid(), name:file.name, filename, mimeType:file.type, size:file.size, date:new Date().toISOString().slice(0,10)});
+  }
+  save();
+  const g = document.querySelector('.attachment-gallery');
+  if (g) renderAttachGallery(task, g);
+  // update badge
+  document.querySelectorAll(`.task-card[data-id="${CSS.escape(taskId)}"] .attach-count`)
+    .forEach(el => { el.textContent = '📎 ' + task.attachments.length; el.style.display = ''; });
 }
 
 // ── Init ──
