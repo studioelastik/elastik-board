@@ -880,10 +880,8 @@ h3.ce-header { font-size: 15px; }
   padding-top: 10px;
   border-top: 1px solid var(--border);
 }
-/* pushes close + save to the right */
-.card-body-spacer { flex: 1; }
 .card-body-save {
-  flex-shrink: 0;
+  flex: 0 0 auto;           /* never grow, never shrink, size to content */
   background: var(--accent); color: #fff;
   border: none; border-radius: var(--r);
   padding: 9px 22px; font-size: 13px; font-weight: 500;
@@ -902,7 +900,8 @@ h3.ce-header { font-size: 15px; }
 .card-body-delete { color: var(--text-3); }
 .card-body-delete:hover { color: #c0392b; background: #fdf0f0; }
 [data-theme="dark"] .card-body-delete:hover { color: #e86868; background: rgba(232,104,104,.1); }
-.card-body-close  { color: var(--text-3); font-size: 18px; line-height: 1; }
+/* margin-left: auto pushes close+save to the right, delete stays left */
+.card-body-close  { color: var(--text-3); font-size: 18px; line-height: 1; margin-left: auto; }
 .card-body-close:hover { color: var(--text); background: var(--surface2); }
 /* Mobile — 44 px minimum touch target */
 @media (pointer: coarse) {
@@ -2868,7 +2867,6 @@ function makeTaskCard(t) {
         <button class="card-body-delete">
           <svg width="16" height="17" viewBox="0 0 11 12" fill="none"><path d="M1 3h9M4 3V2h3v1M2 3l.5 7h6L9 3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
-        <span class="card-body-spacer"></span>
         <button class="card-body-close">✕</button>
         <button class="card-body-save">Save</button>
       </div>
