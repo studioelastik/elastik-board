@@ -2033,7 +2033,7 @@ h3.ce-header { font-size: 15px; }
             </div>
             <div class="sync-step">
               <span class="sync-step-n">3</span>
-              <span>Rules: set <code>.read</code> and <code>.write</code> to <code>"auth != null"</code> → Publish</span>
+              <span>Rules tab: set <code>.read</code> and <code>.write</code> to <code>"auth != null"</code> → Publish (you'll tighten this to your UID after first sign-in)</span>
             </div>
             <div class="sync-step">
               <span class="sync-step-n">4</span>
@@ -2066,6 +2066,17 @@ h3.ce-header { font-size: 15px; }
         All changes save instantly. Open this page on any device to stay in sync.
       </p>
       <p id="sync-error-msg" style="font-size:12px;color:#E86868;margin-top:8px;line-height:1.5;word-break:break-all;"></p>
+      <details style="margin-top:14px" id="sync-rules-details">
+        <summary style="font-size:11px;color:var(--text-3);cursor:pointer;user-select:none;list-style:none;display:flex;align-items:center;gap:5px">
+          <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M2 1l4 3-4 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Fix Firebase security rules
+        </summary>
+        <div style="margin-top:10px;font-size:12px;color:var(--text-2);line-height:1.6">
+          <p style="margin-bottom:8px">Paste this into <strong>Firebase Console → Realtime Database → Rules</strong> and click <strong>Publish</strong>. This locks the database to your account only.</p>
+          <pre id="sync-rules-json" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px 12px;font-size:11px;font-family:'DM Mono',monospace;overflow-x:auto;white-space:pre;cursor:pointer;user-select:all" title="Click to select all"></pre>
+          <p style="margin-top:6px;font-size:11px;color:var(--text-3)">Click the box above to select all, then copy.</p>
+        </div>
+      </details>
       <div class="modal-actions">
         <button class="btn-danger" onclick="disconnectFirebase()">Disconnect</button>
         <button class="btn-save" onclick="closeSyncModal()">Done</button>
@@ -3560,6 +3571,7 @@ let firebaseURL    = localStorage.getItem('elastik_firebase_url')    || FIREBASE
 let firebaseAPIKey = localStorage.getItem('elastik_firebase_apikey') || FIREBASE_DEFAULT_APIKEY;
 let firebaseToken = localStorage.getItem('elastik_firebase_token') || '';
 let firebaseRefreshToken = localStorage.getItem('elastik_firebase_refresh') || '';
+let firebaseUID = localStorage.getItem('elastik_firebase_uid') || '';
 let syncTimer = null;
 let isSendingToFirebase = false;
 let firebaseStream = null;
@@ -3574,8 +3586,10 @@ async function firebaseSignIn(email, password) {
   if (!res.ok) throw new Error(data.error?.message || 'Sign-in failed');
   firebaseToken = data.idToken;
   firebaseRefreshToken = data.refreshToken;
+  firebaseUID = data.localId || '';
   localStorage.setItem('elastik_firebase_token', firebaseToken);
   localStorage.setItem('elastik_firebase_refresh', firebaseRefreshToken);
+  localStorage.setItem('elastik_firebase_uid', firebaseUID);
 }
 
 async function firebaseRefreshAuth() {
@@ -3734,6 +3748,14 @@ function openSyncModal() {
   document.getElementById('sync-panel-connected').style.display = connected ? 'block' : 'none';
   if (connected) {
     document.getElementById('sync-connected-url').textContent = firebaseURL;
+    // Populate secure rules block with the user's specific UID
+    const rulesEl = document.getElementById('sync-rules-json');
+    if (rulesEl) {
+      const uid = firebaseUID || '(sign out and back in to get your UID)';
+      rulesEl.textContent = JSON.stringify({
+        rules: { elastik: { '.read': `auth.uid === "${uid}"`, '.write': `auth.uid === "${uid}"` } }
+      }, null, 2);
+    }
   } else {
     // Pre-fill Advanced fields with defaults so user only needs email + password
     const urlEl = document.getElementById('firebase-url-input');
@@ -3778,10 +3800,12 @@ function disconnectFirebase() {
   firebaseAPIKey = '';
   firebaseToken = '';
   firebaseRefreshToken = '';
+  firebaseUID = '';
   localStorage.removeItem('elastik_firebase_url');
   localStorage.removeItem('elastik_firebase_apikey');
   localStorage.removeItem('elastik_firebase_token');
   localStorage.removeItem('elastik_firebase_refresh');
+  localStorage.removeItem('elastik_firebase_uid');
   setSyncStatus('');
   closeSyncModal();
 }
