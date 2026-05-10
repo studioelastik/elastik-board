@@ -1,5 +1,5 @@
 // Mission Control — Service Worker
-const CACHE = 'mission-control-v22';
+const CACHE = 'mission-control-v23';
 // Only same-origin assets are precached. CDN scripts (EditorJS etc.) are
 // fetched fresh each load — precaching them is fragile (one 404 breaks the
 // whole install) and the editor scripts are small enough to load on demand.
