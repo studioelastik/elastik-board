@@ -1790,6 +1790,11 @@ h3.ce-header { font-size: 15px; }
   outline-offset: -3px;
 }
 
+/* ── Attachment reorder drag ── */
+.attach-block.att-dragging   { opacity: .35; }
+.attach-block.att-drop-before { box-shadow: -3px 0 0 var(--accent), 0 3px 12px rgba(0,0,0,.12); }
+.attach-block.att-drop-after  { box-shadow:  3px 0 0 var(--accent), 0 3px 12px rgba(0,0,0,.12); }
+
 /* ── Video thumbnails in gallery ── */
 .attach-block.is-video { max-width: 220px; }
 .attach-block.is-video video {
@@ -4829,18 +4834,22 @@ function _fmtSize(b) {
   return (b/1048576).toFixed(1) + ' MB';
 }
 
+let _attDragSrc = null; // index of block being reorder-dragged
+
 async function renderAttachGallery(task, galleryEl) {
   const atts = task.attachments || [];
   galleryEl.innerHTML = '';
+
   for (let i = 0; i < atts.length; i++) {
     const att = atts[i];
     const block = document.createElement('div');
     block.className = 'attach-block';
-    block.addEventListener('click', () => openLightbox(task, i));
+    block.draggable = true;
 
     const file = await readAttachFile(att.id);
     const url  = file ? URL.createObjectURL(file) : null;
 
+    // ── Visual content ──
     if (_isImg(att.name)) {
       block.classList.add('is-image');
       const img = document.createElement('img');
@@ -4864,10 +4873,8 @@ async function renderAttachGallery(task, galleryEl) {
     } else {
       block.classList.add('is-file');
       const icon = document.createElement('span');
-      icon.className = 'attach-file-icon';
-      icon.textContent = _attachIcon(att.name);
-      const info = document.createElement('div');
-      info.className = 'attach-file-info';
+      icon.className = 'attach-file-icon'; icon.textContent = _attachIcon(att.name);
+      const info = document.createElement('div'); info.className = 'attach-file-info';
       const nameEl = document.createElement('div');
       nameEl.className = 'attach-file-name'; nameEl.title = att.name; nameEl.textContent = att.name;
       const sizeEl = document.createElement('div');
@@ -4876,13 +4883,16 @@ async function renderAttachGallery(task, galleryEl) {
       block.append(icon, info);
     }
 
+    // ── Download button ──
     if (url) {
       const dl = document.createElement('a');
-      dl.className = 'attach-dl'; dl.href = url; dl.download = att.name; dl.title = 'Save to disk'; dl.textContent = '⬇';
+      dl.className = 'attach-dl'; dl.href = url; dl.download = att.name;
+      dl.title = 'Save to disk'; dl.textContent = '⬇';
       dl.addEventListener('click', e => e.stopPropagation());
       block.appendChild(dl);
     }
 
+    // ── Delete button ──
     const del = document.createElement('button');
     del.className = 'attach-del'; del.textContent = '✕'; del.title = 'Remove';
     del.addEventListener('click', async e => {
@@ -4896,6 +4906,58 @@ async function renderAttachGallery(task, galleryEl) {
         .forEach(el => { const n = task.attachments.length; el.textContent = n ? '📎 '+n : ''; el.style.display = n ? '' : 'none'; });
     });
     block.appendChild(del);
+
+    // ── Reorder drag ──
+    block.addEventListener('dragstart', e => {
+      if (e.dataTransfer.types?.includes('Files')) return;
+      e.stopPropagation(); // don't bubble to card's own dragstart handler
+      _attDragSrc = i;
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', String(i));
+      setTimeout(() => block.classList.add('att-dragging'), 0);
+    });
+    block.addEventListener('dragend', () => {
+      block.classList.remove('att-dragging');
+      galleryEl.querySelectorAll('.attach-block')
+        .forEach(b => b.classList.remove('att-drop-before', 'att-drop-after'));
+      _attDragSrc = null;
+    });
+    block.addEventListener('dragover', e => {
+      if (_attDragSrc === null || e.dataTransfer.types.includes('Files')) return;
+      e.preventDefault(); e.stopPropagation();
+      e.dataTransfer.dropEffect = 'move';
+      const onLeft = e.clientX < block.getBoundingClientRect().left + block.offsetWidth / 2;
+      galleryEl.querySelectorAll('.attach-block')
+        .forEach(b => b.classList.remove('att-drop-before', 'att-drop-after'));
+      block.classList.add(onLeft ? 'att-drop-before' : 'att-drop-after');
+    });
+    block.addEventListener('dragleave', () => {
+      block.classList.remove('att-drop-before', 'att-drop-after');
+    });
+    block.addEventListener('drop', e => {
+      if (_attDragSrc === null || e.dataTransfer.types.includes('Files')) return;
+      e.preventDefault(); e.stopPropagation();
+      block.classList.remove('att-drop-before', 'att-drop-after');
+      const src = _attDragSrc;
+      if (src === i) return;
+      const onLeft = e.clientX < block.getBoundingClientRect().left + block.offsetWidth / 2;
+      const arr = [...task.attachments];
+      const [item] = arr.splice(src, 1);
+      // After removal the target index shifts if src was before it
+      let insertAt = src < i ? i - 1 : i;
+      if (!onLeft) insertAt += 1;
+      arr.splice(Math.max(0, Math.min(insertAt, arr.length)), 0, item);
+      task.attachments = arr;
+      save();
+      renderAttachGallery(task, galleryEl);
+    });
+
+    // ── Open lightbox on click (not during drag) ──
+    block.addEventListener('click', () => {
+      if (_attDragSrc !== null) return;
+      openLightbox(task, i);
+    });
+
     galleryEl.appendChild(block);
   }
 }
