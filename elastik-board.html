@@ -171,7 +171,11 @@ body {
 }
 #sidebar-logo .logo-accent {
   color: var(--accent);
+  transition: color .3s;
 }
+#sidebar-logo.synced  .logo-accent { color: #5DBB5D; }
+#sidebar-logo.syncing .logo-accent { color: #E8A84B; animation: blink .9s infinite; }
+#sidebar-logo.error   .logo-accent { color: #E86868; }
 #sidebar-logo .dot {
   width: 8px; height: 8px; border-radius: 50%;
   background: var(--text-3);          /* default: grey until sync state set */
@@ -3608,9 +3612,11 @@ function setSyncStatus(s, msg) {
   dot.className = '';
   if (s === 'synced')  dot.classList.add('synced');
   if (s === 'syncing') dot.classList.add('syncing');
-  // Mirror state on the sidebar logo dot
+  // Mirror state on the sidebar logo dot + logo text colour
   const sideDot = document.getElementById('sidebar-sync-dot');
   if (sideDot) { sideDot.className = 'dot' + (s ? ' ' + s : ''); }
+  const logo = document.getElementById('sidebar-logo');
+  if (logo) { logo.className = s || ''; }
   if (s === 'error')   dot.classList.add('error');
   const errEl = document.getElementById('sync-error-msg');
   if (errEl) errEl.textContent = (s === 'error' && msg) ? msg : '';
