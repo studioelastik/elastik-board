@@ -1768,15 +1768,19 @@ h3.ce-header { font-size: 15px; }
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .attach-file-size { font-size: 11px; color: var(--text-3); margin-top: 2px; }
-.attach-del {
-  position: absolute; top: 4px; right: 4px;
+.attach-del, .attach-dl {
+  position: absolute;
   width: 20px; height: 20px; padding: 0;
   background: rgba(0,0,0,.55); color: #fff;
   border: none; border-radius: 50%;
   font-size: 10px; line-height: 20px; text-align: center;
   display: none; align-items: center; justify-content: center; cursor: pointer;
+  text-decoration: none;
 }
-.attach-block:hover .attach-del { display: flex; }
+.attach-del { top: 4px; right: 4px; }
+.attach-dl  { top: 4px; right: 28px; }
+.attach-block:hover .attach-del,
+.attach-block:hover .attach-dl { display: flex; }
 .attach-count {
   font-size: 10.5px; color: var(--text-3);
   display: inline-flex; align-items: center; gap: 2px;
@@ -4586,76 +4590,47 @@ function exportVisibleEntriesToICS() {
 }
 
 // ── FILE ATTACHMENTS ─────────────────────────────────────────────────────────
-// Files are written to a user-chosen folder (e.g. iCloud Drive) via the
-// File System Access API. The directory handle is persisted in IndexedDB so
-// permission only needs to be granted once per browser session.
+// Files are stored as ArrayBuffers in IndexedDB — no folder picker required,
+// works in all browsers including Brave with strict fingerprinting. Each
+// attachment block has a ⬇ download button so files can be saved to iCloud
+// Drive (or anywhere) on demand.
 
-let _attachDir = null;
-
-async function _openAttachDB() {
-  return new Promise((res, rej) => {
-    const req = indexedDB.open('elastik-attach-v1', 1);
-    req.onupgradeneeded = e => e.target.result.createObjectStore('h');
+let _fileDB = null;
+async function _openFileDB() {
+  if (_fileDB) return _fileDB;
+  _fileDB = await new Promise((res, rej) => {
+    const req = indexedDB.open('elastik-files-v1', 1);
+    req.onupgradeneeded = e => e.target.result.createObjectStore('files');
     req.onsuccess = e => res(e.target.result);
     req.onerror = () => rej(req.error);
   });
-}
-async function _saveDirHandle(h) {
-  try { const db = await _openAttachDB(); db.transaction('h','readwrite').objectStore('h').put(h,'dir'); } catch {}
-}
-async function _loadDirHandle() {
-  try {
-    const db = await _openAttachDB();
-    return new Promise(res => {
-      const req = db.transaction('h','readonly').objectStore('h').get('dir');
-      req.onsuccess = () => res(req.result || null);
-      req.onerror = () => res(null);
-    });
-  } catch { return null; }
+  return _fileDB;
 }
 
-async function getAttachDir() {
-  if (_attachDir) {
-    const p = await _attachDir.queryPermission({mode:'readwrite'});
-    if (p === 'granted') return _attachDir;
-  }
-  const stored = await _loadDirHandle();
-  if (stored) {
-    const p = await stored.requestPermission({mode:'readwrite'});
-    if (p === 'granted') { _attachDir = stored; return stored; }
-  }
-  if (!window.showDirectoryPicker) {
-    alert('File attachments require Chrome, Edge, or Brave. Safari does not yet support folder access.');
-    return null;
-  }
-  try {
-    const h = await window.showDirectoryPicker({id:'elastik-attach', mode:'readwrite', startIn:'desktop'});
-    await _saveDirHandle(h);
-    _attachDir = h;
-    return h;
-  } catch { return null; }
+async function saveAttachFile(id, file) {
+  const buf = await file.arrayBuffer();
+  const db = await _openFileDB();
+  return new Promise((res, rej) => {
+    const tx = db.transaction('files','readwrite');
+    tx.objectStore('files').put({name:file.name, mimeType:file.type, size:file.size, data:buf}, id);
+    tx.oncomplete = res;
+    tx.onerror = rej;
+  });
 }
-
-async function saveAttachFile(file) {
-  const dir = await getAttachDir();
-  if (!dir) return null;
-  const safe = file.name.replace(/[^a-zA-Z0-9._\-]/g,'_');
-  const filename = `${Date.now()}_${safe}`;
-  const fh = await dir.getFileHandle(filename, {create:true});
-  const w = await fh.createWritable();
-  await w.write(file);
-  await w.close();
-  return filename;
+async function readAttachFile(id) {
+  const db = await _openFileDB();
+  return new Promise(res => {
+    const req = db.transaction('files','readonly').objectStore('files').get(id);
+    req.onsuccess = () => {
+      const r = req.result;
+      res(r ? new File([r.data], r.name, {type: r.mimeType}) : null);
+    };
+    req.onerror = () => res(null);
+  });
 }
-async function readAttachFile(filename) {
-  const dir = await getAttachDir();
-  if (!dir) return null;
-  try { return await (await dir.getFileHandle(filename)).getFile(); } catch { return null; }
-}
-async function deleteAttachFile(filename) {
-  const dir = await getAttachDir();
-  if (!dir) return;
-  try { await dir.removeEntry(filename); } catch {}
+async function deleteAttachFile(id) {
+  const db = await _openFileDB();
+  db.transaction('files','readwrite').objectStore('files').delete(id);
 }
 
 function _attachIcon(name) {
@@ -4678,6 +4653,10 @@ async function renderAttachGallery(task, galleryEl) {
     const block = document.createElement('div');
     block.className = 'attach-block';
 
+    const file = await readAttachFile(att.id);
+    const url = file ? URL.createObjectURL(file) : null;
+
+    // Delete button
     const del = document.createElement('button');
     del.className = 'attach-del';
     del.textContent = '✕';
@@ -4685,48 +4664,52 @@ async function renderAttachGallery(task, galleryEl) {
     del.addEventListener('click', async e => {
       e.stopPropagation();
       if (!confirm(`Remove "${att.name}"?`)) return;
-      await deleteAttachFile(att.filename);
+      await deleteAttachFile(att.id);
       task.attachments = task.attachments.filter(a => a.id !== att.id);
       save();
       renderAttachGallery(task, galleryEl);
-      // refresh count badge on the kanban card (if still visible)
       document.querySelectorAll(`.task-card[data-id="${CSS.escape(task.id)}"] .attach-count`)
         .forEach(el => { const n = task.attachments.length; el.textContent = n ? '📎 '+n : ''; el.style.display = n ? '' : 'none'; });
     });
 
-    const file = await readAttachFile(att.filename);
     if (isImg) {
       block.classList.add('is-image');
       const img = document.createElement('img');
       img.alt = att.name;
-      if (file) {
-        const url = URL.createObjectURL(file);
-        img.src = url;
-        block.addEventListener('click', () => window.open(url, '_blank'));
-      } else {
-        img.style.cssText = 'width:120px;height:80px;object-fit:cover;opacity:.35;background:var(--surface2)';
-      }
+      if (url) { img.src = url; block.addEventListener('click', () => window.open(url, '_blank')); }
+      else { img.style.cssText = 'width:120px;height:80px;object-fit:cover;opacity:.35'; }
       block.appendChild(img);
     } else {
       block.classList.add('is-file');
-      const nameEl = document.createElement('span');
+      const icon = document.createElement('span');
+      icon.className = 'attach-file-icon';
+      icon.textContent = _attachIcon(att.name);
+      const info = document.createElement('div');
+      info.className = 'attach-file-info';
+      const nameEl = document.createElement('div');
       nameEl.className = 'attach-file-name';
       nameEl.title = att.name;
       nameEl.textContent = att.name;
-      block.innerHTML = `<span class="attach-file-icon">${_attachIcon(att.name)}</span>`;
-      const info = document.createElement('div');
-      info.className = 'attach-file-info';
-      info.appendChild(nameEl);
       const sizeEl = document.createElement('div');
       sizeEl.className = 'attach-file-size';
       sizeEl.textContent = _fmtSize(att.size);
-      info.appendChild(sizeEl);
-      block.appendChild(info);
-      if (file) {
-        const url = URL.createObjectURL(file);
-        block.addEventListener('click', () => window.open(url, '_blank'));
-      }
+      info.append(nameEl, sizeEl);
+      block.append(icon, info);
+      if (url) block.addEventListener('click', () => window.open(url, '_blank'));
     }
+
+    // Download button — saves the file to wherever the user chooses (e.g. iCloud Drive)
+    if (url) {
+      const dl = document.createElement('a');
+      dl.className = 'attach-dl';
+      dl.href = url;
+      dl.download = att.name;
+      dl.title = 'Save to disk';
+      dl.textContent = '⬇';
+      dl.addEventListener('click', e => e.stopPropagation());
+      block.appendChild(dl);
+    }
+
     block.appendChild(del);
     galleryEl.appendChild(block);
   }
@@ -4742,14 +4725,13 @@ async function handleCardFileDrop(event, taskId) {
   if (!task) return;
   if (!task.attachments) task.attachments = [];
   for (const file of files) {
-    const filename = await saveAttachFile(file);
-    if (!filename) return;
-    task.attachments.push({id:uid(), name:file.name, filename, mimeType:file.type, size:file.size, date:new Date().toISOString().slice(0,10)});
+    const id = uid();
+    await saveAttachFile(id, file);
+    task.attachments.push({id, name:file.name, mimeType:file.type, size:file.size, date:new Date().toISOString().slice(0,10)});
   }
   save();
   const g = document.querySelector('.attachment-gallery');
   if (g) renderAttachGallery(task, g);
-  // update badge
   document.querySelectorAll(`.task-card[data-id="${CSS.escape(taskId)}"] .attach-count`)
     .forEach(el => { el.textContent = '📎 ' + task.attachments.length; el.style.display = ''; });
 }
