@@ -727,12 +727,12 @@ body.card-open { overflow: hidden; }
   padding-bottom: 80px !important;
 }
 /* Notion-style gutter: padding on .ce-block pushes text to the right of
-   the + / settings buttons. padding-left on .ce-block is not set by
-   EditorJS so there is no specificity conflict.
+   the + / settings buttons. The two buttons are stacked vertically so the
+   gutter only needs to be as wide as one button (26px) plus a margin.
    .ce-toolbar is position:absolute so it still starts at x=0 of the block,
-   and .ce-toolbar__content margin-left:56px keeps the actions visible. */
+   and .ce-toolbar__content margin-left keeps the action column visible. */
 .ce-block {
-  padding-left: 56px !important;
+  padding-left: 40px !important;
   box-sizing: border-box !important;
 }
 .ce-block__content {
@@ -741,8 +741,14 @@ body.card-open { overflow: hidden; }
 }
 .ce-toolbar__content {
   max-width: none !important;
-  margin-left: 56px !important;
+  margin-left: 40px !important;
   margin-right: 0 !important;
+}
+/* Stack + and ⋮⋮ vertically so they're not crammed side by side */
+.ce-toolbar__actions {
+  flex-direction: column !important;
+  gap: 2px !important;
+  top: 0 !important;
 }
 /* Always show the toolbar (+ and settings buttons) instead of only on hover */
 .ce-toolbar {
