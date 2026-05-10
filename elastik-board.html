@@ -1563,6 +1563,18 @@ h3.ce-header { font-size: 15px; }
 .today-hint {
   margin-top: 28px; font-size: 12px; color: var(--text-3); line-height: 1.5;
 }
+/* project prefix inside task name */
+.today-proj-label {
+  color: var(--text-3); font-weight: 400;
+}
+/* drag-to-reorder states */
+.today-slot[draggable="true"] { cursor: grab; }
+.today-slot[draggable="true"]:active { cursor: grabbing; }
+.today-slot-dragging { opacity: .35; }
+.today-slot-drag-over {
+  background: var(--surface2); border-radius: 8px;
+  margin: 0 -8px; padding-left: 8px; padding-right: 8px;
+}
 @media (max-width: 768px) {
   #today-view { padding: 28px 20px calc(72px + env(safe-area-inset-bottom)) 20px; }
   .today-date { font-size: 20px; margin-bottom: 24px; }
@@ -3218,16 +3230,20 @@ function renderToday() {
         </div>
       </li>`;
     }
-    const proj  = getProject(task.pid);
-    const color = proj ? proj.color : 'var(--text-3)';
-    const name  = (task.name || 'Untitled').replace(/&/g,'&amp;').replace(/</g,'&lt;');
-    return `<li class="today-slot">
+    const proj     = getProject(task.pid);
+    const color    = proj ? proj.color : 'var(--text-3)';
+    const projName = proj ? proj.name.split('—')[0].trim() : '';
+    const name     = (task.name || 'Untitled').replace(/&/g,'&amp;').replace(/</g,'&lt;');
+    const prefix   = projName
+      ? `<span class="today-proj-label">${projName.replace(/&/g,'&amp;').replace(/</g,'&lt;')}:&nbsp;</span>`
+      : '';
+    return `<li class="today-slot" draggable="true" data-idx="${i}">
       <span class="today-slot-num">${i+1}</span>
       <div class="today-slot-inner" onclick="openCard('${task.id}')">
         <span class="today-proj-dot" style="background:${color}"></span>
-        <span class="today-task-name">${name}</span>
+        <span class="today-task-name">${prefix}${name}</span>
       </div>
-      <button class="today-unpin" onclick="togglePin('${task.id}')" title="Remove from today">✕</button>
+      <button class="today-unpin" onclick="event.stopPropagation();togglePin('${task.id}')" title="Remove from today">✕</button>
     </li>`;
   }).join('');
 
@@ -3240,6 +3256,38 @@ function renderToday() {
     <h1 class="today-date">${day}</h1>
     <ol class="today-slots">${slotsHtml}</ol>
     ${hintHtml}`;
+
+  // ── Drag-to-reorder ──
+  let dragSrc = null;
+  el.querySelectorAll('.today-slot[draggable]').forEach(li => {
+    li.addEventListener('dragstart', e => {
+      dragSrc = parseInt(li.dataset.idx, 10);
+      setTimeout(() => li.classList.add('today-slot-dragging'), 0);
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    li.addEventListener('dragend', () => {
+      li.classList.remove('today-slot-dragging');
+      el.querySelectorAll('.today-slot').forEach(s => s.classList.remove('today-slot-drag-over'));
+    });
+    li.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      el.querySelectorAll('.today-slot').forEach(s => s.classList.remove('today-slot-drag-over'));
+      li.classList.add('today-slot-drag-over');
+    });
+    li.addEventListener('dragleave', () => li.classList.remove('today-slot-drag-over'));
+    li.addEventListener('drop', e => {
+      e.preventDefault();
+      li.classList.remove('today-slot-drag-over');
+      const dest = parseInt(li.dataset.idx, 10);
+      if (dragSrc === null || dragSrc === dest) return;
+      const pins = todayPins.slice();
+      [pins[dragSrc], pins[dest]] = [pins[dest], pins[dragSrc]];
+      todayPins = pins;
+      saveTodayPins();
+      renderToday();
+    });
+  });
 }
 
 // ── View switching ──
