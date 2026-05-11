@@ -4035,6 +4035,9 @@ function startFirebaseStream() {
   firebaseStream.addEventListener('put', e => {
     if (firstEvent) { firstEvent = false; return; }
     if (isSendingToFirebase || syncTimer) return;
+    // Local has unsynced edits queued (last push failed) — applying a remote
+    // snapshot would overwrite them. Wait until the retry push lands.
+    try { if (localStorage.getItem('elastik_pending_sync')) return; } catch(_) {}
     try {
       const remote = JSON.parse(e.data).data;
       if (!remote || !remote.tasks) return;
@@ -5115,7 +5118,16 @@ if (location.hash.startsWith('#task-')) {
 }
 if (firebaseURL && firebaseAPIKey) {
   setSyncStatus('syncing');
-  pushToFirebase().then(() => pullFromFirebase().then(startFirebaseStream));
+  pushToFirebase().then(() => {
+    // If the push failed silently, `elastik_pending_sync` is still set, meaning
+    // local state has edits that never reached Firebase. Pulling now would
+    // overwrite those edits with stale remote data. Skip the pull in that case
+    // and connect the stream — the next save() will retry the push.
+    let pending = false;
+    try { pending = !!localStorage.getItem('elastik_pending_sync'); } catch(_) {}
+    if (pending) { startFirebaseStream(); return; }
+    pullFromFirebase().then(startFirebaseStream);
+  });
 }
 </script>
 </body>
