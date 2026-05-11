@@ -1613,9 +1613,9 @@ h3.ce-header { font-size: 15px; }
   .task-card:not(.expanded) .pin-dot:not(.pinned) { opacity: 0; transition: opacity .12s; }
   .task-card:not(.expanded):hover .pin-dot:not(.pinned) { opacity: 1; }
 }
-/* Touch: hide unpinned dots — too cluttered on small cards */
+/* Touch: show all pin dots, but larger touch target */
 @media (pointer: coarse) {
-  .pin-dot:not(.pinned) { display: none; }
+  .pin-dot { width: 20px; height: 20px; }
 }
 .time-toolbar {
   display: flex; align-items: center; gap: 8px;
@@ -1788,6 +1788,21 @@ h3.ce-header { font-size: 15px; }
 .task-card.expanded.file-drag-over {
   outline: 2.5px dashed var(--accent);
   outline-offset: -3px;
+}
+
+/* ── Attach-file button (always visible in expanded card) ── */
+.attach-add-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 14px; border-radius: 8px;
+  border: 1.5px dashed var(--border-strong);
+  background: transparent; color: var(--text-3);
+  font-size: 12px; font-family: inherit; cursor: pointer;
+  transition: border-color .15s, color .15s, background .15s;
+  margin-bottom: 10px;
+}
+.attach-add-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }
+@media (pointer: coarse) {
+  .attach-add-btn { width: 100%; justify-content: center; padding: 12px; font-size: 14px; }
 }
 
 /* ── Attachment reorder drag ── */
@@ -2348,6 +2363,10 @@ h3.ce-header { font-size: 15px; }
 
 <!-- Context menu -->
 <div id="ctx-menu">
+  <div class="ctx-item" id="ctx-pin">
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1.3"/><circle cx="6" cy="6" r="1.8" fill="currentColor"/></svg>
+    <span id="ctx-pin-label">Pin to Today</span>
+  </div>
   <div class="ctx-item" id="ctx-edit">
     <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M8.5 1.5l2 2-7 7H1.5v-2l7-7z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
     Edit
@@ -2358,6 +2377,7 @@ h3.ce-header { font-size: 15px; }
     Delete
   </div>
 </div>
+<input type="file" id="attach-file-input" multiple style="display:none">
 
 <script>
 const COLORS = ['#C8501A','#534AB7','#0F6E56','#C03F6E','#185FA5','#BA7517','#888780','#1D9E75','#D85A30','#C0913A','#2D9CDB','#8E44AD'];
@@ -2862,6 +2882,19 @@ async function _openCard(id, { pushHistory = true } = {}) {
       taskBody.insertBefore(gallery, editorSlot);
     }
     renderAttachGallery(task, gallery);
+
+    // Attach button (works on mobile — opens native file picker)
+    let addBtn = card.querySelector('.attach-add-btn');
+    if (!addBtn) {
+      addBtn = document.createElement('button');
+      addBtn.className = 'attach-add-btn';
+      addBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2v10M2 7h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg> Attach files or photos';
+      addBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        document.getElementById('attach-file-input').click();
+      });
+      taskBody.insertBefore(addBtn, editorSlot);
+    }
 
     // File drag-drop — only triggers on actual files, not task reorder drags
     card.addEventListener('dragover', e => {
@@ -3750,13 +3783,14 @@ function saveSection() {
 // ── Context menu ──
 function showCtxMenu(x, y, taskId) {
   ctxTaskId = taskId;
+  document.getElementById('ctx-pin-label').textContent = isPinned(taskId) ? 'Unpin from Today' : 'Pin to Today';
   const m = document.getElementById('ctx-menu');
   m.style.display = 'block';
-  // Keep menu within viewport
-  const mw = 160, mh = 90;
+  const mw = 170, mh = 110;
   m.style.left = Math.min(x, window.innerWidth - mw - 8) + 'px';
   m.style.top  = Math.min(y, window.innerHeight - mh - 8) + 'px';
 }
+document.getElementById('ctx-pin').onclick    = () => { hideCtx(); togglePin(ctxTaskId); };
 document.getElementById('ctx-edit').onclick   = () => { hideCtx(); openTaskModal(ctxTaskId); };
 document.getElementById('ctx-delete').onclick = () => { hideCtx(); deleteTask(ctxTaskId); };
 function hideCtx() { document.getElementById('ctx-menu').style.display = 'none'; }
@@ -4985,6 +5019,26 @@ async function handleCardFileDrop(event, taskId) {
   document.querySelectorAll(`.task-card[data-id="${CSS.escape(taskId)}"] .attach-count`)
     .forEach(el => { el.textContent = '📎 ' + task.attachments.length; el.style.display = ''; });
 }
+
+// ── Mobile file picker ──
+document.getElementById('attach-file-input').addEventListener('change', async e => {
+  const files = Array.from(e.target.files);
+  if (!files.length) return;
+  const task = getTask(openCardId);
+  if (!task) return;
+  if (!task.attachments) task.attachments = [];
+  for (const file of files) {
+    const id = uid();
+    await saveAttachFile(id, file);
+    task.attachments.push({id, name: file.name, mimeType: file.type, size: file.size, date: new Date().toISOString().slice(0,10)});
+  }
+  save();
+  const g = document.querySelector('.attachment-gallery');
+  if (g) renderAttachGallery(task, g);
+  document.querySelectorAll(`.task-card[data-id="${CSS.escape(openCardId)}"] .attach-count`)
+    .forEach(el => { el.textContent = '📎 ' + task.attachments.length; el.style.display = ''; });
+  e.target.value = '';
+});
 
 // ── Init ──
 applyTheme(localStorage.getItem('elastik_theme') || 'light');
