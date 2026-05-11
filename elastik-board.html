@@ -92,6 +92,8 @@ if ('serviceWorker' in navigator) {
   --accent: #3B7CE8;
   --accent-bg: #EDF4FF;
   --theme-icon: '☀';
+  --shadow-card: 0 1px 2px rgba(0,0,0,.05), 0 1px 3px rgba(0,0,0,.04);
+  --shadow-card-hover: 0 4px 14px rgba(0,0,0,.09), 0 2px 4px rgba(0,0,0,.05);
 
   --s-done-bg: #EAF3DE;   --s-done-text: #3B6D11;   --s-done-border: #C0DD97;
   --s-wip-bg: #FAEEDA;    --s-wip-text: #854F0B;    --s-wip-border: #FAC775;
@@ -109,8 +111,8 @@ if ('serviceWorker' in navigator) {
 /* ── Dark theme ── */
 [data-theme="dark"] {
   --bg: #000000;
-  --surface: #0E0E0E;
-  --surface2: #1A1A1A;
+  --surface: #161616;
+  --surface2: #1F1F1F;
   --border: rgba(255,255,255,0.08);
   --border-strong: rgba(255,255,255,0.18);
   --text: #F0F0F0;
@@ -119,6 +121,10 @@ if ('serviceWorker' in navigator) {
   --accent: #5B9CF6;
   --accent-bg: #0A1626;
   --theme-icon: '☾';
+  /* Pure-black bg makes drop shadows invisible — use a tone shift instead.
+     Cards lift via slightly lighter surface; hover lifts further. */
+  --shadow-card: none;
+  --shadow-card-hover: 0 0 0 1px rgba(255,255,255,.05);
 
   --s-done-bg: #162510;   --s-done-text: #7DC948;   --s-done-border: #2D5020;
   --s-wip-bg: #281A07;    --s-wip-text: #E8A84B;    --s-wip-border: #4A3010;
@@ -448,12 +454,12 @@ body {
 
 .task-card {
   background: var(--surface);
-  border: 1px solid var(--border);
+  box-shadow: var(--shadow-card);
   border-radius: var(--r-lg);
   padding: 12px 14px;
   cursor: grab;
   user-select: none;
-  transition: box-shadow .15s, transform .1s, border-color .15s;
+  transition: box-shadow .15s, transform .1s, background .15s;
   position: relative;
   overflow: hidden;   /* prevent inline-editor fields from bleeding outside */
   min-width: 0;       /* flex child shrink fix */
@@ -470,7 +476,7 @@ body {
   .drag-handle { display: flex; }
   .drag-handle span { display: block; width: 14px; height: 1.5px; background: currentColor; border-radius: 1px; }
 }
-.task-card:hover { border-color: var(--border-strong); box-shadow: 0 2px 8px rgba(0,0,0,.07); }
+.task-card:hover { box-shadow: var(--shadow-card-hover); }
 .task-card.dragging { opacity: .4; transform: scale(.97); }
 .task-card.drag-placeholder {
   border: 1.5px dashed var(--border-strong);
@@ -1550,17 +1556,16 @@ h3.ce-header { font-size: 15px; }
   position: relative;
   display: flex; flex-direction: column;
   background: var(--surface);
-  border: 1px solid var(--border);
+  box-shadow: var(--shadow-card);
   border-radius: 12px;
   padding: 26px 18px 16px;
   min-height: 220px;
   overflow: hidden;
-  transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+  transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
 }
 .today-slot:not(.today-slot-empty):hover {
-  border-color: var(--border-strong);
   transform: translateY(-2px);
-  box-shadow: 0 6px 18px rgba(0,0,0,.07);
+  box-shadow: var(--shadow-card-hover);
 }
 .today-slot-bar {
   position: absolute; top: 0; left: 0; right: 0; height: 4px;
@@ -1606,8 +1611,9 @@ h3.ce-header { font-size: 15px; }
   min-height: 26px;
 }
 .today-slot-empty {
-  border-style: dashed;
   background: transparent;
+  box-shadow: none;
+  border: 1.5px dashed var(--border-strong);
   justify-content: center;
 }
 .today-slot-empty .today-slot-inner {
@@ -1637,8 +1643,7 @@ h3.ce-header { font-size: 15px; }
 .today-slot[draggable="true"]:active { cursor: grabbing; }
 .today-slot-dragging { opacity: .35; }
 .today-slot-drag-over {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--accent-bg);
+  box-shadow: 0 0 0 2px var(--accent), 0 0 0 6px var(--accent-bg);
 }
 @media (max-width: 900px) {
   .today-slots { grid-template-columns: 1fr; gap: 14px; max-width: none; }
