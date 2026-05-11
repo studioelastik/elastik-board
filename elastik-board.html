@@ -111,8 +111,8 @@ if ('serviceWorker' in navigator) {
 /* ── Dark theme ── */
 [data-theme="dark"] {
   --bg: #000000;
-  --surface: #161616;
-  --surface2: #1F1F1F;
+  --surface: #0C0C0C;
+  --surface2: #181818;
   --border: rgba(255,255,255,0.08);
   --border-strong: rgba(255,255,255,0.18);
   --text: #F0F0F0;
@@ -154,7 +154,6 @@ body {
 #sidebar {
   width: var(--sidebar);
   background: var(--surface);
-  border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   position: fixed;
@@ -162,9 +161,9 @@ body {
   z-index: 100;
   transition: transform .25s ease;
 }
+[data-theme="light"] #sidebar { box-shadow: 1px 0 0 var(--border); }
 #sidebar-logo {
-  padding: 16px 18px 12px;
-  border-bottom: 1px solid var(--border);
+  padding: 18px 18px 14px;
   display: flex; align-items: center; gap: 8px;
 }
 #sidebar-logo span {
@@ -192,8 +191,7 @@ body {
 #sidebar-logo .dot.syncing { background: #E8A84B; animation: blink .9s infinite; }
 #sidebar-logo .dot.error   { background: #E86868; }
 #sidebar-views {
-  padding: 12px 0;
-  border-bottom: 1px solid var(--border);
+  padding: 8px 0 14px;
 }
 .sidebar-section-label {
   font-size: 10px;
@@ -1413,12 +1411,13 @@ h3.ce-header { font-size: 15px; }
     height: calc(58px + env(safe-area-inset-bottom));
     padding-bottom: env(safe-area-inset-bottom);
     background: var(--surface);
-    border-top: 1px solid var(--border);
+    box-shadow: 0 -1px 24px rgba(0,0,0,.18);
     z-index: 100;
     align-items: center;
     justify-content: space-around;
     gap: 4px; padding-left: 8px; padding-right: 8px;
   }
+  [data-theme="dark"] #bottom-nav { box-shadow: 0 -1px 0 rgba(255,255,255,.03); }
   .bnav-btn {
     display: flex; flex-direction: column; align-items: center; gap: 3px;
     background: none; border: none; cursor: pointer;
@@ -1430,12 +1429,15 @@ h3.ce-header { font-size: 15px; }
   .bnav-btn.active { color: var(--accent); }
   .bnav-add {
     width: 48px; height: 48px; padding: 0; min-width: 0;
-    background: #1a1a1a; color: white;
+    background: var(--accent); color: white;
     border-radius: 50%; font-size: 0;
-    box-shadow: 0 4px 14px rgba(0,0,0,.35);
+    box-shadow: 0 6px 18px rgba(59,124,232,.35);
     justify-content: center;
   }
-  [data-theme="dark"] .bnav-add { background: #fff; color: #1a1a1a; box-shadow: 0 4px 14px rgba(0,0,0,.4); }
+  [data-theme="dark"] .bnav-add {
+    background: var(--accent); color: white;
+    box-shadow: 0 6px 18px rgba(91,156,246,.35);
+  }
   .bnav-add.active { color: white; }
   #add-task-main { display: none; }
 }
@@ -2097,7 +2099,7 @@ h3.ce-header { font-size: 15px; }
       <span>Board</span>
     </button>
     <button class="bnav-btn bnav-add" onclick="openTaskModal()">
-      <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M11 4v14M4 11h14" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M11 4v14M4 11h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
     </button>
     <button class="bnav-btn" id="bnav-list" onclick="setView('list')">
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="3" width="14" height="2" rx="1" fill="currentColor"/><rect x="2" y="8" width="14" height="2" rx="1" fill="currentColor" opacity=".6"/><rect x="2" y="13" width="9" height="2" rx="1" fill="currentColor" opacity=".4"/></svg>
