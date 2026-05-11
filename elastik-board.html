@@ -1541,62 +1541,113 @@ h3.ce-header { font-size: 15px; }
 }
 .today-slots {
   list-style: none; padding: 0; margin: 0;
-  border-top: 1px solid var(--border);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+  max-width: 1200px;
 }
 .today-slot {
-  display: flex; align-items: center; gap: 14px;
-  padding: 18px 0;
-  border-bottom: 1px solid var(--border);
+  position: relative;
+  display: flex; flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 26px 18px 16px;
+  min-height: 220px;
+  overflow: hidden;
+  transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+}
+.today-slot:not(.today-slot-empty):hover {
+  border-color: var(--border-strong);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0,0,0,.07);
+}
+.today-slot-bar {
+  position: absolute; top: 0; left: 0; right: 0; height: 4px;
 }
 .today-slot-num {
-  width: 18px; flex-shrink: 0;
-  font-size: 11px; font-weight: 600;
+  position: absolute; top: 12px; left: 16px;
+  font-size: 10px; font-weight: 700; letter-spacing: .12em;
   color: var(--text-3); font-variant-numeric: tabular-nums;
 }
 .today-slot-inner {
-  flex: 1; display: flex; align-items: center;
-  gap: 10px; min-width: 0; cursor: pointer;
+  display: flex; flex-direction: column; gap: 10px;
+  min-width: 0; flex: 1; cursor: pointer;
 }
-.today-proj-dot {
-  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+.today-proj-badge {
+  align-self: flex-start;
+  font-size: 11px; padding: 3px 8px; flex-shrink: 0;
 }
 .today-task-name {
-  font-size: 16px; font-weight: 500; color: var(--text);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font-size: 18px; font-weight: 600; color: var(--text);
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
   transition: color .12s;
 }
 .today-slot-inner:hover .today-task-name { color: var(--accent); }
-.today-slot-empty .today-slot-inner { cursor: default; }
+.today-note-preview {
+  font-size: 13px; color: var(--text-2);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+}
+.today-note-preview .note-preview-link { font-size: 13px; }
+.today-slot-foot {
+  margin-top: auto;
+  display: flex; align-items: center; gap: 8px;
+  padding-top: 12px;
+  min-height: 26px;
+}
+.today-slot-empty {
+  border-style: dashed;
+  background: transparent;
+  justify-content: center;
+}
+.today-slot-empty .today-slot-inner {
+  cursor: default;
+  align-items: center; justify-content: center;
+  text-align: center;
+}
 .today-slot-empty .today-task-name {
-  color: var(--text-3); font-weight: 400; font-size: 14px;
+  color: var(--text-3); font-weight: 400; font-size: 13px;
+  -webkit-line-clamp: 2;
 }
 .today-slot-empty .today-slot-inner:hover .today-task-name { color: var(--text-3); }
 .today-unpin {
+  position: absolute; top: 8px; right: 8px;
   background: none; border: none; cursor: pointer;
-  color: var(--border-strong); font-size: 12px; line-height: 1;
-  padding: 4px 6px; border-radius: 4px; flex-shrink: 0;
+  color: var(--border-strong); font-size: 14px; line-height: 1;
+  padding: 4px 7px; border-radius: 6px;
   transition: color .1s, background .1s;
+  z-index: 2;
 }
 .today-unpin:hover { color: var(--text); background: var(--surface2); }
 .today-hint {
   margin-top: 28px; font-size: 12px; color: var(--text-3); line-height: 1.5;
-}
-/* project badge sizing in today view */
-.today-proj-badge {
-  font-size: 11px; padding: 3px 8px; flex-shrink: 0;
 }
 /* drag-to-reorder states */
 .today-slot[draggable="true"] { cursor: grab; }
 .today-slot[draggable="true"]:active { cursor: grabbing; }
 .today-slot-dragging { opacity: .35; }
 .today-slot-drag-over {
-  background: var(--surface2); border-radius: 8px;
-  margin: 0 -8px; padding-left: 8px; padding-right: 8px;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-bg);
+}
+@media (max-width: 900px) {
+  .today-slots { grid-template-columns: 1fr; gap: 14px; max-width: none; }
+  .today-slot { min-height: 0; padding: 22px 16px 14px; }
 }
 @media (max-width: 768px) {
   #today-view { padding: 28px 20px calc(72px + env(safe-area-inset-bottom)) 20px; }
   .today-date { font-size: 20px; margin-bottom: 24px; }
-  .today-task-name { font-size: 15px; }
+  .today-task-name { font-size: 17px; }
 }
 
 /* ── Pin dot — task-card meta ── */
@@ -3481,11 +3532,12 @@ function renderToday() {
 
   const slotsHtml = todayPins.map((id, i) => {
     const task = id ? getTask(id) : null;
+    const slotNum = String(i+1).padStart(2,'0');
     if (!task) {
       return `<li class="today-slot today-slot-empty" aria-label="Empty slot ${i+1}">
-        <span class="today-slot-num">${i+1}</span>
+        <span class="today-slot-num">${slotNum}</span>
         <div class="today-slot-inner">
-          <span class="today-task-name">—</span>
+          <span class="today-task-name">Pin a task from the board</span>
         </div>
       </li>`;
     }
@@ -3496,12 +3548,20 @@ function renderToday() {
     const badge    = proj
       ? `<span class="project-badge today-proj-badge" style="background:${color};color:${pillTextColor(color)}">${projName.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</span>`
       : '';
+    const noteHtml = task.notes
+      ? `<div class="today-note-preview">${notePreview(task.notes)}</div>`
+      : '';
+    const dueHtml  = dueDateDisplay(task.dueDate);
     return `<li class="today-slot" draggable="true" data-idx="${i}">
-      <span class="today-slot-num">${i+1}</span>
-      <div class="today-slot-inner" onclick="openCard('${task.id}')">
-        ${badge}<span class="today-task-name">${name}</span>
-      </div>
+      <div class="today-slot-bar" style="background:${color}"></div>
+      <span class="today-slot-num">${slotNum}</span>
       <button class="today-unpin" onclick="event.stopPropagation();togglePin('${task.id}')" title="Remove from today">✕</button>
+      <div class="today-slot-inner" onclick="openCard('${task.id}')">
+        ${badge}
+        <div class="today-task-name">${name}</div>
+        ${noteHtml}
+        <div class="today-slot-foot">${dueHtml}</div>
+      </div>
     </li>`;
   }).join('');
 
