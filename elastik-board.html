@@ -366,6 +366,7 @@ body {
 }
 
 .swimlane { margin-bottom: 36px; }
+.swimlane:last-child { margin-bottom: 0; }
 
 .swimlane-header {
   display: flex; align-items: center; gap: 10px;
@@ -475,6 +476,10 @@ body {
   .drag-handle span { display: block; width: 14px; height: 1.5px; background: currentColor; border-radius: 1px; }
 }
 .task-card:hover { box-shadow: var(--shadow-card-hover); }
+/* Mobile dark-mode: lift card surface so it reads as a card against pure black */
+@media (max-width: 768px) {
+  [data-theme="dark"] .task-card { background: #2A2A2A; }
+}
 .task-card.dragging { opacity: .4; transform: scale(.97); }
 .task-card.drag-placeholder {
   border: 1.5px dashed var(--border-strong);
@@ -4168,7 +4173,12 @@ function applyZoom() {
   if (mobile) {
     main.style.zoom   = uiScale;
     main.style.width  = (100 / uiScale) + '%';
-    main.style.height = (100 / uiScale) + '%';
+    // Don't override height: Chrome resolves height % inside a zoomed element
+    // against the parent divided by zoom, so 83.33% ends up rendering at only
+    // ~83% of the viewport and leaves a blank strip above the bottom nav.
+    // The CSS rule `#main { height: 100% }` on mobile gives us the full
+    // viewport once zoom scales it up.
+    main.style.height = '';
     // Measure actual safe-area-inset-bottom so we can compensate for zoom
     const probe = document.createElement('div');
     probe.style.cssText = 'position:fixed;bottom:0;left:0;width:0;height:env(safe-area-inset-bottom,0px);pointer-events:none;visibility:hidden;';
@@ -4177,13 +4187,13 @@ function applyZoom() {
     probe.remove();
     // The padding inside the zoomed #main must shrink so it looks like (bnav + safe area) outside
     const pb = Math.ceil((58 + safeBottom) / uiScale) + 'px';
-    ['kanban-view', 'list-view'].forEach(id => {
+    ['kanban-view', 'list-view', 'time-view', 'today-view'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.style.paddingBottom = pb;
     });
   } else {
     main.style.zoom = main.style.width = main.style.height = '';
-    ['kanban-view', 'list-view'].forEach(id => {
+    ['kanban-view', 'list-view', 'time-view', 'today-view'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.style.paddingBottom = '';
     });
@@ -5125,16 +5135,25 @@ if (location.hash.startsWith('#task-')) {
 }
 if (firebaseURL && firebaseAPIKey) {
   setSyncStatus('syncing');
-  pushToFirebase().then(() => {
-    // If the push failed silently, `elastik_pending_sync` is still set, meaning
-    // local state has edits that never reached Firebase. Pulling now would
-    // overwrite those edits with stale remote data. Skip the pull in that case
-    // and connect the stream — the next save() will retry the push.
-    let pending = false;
-    try { pending = !!localStorage.getItem('elastik_pending_sync'); } catch(_) {}
-    if (pending) { startFirebaseStream(); return; }
+  // If the previous session has unsynced edits (pending_sync flag set),
+  // push them first so the cloud reflects local. Otherwise pull — pushing
+  // unconditionally would clobber edits made on another device since the
+  // last sync.
+  let pending = false;
+  try { pending = !!localStorage.getItem('elastik_pending_sync'); } catch(_) {}
+  if (pending) {
+    pushToFirebase().then(() => {
+      // After pushing local edits, pull to pick up any concurrent remote
+      // changes, then open the stream. If the push failed (pending still
+      // set), skip the pull to preserve unsaved edits.
+      let stillPending = false;
+      try { stillPending = !!localStorage.getItem('elastik_pending_sync'); } catch(_) {}
+      if (stillPending) { startFirebaseStream(); return; }
+      pullFromFirebase().then(startFirebaseStream);
+    });
+  } else {
     pullFromFirebase().then(startFirebaseStream);
-  });
+  }
 }
 </script>
 </body>
