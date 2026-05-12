@@ -100,12 +100,14 @@ if ('serviceWorker' in navigator) {
   --s-next-bg: #E6F1FB;   --s-next-text: #185FA5;   --s-next-border: #B5D4F4;
   --s-block-bg: #FCEBEB;  --s-block-text: #A32D2D;  --s-block-border: #F7C1C1;
   --s-nosched-bg: #F0EEF8; --s-nosched-text: #5B4FA8; --s-nosched-border: #C8C0EE;
+  --s-archive-bg: #EEEEEE; --s-archive-text: #6B6B6B; --s-archive-border: #D4D4D4;
 
   --col-wip: #BA7517;
   --col-next: #378ADD;
   --col-done: #3B6D11;
   --col-block: #E24B4A;
   --col-nosched: #5B4FA8;
+  --col-archive: #6B6B6B;
 }
 
 /* ── Dark theme ── */
@@ -131,12 +133,14 @@ if ('serviceWorker' in navigator) {
   --s-next-bg: #0C1D33;   --s-next-text: #5BAAE8;   --s-next-border: #18365A;
   --s-block-bg: #2A0F0F;  --s-block-text: #E86868;  --s-block-border: #501818;
   --s-nosched-bg: #18143A; --s-nosched-text: #9080E8; --s-nosched-border: #302860;
+  --s-archive-bg: #1A1A1A; --s-archive-text: #909090; --s-archive-border: #2F2F2F;
 
   --col-wip: #D4922A;
   --col-next: #5BAAE8;
   --col-done: #7DC948;
   --col-block: #E86868;
   --col-nosched: #9080E8;
+  --col-archive: #909090;
 }
 
 body {
@@ -414,6 +418,26 @@ body {
 .col-title-edit { background: transparent; border: none; outline: 1px solid var(--accent); border-radius: 3px; padding: 1px 4px; width: 90px; }
 .col-count { font-size: 11px; color: var(--text-3); background: var(--surface2); padding: 1px 6px; border-radius: 8px; }
 .col-indicator { width: 3px; height: 14px; border-radius: 2px; }
+.col-collapse-btn {
+  background: none; border: none; padding: 2px 3px; margin: -2px 0 -2px -3px;
+  cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+  color: var(--text-3); border-radius: 4px; line-height: 0;
+  transition: background .12s, color .12s;
+}
+.col-collapse-btn:hover { background: var(--surface2); color: var(--text-2); }
+.col-chev { transition: transform .15s; }
+.col-chev-collapsed { transform: rotate(-90deg); }
+
+/* Collapsed column — header only, narrow rail */
+.kanban-col.kanban-col-collapsed { width: 140px; opacity: .82; }
+.kanban-col-collapsed .task-list,
+.kanban-col-collapsed .col-add-btn { display: none; }
+.kanban-col-collapsed .col-header { margin-bottom: 0; }
+
+/* Archive column — subtler styling so it doesn't compete with active columns */
+.kanban-col-archive .col-title { color: var(--text-3); }
+.kanban-col-archive .task-card { opacity: .78; }
+.kanban-col-archive .task-card:hover { opacity: 1; }
 
 /* ── Column filter bar ── */
 #col-filter-bar {
@@ -1051,6 +1075,7 @@ h3.ce-header { font-size: 15px; }
 .s-next   { background: var(--s-next-bg);   color: var(--s-next-text);   }
 .s-block  { background: var(--s-block-bg);  color: var(--s-block-text);  }
 .s-nosched{ background: var(--s-nosched-bg);color: var(--s-nosched-text);}
+.s-archive{ background: var(--s-archive-bg);color: var(--s-archive-text);}
 
 /* ── Settings ── */
 #settings-btn {
@@ -2139,6 +2164,7 @@ h3.ce-header { font-size: 15px; }
         <option value="nosched">No schedule</option>
         <option value="done">Done</option>
         <option value="block">Blocked</option>
+        <option value="archive">Archive</option>
       </select>
     </div>
     <div class="form-group">
@@ -2446,10 +2472,10 @@ h3.ce-header { font-size: 15px; }
 
 <script>
 const COLORS = ['#C8501A','#534AB7','#0F6E56','#C03F6E','#185FA5','#BA7517','#888780','#1D9E75','#D85A30','#C0913A','#2D9CDB','#8E44AD'];
-const STATUSES = ['next','wip','done','block','nosched'];
-const STATUS_LABELS_DEFAULT = {wip:'In progress',next:'Up next',nosched:'No schedule',done:'Done',block:'Blocked'};
+const STATUSES = ['next','wip','done','block','nosched','archive'];
+const STATUS_LABELS_DEFAULT = {wip:'In progress',next:'Up next',nosched:'No schedule',done:'Done',block:'Blocked',archive:'Archive'};
 function statusLabel(s) { return (state && state.colLabels && state.colLabels[s]) || STATUS_LABELS_DEFAULT[s] || s; }
-const STATUS_COLS_ORDER = ['wip','next','nosched','done','block'];
+const STATUS_COLS_ORDER = ['wip','next','nosched','done','block','archive'];
 function defaultSections() {
   return [
     {id:'dayjob',  name:'Day Job',       color:'#C8501A'},
@@ -2550,6 +2576,10 @@ function pillTextColor(hex) {
 }
 function getProject(pid) { return state.projects.find(p=>p.id===pid); }
 function getTask(id) { return state.tasks.find(t=>t.id===id); }
+function setTaskStatus(task, status) {
+  if (status === 'archive' && task.status !== 'archive') task.archivedAt = Date.now();
+  task.status = status;
+}
 function getSection(id) { return state.sections.find(s=>s.id===id); }
 function sectionTasks(sectionId) {
   let tasks = state.tasks.filter(t => {
@@ -2628,6 +2658,24 @@ function togglePin(id) {
     if (dot) dot.classList.toggle('pinned', isPinned(card.dataset.id));
   });
   if (currentView === 'today') renderToday();
+}
+
+// ── Column collapse (per section + status) ──
+// Archive starts collapsed by default — it can grow large and we don't want
+// it spamming the view.
+function colCollapseKey(sectionId, status) { return `${sectionId}__${status}`; }
+function isColCollapsed(sectionId, status) {
+  const map = (state && state.collapsedCols) || {};
+  const key = colCollapseKey(sectionId, status);
+  if (key in map) return !!map[key];
+  return status === 'archive';
+}
+function toggleColCollapse(sectionId, status) {
+  if (!state.collapsedCols) state.collapsedCols = {};
+  const key = colCollapseKey(sectionId, status);
+  const collapsed = isColCollapsed(sectionId, status);
+  state.collapsedCols[key] = !collapsed;
+  save(); renderKanban();
 }
 
 // ── Column visibility filter ──
@@ -3029,6 +3077,7 @@ function renderKanban() {
     done:    cs.getPropertyValue('--col-done').trim(),
     block:   cs.getPropertyValue('--col-block').trim(),
     nosched: cs.getPropertyValue('--col-nosched').trim(),
+    archive: cs.getPropertyValue('--col-archive').trim(),
   };
 
   const visibleStatuses = STATUSES.filter(s => !hiddenStatuses.has(s));
@@ -3056,12 +3105,20 @@ function renderKanban() {
     cols.id = 'lane-cols-' + sec.id;
 
     STATUS_COLS_ORDER.filter(s => !hiddenStatuses.has(s)).forEach(status => {
-      const colTasks = tasks.filter(t=>t.status===status);
+      let colTasks = tasks.filter(t=>t.status===status);
+      // Archive sorts newest first by archivedAt timestamp
+      if (status === 'archive') {
+        colTasks = colTasks.slice().sort((a,b) => (b.archivedAt||0) - (a.archivedAt||0));
+      }
+      const collapsed = isColCollapsed(sec.id, status);
       const col = document.createElement('div');
-      col.className = 'kanban-col';
+      col.className = 'kanban-col' + (status === 'archive' ? ' kanban-col-archive' : '') + (collapsed ? ' kanban-col-collapsed' : '');
       col.dataset.status = status;
       col.innerHTML = `
         <div class="col-header">
+          <button class="col-collapse-btn" onclick="toggleColCollapse('${sec.id}','${status}')" title="${collapsed ? 'Expand' : 'Collapse'} column" aria-label="${collapsed ? 'Expand' : 'Collapse'} column">
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" class="col-chev${collapsed ? ' col-chev-collapsed' : ''}"><path d="M2.5 3.5L5 6l2.5-2.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
           <span class="col-title" onclick="editColTitle(this,'${status}')" title="Click to rename">${statusLabel(status)}</span>
           <span class="col-count">${colTasks.length}</span>
         </div>`;
@@ -3078,11 +3135,14 @@ function renderKanban() {
       }
       col.appendChild(list);
 
-      const addBtn = document.createElement('div');
-      addBtn.className = 'col-add-btn';
-      addBtn.innerHTML = `<svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M5.5 1v9M1 5.5h9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg> Add task`;
-      addBtn.onclick = () => openTaskModal(null, status, sec.id);
-      col.appendChild(addBtn);
+      // No add button for archive — items reach it only via drop
+      if (status !== 'archive') {
+        const addBtn = document.createElement('div');
+        addBtn.className = 'col-add-btn';
+        addBtn.innerHTML = `<svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M5.5 1v9M1 5.5h9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg> Add task`;
+        addBtn.onclick = () => openTaskModal(null, status, sec.id);
+        col.appendChild(addBtn);
+      }
 
       setupDropZone(list);
       cols.appendChild(col);
@@ -3373,7 +3433,7 @@ function endTouchDrag() {
   if (list && draggedId) {
     const task = getTask(draggedId);
     if (task) {
-      task.status = list.dataset.status;
+      setTaskStatus(task, list.dataset.status);
       applyDropOrder(list, draggedId);
       save();
     }
@@ -3409,7 +3469,7 @@ function setupDropZone(list) {
     if (!draggedId) return;
     const task = getTask(draggedId);
     if (!task) return;
-    task.status = list.dataset.status;
+    setTaskStatus(task, list.dataset.status);
     applyDropOrder(list, draggedId);
     if (dragPlaceholder) { dragPlaceholder.remove(); dragPlaceholder = null; }
     draggedId = null;
@@ -3740,9 +3800,11 @@ function saveTask() {
   const dueDate = document.getElementById('task-due-input').value || '';
   if (editingTaskId) {
     const t = getTask(editingTaskId);
-    t.name=name; t.pid=pid; t.status=status; t.notes=notes; t.dueDate=dueDate;
+    t.name=name; t.pid=pid; setTaskStatus(t, status); t.notes=notes; t.dueDate=dueDate;
   } else {
-    state.tasks.push({id:uid(),pid,name,status,notes,dueDate});
+    const t = {id:uid(),pid,name,status,notes,dueDate};
+    if (status === 'archive') t.archivedAt = Date.now();
+    state.tasks.push(t);
   }
   save(); closeTaskModal(); renderAll();
 }
