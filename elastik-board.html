@@ -1403,22 +1403,27 @@ h3.ce-header { font-size: 15px; }
 
   #main { margin-left: 0; max-width: 100vw; }
 
+  /* Compact mobile pill — safe-area lives in the top offset, not as
+     internal padding, so the pill stays a tight horizontal strip. */
   #header {
-    padding: 0 10px; gap: 0;
-    height: auto;
-    padding-top: max(env(safe-area-inset-top), 50px);
-    padding-bottom: 10px;
+    padding: 6px 10px; gap: 0;
+    height: 44px;
+    top: calc(max(env(safe-area-inset-top), 10px) + 4px);
+    margin: 0 10px;
+    width: calc(100% - 20px);
     align-items: center;
   }
-  #header-right { gap: 5px; }
+  #header-right { gap: 4px; }
   #menu-btn { display: flex; width: 28px; height: 28px; }
-  #reload-btn { display: flex; width: 26px; height: 26px; }
-  #sync-btn { width: 26px; height: 26px; }
-  #theme-toggle { width: 26px; height: 26px; }
+  /* Hide non-essential tools on phones to keep the pill compact */
+  #reload-btn { display: none; }
+  #timer-pill { display: none; }
+  #sync-btn { width: 24px; height: 24px; }
+  #theme-toggle { width: 24px; height: 24px; }
   #header-center { display: none; }
   #header-title { font-size: 14px; }
 
-  #add-task-main { width: 34px; height: 34px; padding: 0; border-radius: 50%; }
+  #add-task-main { width: 30px; height: 30px; padding: 0; border-radius: 50%; }
   #add-task-main .btn-label { display: none; }
 
   #kanban-view { padding: 14px 10px calc(72px + env(safe-area-inset-bottom)) 10px; }
