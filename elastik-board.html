@@ -368,14 +368,17 @@ body {
 .view-btn.active { background: var(--surface); color: var(--text); font-weight: 500; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
 
 #add-task-main {
-  display: flex; align-items: center; gap: 6px;
-  padding: 6px 12px; font-size: 12px; font-weight: 500;
+  display: flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; padding: 0;
   background: var(--accent); color: white;
-  border: none; border-radius: var(--r);
+  border: none; border-radius: 50%;
   cursor: pointer; font-family: inherit;
-  transition: opacity .15s;
+  box-shadow: 0 1px 3px rgba(59,124,232,.3);
+  transition: opacity .15s, box-shadow .15s, transform .1s;
 }
-#add-task-main:hover { opacity: .88; }
+#add-task-main:hover { opacity: .92; box-shadow: 0 3px 10px rgba(59,124,232,.35); }
+#add-task-main:active { transform: scale(.94); }
+#add-task-main .btn-label { display: none; }
 
 #theme-toggle {
   width: 30px; height: 30px;
@@ -4369,7 +4372,24 @@ function flushPendingSync() {
 window.addEventListener('pagehide', flushPendingSync);
 window.addEventListener('beforeunload', flushPendingSync);
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden') flushPendingSync();
+  if (document.visibilityState === 'hidden') {
+    flushPendingSync();
+    return;
+  }
+  // Returning to the foreground (especially on iOS where PWAs are suspended
+  // while backgrounded): the EventSource may have been silently dropped, so
+  // our in-memory state could be stale relative to what other devices wrote
+  // while we were asleep. Pull fresh and re-open the stream — but only if
+  // we don't have unsynced local edits, otherwise we'd clobber them.
+  if (!firebaseURL || !firebaseAPIKey) return;
+  let pending = false;
+  try { pending = !!localStorage.getItem('elastik_pending_sync'); } catch(_) {}
+  if (pending) {
+    forceSyncNow();
+    return;
+  }
+  if (firebaseStream) { firebaseStream.close(); firebaseStream = null; }
+  pullFromFirebase().then(startFirebaseStream);
 });
 
 // ── Time tracking ──
