@@ -9,12 +9,10 @@
   </defs>
   <path d="M28 16 H66 L84 34 V74 Q84 84 74 84 H26 Q16 84 16 74 V26 Q16 16 26 16 Z" fill="#FFFFFF"/>
   <path d="M66 16 L84 34 H68 Q66 34 66 32 Z" fill="url(#peel)"/>
-  <circle cx="28" cy="44" r="3" fill="#C8501A"/>
-  <rect x="34" y="42.5" width="34" height="3" rx="1.5" fill="#D8D8D8"/>
-  <circle cx="28" cy="54" r="3" fill="#534AB7"/>
-  <rect x="34" y="52.5" width="38" height="3" rx="1.5" fill="#D8D8D8"/>
-  <circle cx="28" cy="64" r="3" fill="#0F6E56"/>
-  <rect x="34" y="62.5" width="36" height="3" rx="1.5" fill="#D8D8D8"/>
-  <circle cx="28" cy="74" r="3" fill="#C03F6E"/>
-  <rect x="34" y="72.5" width="30" height="3" rx="1.5" fill="#D8D8D8"/>
+  <circle cx="28" cy="48" r="3" fill="#C8501A"/>
+  <rect x="34" y="46.5" width="38" height="3" rx="1.5" fill="#111111"/>
+  <circle cx="28" cy="58" r="3" fill="#534AB7"/>
+  <rect x="34" y="56.5" width="34" height="3" rx="1.5" fill="#111111"/>
+  <circle cx="28" cy="68" r="3" fill="#0F6E56"/>
+  <rect x="34" y="66.5" width="36" height="3" rx="1.5" fill="#111111"/>
 </svg>

@@ -8,12 +8,10 @@
   </defs>
   <path d="M22 8 H68 L92 32 V80 Q92 92 80 92 H20 Q8 92 8 80 V20 Q8 8 20 8 Z" fill="#FFFFFF"/>
   <path d="M68 8 L92 32 H70 Q68 32 68 30 Z" fill="url(#peel)"/>
-  <circle cx="22" cy="44" r="4" fill="#C8501A"/>
-  <rect x="30" y="42" width="44" height="4" rx="2" fill="#D8D8D8"/>
-  <circle cx="22" cy="56" r="4" fill="#534AB7"/>
-  <rect x="30" y="54" width="50" height="4" rx="2" fill="#D8D8D8"/>
-  <circle cx="22" cy="68" r="4" fill="#0F6E56"/>
-  <rect x="30" y="66" width="46" height="4" rx="2" fill="#D8D8D8"/>
-  <circle cx="22" cy="80" r="4" fill="#C03F6E"/>
-  <rect x="30" y="78" width="38" height="4" rx="2" fill="#D8D8D8"/>
+  <circle cx="22" cy="48" r="4" fill="#C8501A"/>
+  <rect x="30" y="46" width="50" height="4" rx="2" fill="#111111"/>
+  <circle cx="22" cy="62" r="4" fill="#534AB7"/>
+  <rect x="30" y="60" width="44" height="4" rx="2" fill="#111111"/>
+  <circle cx="22" cy="76" r="4" fill="#0F6E56"/>
+  <rect x="30" y="74" width="46" height="4" rx="2" fill="#111111"/>
 </svg>
