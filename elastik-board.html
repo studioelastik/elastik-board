@@ -31,26 +31,26 @@
     ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(0, 0, s, s);
 
-    var pad   = s * 0.11;
-    var dotR  = s * 0.05;
-    var lineH = s * 0.05;
-    var gap   = s * 0.022;
+    var pad   = s * 0.13;
+    var dotR  = s * 0.055;
+    var lineH = s * 0.055;
+    var gap   = s * 0.028;
 
     var dotX   = pad + dotR;
     var lineX  = dotX + dotR + gap;
     var lineMax = (s - pad) - lineX;
 
-    // 5 evenly-spaced rows
-    var rowY  = [0.22, 0.36, 0.50, 0.64, 0.78].map(function(f){ return s*f; });
-    var colors = ['#C8501A','#534AB7','#0F6E56','#C03F6E','#185FA5'];
-    var frac   = [0.88, 0.65, 0.78, 0.58, 0.72];
+    // 3 evenly-spaced rows
+    var rowY  = [0.32, 0.50, 0.68].map(function(f){ return s*f; });
+    var colors = ['#C8501A','#534AB7','#0F6E56'];
+    var frac   = [0.92, 0.72, 0.84];
 
     for (var i = 0; i < rowY.length; i++) {
       var y = rowY[i];
       ctx.beginPath(); ctx.arc(dotX, y, dotR, 0, Math.PI*2);
       ctx.fillStyle = colors[i]; ctx.fill();
       pill(ctx, lineX, y - lineH/2, lineMax * frac[i], lineH);
-      ctx.fillStyle = '#D8D8D8'; ctx.fill();
+      ctx.fillStyle = '#111111'; ctx.fill();
     }
   }
 
@@ -1644,12 +1644,15 @@ h3.ce-header { font-size: 15px; }
     width: 48px; height: 48px; padding: 0; min-width: 0;
     background: var(--accent); color: white;
     border-radius: 50%; font-size: 0;
-    box-shadow: 0 6px 18px rgba(59,124,232,.35);
+    box-shadow: 0 6px 18px rgba(59,124,232,.4);
     justify-content: center;
+    /* Lift the FAB above the nav line so its drop-shadow isn't clipped
+       by the bottom of the viewport / home-indicator safe area. */
+    transform: translateY(-12px);
   }
   [data-theme="dark"] .bnav-add {
     background: var(--accent); color: white;
-    box-shadow: 0 6px 18px rgba(91,156,246,.35);
+    box-shadow: 0 6px 18px rgba(91,156,246,.45);
   }
   .bnav-add.active { color: white; }
   #add-task-main { display: none; }
