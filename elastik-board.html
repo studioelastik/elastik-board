@@ -1276,64 +1276,78 @@ h3.ce-header { font-size: 15px; }
 /* ── Capture overlay (distraction-free brain dump) ── */
 #capture-overlay {
   position: fixed; inset: 0; z-index: 1000;
-  background: rgba(8,8,12,.88);
+  /* Light mode: dim translucent light backdrop. Dark mode is overridden below. */
+  background: rgba(245,245,245,.78);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
   display: none; align-items: center; justify-content: center;
   padding: max(env(safe-area-inset-top), 24px) 24px max(env(safe-area-inset-bottom), 24px);
   opacity: 0; transition: opacity .18s ease;
 }
+[data-theme="dark"] #capture-overlay {
+  background: rgba(8,8,12,.85);
+}
 #capture-overlay.open { display: flex; opacity: 1; }
 #capture-stage {
   width: 100%; max-width: 640px;
   display: flex; flex-direction: column; gap: 14px;
-  align-items: center;
+  align-items: stretch;
   position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 22px 22px 18px;
+  box-shadow: 0 12px 40px rgba(0,0,0,.12);
+}
+[data-theme="dark"] #capture-stage {
+  box-shadow: 0 12px 40px rgba(0,0,0,.5);
 }
 #capture-input {
   width: 100%; min-height: 180px; max-height: 60vh;
   background: transparent; border: none; outline: none;
-  color: #fff;
+  color: var(--text);
   font-family: inherit; font-size: 22px; line-height: 1.45;
   font-weight: 400;
   resize: none;
   text-align: left;
   caret-color: var(--accent);
 }
-#capture-input::placeholder { color: rgba(255,255,255,.35); }
+#capture-input::placeholder { color: var(--text-3); }
 #capture-hint {
-  font-size: 12px; color: rgba(255,255,255,.4); letter-spacing: .02em;
+  font-size: 12px; color: var(--text-3); letter-spacing: .02em;
   align-self: flex-end;
 }
 #capture-hint .cap-hint-key {
   font-family: 'DM Mono', ui-monospace, monospace;
   padding: 1px 6px; border-radius: 4px;
-  background: rgba(255,255,255,.08);
-  color: rgba(255,255,255,.7);
+  background: var(--surface2);
+  color: var(--text-2);
   margin-right: 2px;
 }
 #capture-flash {
-  position: absolute; top: -36px; left: 50%; transform: translateX(-50%) translateY(8px);
+  position: absolute; top: -16px; left: 50%; transform: translateX(-50%) translateY(8px);
   background: var(--accent); color: #fff;
   padding: 5px 12px; border-radius: 999px;
   font-size: 12px; font-weight: 600; letter-spacing: .03em;
   opacity: 0; pointer-events: none;
   transition: opacity .2s ease, transform .2s ease;
+  z-index: 2;
 }
 #capture-flash.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 #capture-close {
   position: absolute; top: max(env(safe-area-inset-top), 16px); right: 16px;
   width: 36px; height: 36px; border-radius: 50%;
-  background: rgba(255,255,255,.08); border: none;
-  color: rgba(255,255,255,.7); font-size: 14px;
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text-2); font-size: 14px;
   cursor: pointer;
   display: flex; align-items: center; justify-content: center;
   transition: background .15s, color .15s;
 }
-#capture-close:hover { background: rgba(255,255,255,.16); color: #fff; }
+#capture-close:hover { background: var(--border-strong); color: var(--text); }
 @media (max-width: 768px) {
   #capture-input { font-size: 19px; }
   #capture-hint { font-size: 11px; }
+  #capture-stage { padding: 18px 18px 14px; border-radius: 14px; }
 }
 
 /* ── Inbox view ── */
