@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Image Mirror">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#000000">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Image Mirror</title>
+<style>
+  :root { color-scheme: dark; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    height: 100%;
+    background: #000;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #stage {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right)
+             env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  #view {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    opacity: 0;
+    transition: opacity .25s ease;
+  }
+  #view.visible { opacity: 1; }
+  #placeholder {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    color: #6b6b73;
+    text-align: center;
+    padding: 32px;
+  }
+  #placeholder.visible { display: flex; }
+  #placeholder .logo {
+    width: 64px;
+    height: 64px;
+    border-radius: 16px;
+    border: 2px dashed #3a3a42;
+  }
+  #placeholder p { font-size: 16px; line-height: 1.4; }
+  #placeholder .hint { font-size: 13px; color: #4a4a52; }
+  #dot {
+    position: fixed;
+    top: calc(env(safe-area-inset-top) + 10px);
+    right: calc(env(safe-area-inset-right) + 12px);
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #2e7d32;
+    box-shadow: 0 0 8px rgba(46,125,50,.8);
+    opacity: 0;
+    transition: opacity .3s ease, background .3s ease;
+  }
+  #dot.offline { background: #b23b3b; box-shadow: 0 0 8px rgba(178,59,59,.8); opacity: 1; }
+</style>
+</head>
+<body>
+  <div id="stage">
+    <img id="view" alt="Mirrored image" decoding="async">
+    <div id="placeholder" class="visible">
+      <div class="logo"></div>
+      <p id="status">Waiting for an image…</p>
+      <p class="hint">Drop or paste an image on your Mac.</p>
+    </div>
+  </div>
+  <div id="dot"></div>
+  <script src="app.js"></script>
+</body>
+</html>
