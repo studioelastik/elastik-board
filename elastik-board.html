@@ -1724,6 +1724,124 @@ h3.ce-header { font-size: 15px; }
   .today-task-name { font-size: 17px; }
 }
 
+/* ── Ideas view — chat-style idea space ── */
+#ideas-view {
+  flex: 1; min-height: 0;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.ideas-wrap {
+  flex: 1; min-height: 0;
+  display: flex; flex-direction: column;
+  width: 100%; max-width: 760px;
+  margin: 0 auto;
+  padding: 40px 48px 0;
+}
+.ideas-header { flex-shrink: 0; }
+.ideas-sub {
+  font-size: 13px; color: var(--text-2);
+  line-height: 1.5; margin: -24px 0 24px;
+  max-width: 440px;
+}
+.ideas-feed {
+  flex: 1; min-height: 0;
+  overflow-y: auto;
+  display: flex; flex-direction: column;
+  gap: 14px;
+  padding: 16px 2px 20px;
+}
+.idea-msg {
+  display: flex; flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+.idea-bubble {
+  position: relative;
+  max-width: 80%;
+  background: var(--accent);
+  color: #fff;
+  padding: 10px 14px;
+  border-radius: 16px 16px 4px 16px;
+  box-shadow: var(--shadow-card);
+}
+.idea-text {
+  font-size: 14px; line-height: 1.45;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+.idea-text a { color: #fff; text-decoration: underline; }
+.idea-time {
+  font-size: 10px; color: var(--text-3);
+  letter-spacing: .03em;
+  padding-right: 4px;
+}
+.idea-del {
+  position: absolute; top: -8px; left: -8px;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  border: none;
+  background: var(--surface);
+  color: var(--text-2);
+  box-shadow: var(--shadow-card-hover);
+  cursor: pointer;
+  font-size: 11px; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0;
+  transition: opacity .12s, color .12s;
+}
+.idea-bubble:hover .idea-del { opacity: 1; }
+.idea-del:hover { color: var(--col-block); }
+.ideas-empty {
+  flex: 1;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  text-align: center; gap: 14px;
+  color: var(--text-3);
+}
+.ideas-empty svg { color: var(--border-strong); }
+.ideas-empty p { font-size: 13px; line-height: 1.6; }
+.ideas-composer {
+  flex-shrink: 0;
+  display: flex; align-items: flex-end; gap: 8px;
+  padding: 12px 0 28px;
+  background: var(--bg);
+}
+.ideas-input {
+  flex: 1;
+  font-family: inherit; font-size: 14px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 11px 16px;
+  resize: none;
+  line-height: 1.45;
+  max-height: 160px;
+  outline: none;
+  transition: border-color .12s;
+}
+.ideas-input:focus { border-color: var(--accent); }
+.ideas-input::placeholder { color: var(--text-3); }
+.ideas-send {
+  flex-shrink: 0;
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: opacity .12s, transform .08s;
+}
+.ideas-send:hover { opacity: .9; }
+.ideas-send:active { transform: scale(.94); }
+@media (max-width: 768px) {
+  .ideas-wrap { padding: 28px 18px 0; }
+  .ideas-composer { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
+  .ideas-input { font-size: 16px; }
+  .idea-bubble { max-width: 88%; }
+}
+
 /* ── Pin dot — task-card meta ── */
 .pin-dot {
   width: 14px; height: 14px; border-radius: 50%;
@@ -2083,6 +2201,10 @@ h3.ce-header { font-size: 15px; }
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7.5" r="5.5" stroke="currentColor" stroke-width="1.3"/><path d="M7 4.5V7.5l2 1.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
         Time
       </div>
+      <div class="sidebar-item" onclick="setView('ideas')" id="nav-ideas">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 3.5A1.5 1.5 0 013.5 2h7A1.5 1.5 0 0112 3.5v5A1.5 1.5 0 0110.5 10H6L3 12.5V10h-.5A1.5 1.5 0 011 8.5v-5z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+        Ideas
+      </div>
     </div>
     <div id="sidebar-projects">
       <div class="sidebar-section-label">Projects</div>
@@ -2119,6 +2241,7 @@ h3.ce-header { font-size: 15px; }
           <button class="view-btn active" id="vbtn-kanban" onclick="setView('kanban')">Board</button>
           <button class="view-btn" id="vbtn-list" onclick="setView('list')">List</button>
           <button class="view-btn" id="vbtn-time" onclick="setView('time')">Time</button>
+          <button class="view-btn" id="vbtn-ideas" onclick="setView('ideas')">Ideas</button>
         </div>
       </div>
       <div id="header-right">
@@ -2153,6 +2276,7 @@ h3.ce-header { font-size: 15px; }
     <div id="list-view" style="display:none"></div>
     <div id="time-view" style="display:none"></div>
     <div id="today-view" style="display:none"></div>
+    <div id="ideas-view" style="display:none"></div>
   </div>
 
   <!-- Bottom nav (mobile) -->
@@ -2527,6 +2651,7 @@ function load() {
     if (!raw.sections) raw.sections = defaultSections();
     if (!raw.colLabels) raw.colLabels = {...STATUS_LABELS_DEFAULT};
     if (!raw.timeEntries) raw.timeEntries = [];
+    if (!raw.ideas) raw.ideas = [];
     if (!('activeTimer' in raw)) raw.activeTimer = null;
     raw.projects.forEach(p => { if (!p.section) p.section = 'studio'; });
     // ensure general section always exists
@@ -2577,6 +2702,7 @@ function defaultData() {
     view: 'kanban',
     colLabels: {...STATUS_LABELS_DEFAULT},
     timeEntries: [],
+    ideas: [],
     activeTimer: null
   };
 }
@@ -2811,6 +2937,7 @@ function renderSidebar() {
   document.getElementById('nav-kanban').className = 'sidebar-item'+(currentView==='kanban'?' active':'');
   document.getElementById('nav-list').className   = 'sidebar-item'+(currentView==='list'  ?' active':'');
   document.getElementById('nav-today').className  = 'sidebar-item'+(currentView==='today' ?' active':'');
+  document.getElementById('nav-ideas').className  = 'sidebar-item'+(currentView==='ideas' ?' active':'');
 }
 
 function toggleLane(id) {
@@ -3717,6 +3844,82 @@ function renderToday() {
   });
 }
 
+// ── Ideas view — a chat with yourself for capturing ideas ──
+function renderIdeas() {
+  const el = document.getElementById('ideas-view');
+  if (!el) return;
+  if (!state.ideas) state.ideas = [];
+  const ideas = state.ideas.slice().sort((a, b) => a.ts - b.ts);
+
+  const feedHtml = ideas.length
+    ? ideas.map(idea => {
+        const d = new Date(idea.ts);
+        const stamp = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+          + ' · ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+        return `<div class="idea-msg" data-id="${idea.id}">
+          <div class="idea-bubble">
+            <div class="idea-text">${parseNotes(idea.text)}</div>
+            <button class="idea-del" onclick="deleteIdea('${idea.id}')" title="Delete idea">✕</button>
+          </div>
+          <div class="idea-time">${stamp}</div>
+        </div>`;
+      }).join('')
+    : `<div class="ideas-empty">
+        <svg width="40" height="40" viewBox="0 0 40 40" fill="none"><path d="M6 10a4 4 0 014-4h20a4 4 0 014 4v14a4 4 0 01-4 4H15l-8 6v-6a4 4 0 01-1-3V10z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+        <p>No ideas yet.<br>Start a conversation with yourself — capture<br>anything that comes to mind.</p>
+      </div>`;
+
+  el.innerHTML = `
+    <div class="ideas-wrap">
+      <div class="ideas-header">
+        <div class="today-eyebrow">Ideas</div>
+        <h1 class="today-date">Idea space</h1>
+        <p class="ideas-sub">A chat with yourself for thinking out loud. Notes you capture here sync across your devices.</p>
+      </div>
+      <div class="ideas-feed" id="ideas-feed">${feedHtml}</div>
+      <div class="ideas-composer">
+        <textarea id="idea-input" class="ideas-input" rows="1" placeholder="What's on your mind?"></textarea>
+        <button class="ideas-send" onclick="addIdea()" title="Send idea">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 8l12-6-4 13-3-5-5-2z" fill="currentColor"/></svg>
+        </button>
+      </div>
+    </div>`;
+
+  const input = document.getElementById('idea-input');
+  if (input) {
+    const autosize = () => {
+      input.style.height = 'auto';
+      input.style.height = Math.min(input.scrollHeight, 160) + 'px';
+    };
+    input.addEventListener('input', autosize);
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); addIdea(); }
+    });
+    autosize();
+  }
+  const feed = document.getElementById('ideas-feed');
+  if (feed) feed.scrollTop = feed.scrollHeight;
+}
+
+function addIdea() {
+  const input = document.getElementById('idea-input');
+  if (!input) return;
+  const text = input.value.trim();
+  if (!text) return;
+  if (!state.ideas) state.ideas = [];
+  state.ideas.push({ id: uid(), text, ts: Date.now() });
+  save();
+  renderIdeas();
+  document.getElementById('idea-input')?.focus();
+}
+
+function deleteIdea(id) {
+  if (!state.ideas) return;
+  state.ideas = state.ideas.filter(i => i.id !== id);
+  save();
+  renderIdeas();
+}
+
 // ── View switching ──
 function setView(v) {
   currentView = v; state.view = v; save();
@@ -3724,27 +3927,32 @@ function setView(v) {
   document.getElementById('list-view').style.display   = v==='list'   ? 'block' : 'none';
   document.getElementById('time-view').style.display   = v==='time'   ? 'block' : 'none';
   document.getElementById('today-view').style.display  = v==='today'  ? 'block' : 'none';
+  document.getElementById('ideas-view').style.display  = v==='ideas'  ? 'flex'  : 'none';
   document.getElementById('col-filter-bar')?.classList.toggle('visible', v==='kanban');
   document.getElementById('vbtn-kanban').className = 'view-btn'+(v==='kanban'?' active':'');
   document.getElementById('vbtn-list').className   = 'view-btn'+(v==='list'  ?' active':'');
   document.getElementById('vbtn-time').className   = 'view-btn'+(v==='time'  ?' active':'');
   document.getElementById('vbtn-today').className  = 'view-btn'+(v==='today' ?' active':'');
+  document.getElementById('vbtn-ideas').className  = 'view-btn'+(v==='ideas' ?' active':'');
   document.getElementById('nav-kanban').className  = 'sidebar-item'+(v==='kanban'?' active':'');
   document.getElementById('nav-list').className    = 'sidebar-item'+(v==='list'  ?' active':'');
   document.getElementById('nav-time').className    = 'sidebar-item'+(v==='time'  ?' active':'');
   document.getElementById('nav-today').className   = 'sidebar-item'+(v==='today' ?' active':'');
+  document.getElementById('nav-ideas').className   = 'sidebar-item'+(v==='ideas' ?' active':'');
   document.getElementById('bnav-board')?.classList.toggle('active', v==='kanban');
   document.getElementById('bnav-list')?.classList.toggle('active', v==='list');
   document.getElementById('bnav-time')?.classList.toggle('active', v==='time');
-  // Hide per-project title and add-task button in time / today views
+  // Hide per-project title and add-task button in time / today / ideas views
+  const noProjectCtx = (v==='time'||v==='today'||v==='ideas');
   const headerTitle = document.getElementById('header-title');
-  if (headerTitle) headerTitle.style.visibility = (v==='time'||v==='today') ? 'hidden' : '';
+  if (headerTitle) headerTitle.style.visibility = noProjectCtx ? 'hidden' : '';
   const addBtn = document.getElementById('add-task-main');
-  if (addBtn) addBtn.style.display = (v==='time'||v==='today') ? 'none' : '';
+  if (addBtn) addBtn.style.display = noProjectCtx ? 'none' : '';
   if (v==='kanban') { renderColFilterBar(); renderKanban(); }
   else if (v==='list')  renderList();
   else if (v==='time')  renderTime();
   else if (v==='today') renderToday();
+  else if (v==='ideas') renderIdeas();
 }
 
 function renderAll() {
@@ -3753,6 +3961,7 @@ function renderAll() {
   else if (currentView==='list')  renderList();
   else if (currentView==='time')  renderTime();
   else if (currentView==='today') renderToday();
+  else if (currentView==='ideas') renderIdeas();
   renderTimerPill();
   // If a card was open during re-render, ensure it stays in the sheet.
   // renderKanban() will have created a fresh duplicate in the kanban — move
@@ -4105,6 +4314,7 @@ function migrateRemote(data) {
   if (!data.sections) data.sections = defaultSections();
   if (!data.colLabels) data.colLabels = {...STATUS_LABELS_DEFAULT};
   if (!data.timeEntries) data.timeEntries = [];
+  if (!data.ideas) data.ideas = [];
   if (!('activeTimer' in data)) data.activeTimer = null;
   data.projects.forEach(p => { if (!p.section) p.section = 'studio'; });
   // Ensure general section exists
