@@ -1259,6 +1259,131 @@ h3.ce-header { font-size: 15px; }
   transition: background .15s, color .15s;
 }
 #sync-btn:hover { background: var(--border-strong); color: var(--text); }
+#capture-btn {
+  width: 30px; height: 30px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--r); cursor: pointer;
+  color: var(--accent); font-family: inherit;
+  transition: background .15s, color .15s, transform .1s;
+}
+#capture-btn:hover { background: var(--accent-bg); transform: scale(1.05); }
+#capture-btn:active { transform: scale(.94); }
+@media (max-width: 768px) { #capture-btn { width: 26px; height: 26px; } }
+
+/* ── Capture overlay (distraction-free brain dump) ── */
+#capture-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(8,8,12,.88);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  display: none; align-items: center; justify-content: center;
+  padding: max(env(safe-area-inset-top), 24px) 24px max(env(safe-area-inset-bottom), 24px);
+  opacity: 0; transition: opacity .18s ease;
+}
+#capture-overlay.open { display: flex; opacity: 1; }
+#capture-stage {
+  width: 100%; max-width: 640px;
+  display: flex; flex-direction: column; gap: 14px;
+  align-items: center;
+  position: relative;
+}
+#capture-input {
+  width: 100%; min-height: 180px; max-height: 60vh;
+  background: transparent; border: none; outline: none;
+  color: #fff;
+  font-family: inherit; font-size: 22px; line-height: 1.45;
+  font-weight: 400;
+  resize: none;
+  text-align: left;
+  caret-color: var(--accent);
+}
+#capture-input::placeholder { color: rgba(255,255,255,.35); }
+#capture-hint {
+  font-size: 12px; color: rgba(255,255,255,.4); letter-spacing: .02em;
+  align-self: flex-end;
+}
+#capture-hint .cap-hint-key {
+  font-family: 'DM Mono', ui-monospace, monospace;
+  padding: 1px 6px; border-radius: 4px;
+  background: rgba(255,255,255,.08);
+  color: rgba(255,255,255,.7);
+  margin-right: 2px;
+}
+#capture-flash {
+  position: absolute; top: -36px; left: 50%; transform: translateX(-50%) translateY(8px);
+  background: var(--accent); color: #fff;
+  padding: 5px 12px; border-radius: 999px;
+  font-size: 12px; font-weight: 600; letter-spacing: .03em;
+  opacity: 0; pointer-events: none;
+  transition: opacity .2s ease, transform .2s ease;
+}
+#capture-flash.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+#capture-close {
+  position: absolute; top: max(env(safe-area-inset-top), 16px); right: 16px;
+  width: 36px; height: 36px; border-radius: 50%;
+  background: rgba(255,255,255,.08); border: none;
+  color: rgba(255,255,255,.7); font-size: 14px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .15s, color .15s;
+}
+#capture-close:hover { background: rgba(255,255,255,.16); color: #fff; }
+@media (max-width: 768px) {
+  #capture-input { font-size: 19px; }
+  #capture-hint { font-size: 11px; }
+}
+
+/* ── Inbox view ── */
+#inbox-view { flex: 1; padding: 32px 32px 40px; overflow-y: auto; }
+@media (max-width: 768px) {
+  #inbox-view { padding: 14px 14px calc(72px + env(safe-area-inset-bottom)) 14px; overflow-y: auto; }
+}
+.inbox-eyebrow {
+  font-size: 11px; font-weight: 600; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--text-3); margin-bottom: 6px;
+}
+.inbox-title { font-size: 22px; font-weight: 700; margin: 0 0 6px; }
+.inbox-sub { font-size: 13px; color: var(--text-2); margin-bottom: 24px; }
+.inbox-empty { padding: 60px 0; text-align: center; color: var(--text-3); font-size: 13px; }
+.inbox-empty kbd {
+  display: inline-block; padding: 2px 7px; border-radius: 4px;
+  background: var(--surface2); border: 1px solid var(--border);
+  font-family: 'DM Mono', ui-monospace, monospace; font-size: 11px;
+  color: var(--text-2); margin: 0 1px;
+}
+.inbox-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.inbox-item {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-lg); padding: 14px 16px;
+  display: flex; flex-direction: column; gap: 6px;
+  transition: border-color .15s, box-shadow .15s;
+}
+.inbox-item:hover { border-color: var(--border-strong); box-shadow: var(--shadow-card); }
+.inbox-item-text {
+  font-size: 15px; line-height: 1.5; color: var(--text);
+  white-space: pre-wrap; word-break: break-word;
+}
+.inbox-item-foot {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 8px;
+}
+.inbox-item-time { font-size: 11px; color: var(--text-3); }
+.inbox-item-actions { display: flex; gap: 6px; }
+.inbox-item-btn {
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text-2); font-family: inherit; font-size: 11px;
+  padding: 4px 10px; border-radius: 6px; cursor: pointer;
+  transition: background .12s, color .12s, border-color .12s;
+}
+.inbox-item-btn:hover { background: var(--accent-bg); color: var(--accent); border-color: var(--accent); }
+.inbox-item-btn.danger:hover { background: rgba(232,104,104,.1); color: #e86868; border-color: rgba(232,104,104,.4); }
+.sidebar-item-badge {
+  margin-left: auto;
+  background: var(--accent); color: #fff;
+  font-size: 10px; font-weight: 600;
+  padding: 1px 7px; border-radius: 999px; min-width: 18px; text-align: center;
+}
 #reload-btn {
   width: 30px; height: 30px; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
@@ -2078,6 +2203,10 @@ h3.ce-header { font-size: 15px; }
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="2.5" cy="3.5" r="1" fill="currentColor"/><path d="M5 3.5h7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="2.5" cy="7" r="1" fill="currentColor"/><path d="M5 7h7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="2.5" cy="10.5" r="1" fill="currentColor"/><path d="M5 10.5h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
         Today
       </div>
+      <div class="sidebar-item" onclick="setView('inbox')" id="nav-inbox">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1.5 8L3 2.5h8L12.5 8M1.5 8v3.5h11V8M1.5 8h3l1 1.5h3l1-1.5h3" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"/></svg>
+        Inbox <span id="nav-inbox-count" class="sidebar-item-badge" style="display:none"></span>
+      </div>
       <div class="sidebar-item active" onclick="setView('kanban')" id="nav-kanban">
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="3.5" height="12" rx="1" fill="currentColor" opacity=".6"/><rect x="5.5" y="1" width="3.5" height="8" rx="1" fill="currentColor"/><rect x="10" y="1" width="3" height="10" rx="1" fill="currentColor" opacity=".6"/></svg>
         Board
@@ -2139,6 +2268,9 @@ h3.ce-header { font-size: 15px; }
             <svg width="9" height="9" viewBox="0 0 9 9" fill="none"><rect x="1" y="1" width="7" height="7" rx="1" fill="currentColor"/></svg>
           </button>
         </div>
+        <button id="capture-btn" onclick="openCapture()" title="Quick capture (press C)" aria-label="Quick capture">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1l1.6 4.4 4.4 1.6-4.4 1.6L7 13l-1.6-4.4L1 7l4.4-1.6L7 1z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" fill="currentColor" fill-opacity=".18"/></svg>
+        </button>
         <button id="reload-btn" onclick="location.reload()" title="Get latest version" style="font-size:16px; line-height:1;">↺</button>
         <button id="sync-btn" onclick="openSyncModal()" title="Cloud sync">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M10.5 9.5a2.5 2.5 0 000-5 2.5 2.5 0 00-4.9-.5A2 2 0 103.5 8h.5M7 10l-1.5 1.5L7 13M7 10v4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -2160,6 +2292,7 @@ h3.ce-header { font-size: 15px; }
     <div id="list-view" style="display:none"></div>
     <div id="time-view" style="display:none"></div>
     <div id="today-view" style="display:none"></div>
+    <div id="inbox-view" style="display:none"></div>
   </div>
 
   <!-- Bottom nav (mobile) -->
@@ -2184,6 +2317,16 @@ h3.ce-header { font-size: 15px; }
       <span>Time</span>
     </button>
   </nav>
+</div>
+
+<!-- Quick Capture overlay — distraction-free brain dump -->
+<div id="capture-overlay" onclick="if(event.target===this)closeCapture(true)">
+  <div id="capture-stage">
+    <textarea id="capture-input" placeholder="Brain dump — anything. Hit ⏎ to save another, esc to close." rows="1" autocomplete="off" autocorrect="off"></textarea>
+    <div id="capture-hint"><span class="cap-hint-key">⏎</span> save & next  ·  <span class="cap-hint-key">esc</span> close</div>
+    <div id="capture-flash">Captured</div>
+  </div>
+  <button id="capture-close" onclick="closeCapture(true)" aria-label="Close capture">✕</button>
 </div>
 
 <!-- Task Modal -->
@@ -2535,6 +2678,7 @@ function load() {
     if (!raw.colLabels) raw.colLabels = {...STATUS_LABELS_DEFAULT};
     if (!raw.timeEntries) raw.timeEntries = [];
     if (!('activeTimer' in raw)) raw.activeTimer = null;
+    if (!raw.inbox) raw.inbox = [];
     raw.projects.forEach(p => { if (!p.section) p.section = 'studio'; });
     // ensure general section always exists
     if (!raw.sections.find(s => s.id === 'general'))
@@ -3724,6 +3868,159 @@ function renderToday() {
   });
 }
 
+// ── Quick capture (distraction-free brain dump) ──
+function openCapture() {
+  const ov = document.getElementById('capture-overlay');
+  const ta = document.getElementById('capture-input');
+  if (!ov || !ta) return;
+  ov.classList.add('open');
+  ta.value = '';
+  document.body.style.overflow = 'hidden';
+  // Auto-grow as user types
+  ta.style.height = 'auto';
+  setTimeout(() => ta.focus({ preventScroll: true }), 30);
+}
+function closeCapture(saveCurrent) {
+  const ov = document.getElementById('capture-overlay');
+  const ta = document.getElementById('capture-input');
+  if (!ov) return;
+  if (saveCurrent && ta && ta.value.trim()) saveCaptureText(ta.value.trim(), { silent: true });
+  ov.classList.remove('open');
+  document.body.style.overflow = '';
+  if (ta) ta.value = '';
+  updateInboxBadge();
+}
+function saveCaptureText(text, opts) {
+  opts = opts || {};
+  if (!text) return;
+  if (!state.inbox) state.inbox = [];
+  state.inbox.unshift({ id: uid(), text, createdAt: Date.now() });
+  save();
+  updateInboxBadge();
+  if (currentView === 'inbox') renderInbox();
+  if (!opts.silent) flashCaptureSaved();
+}
+function flashCaptureSaved() {
+  const flash = document.getElementById('capture-flash');
+  if (!flash) return;
+  flash.classList.add('show');
+  clearTimeout(flashCaptureSaved._t);
+  flashCaptureSaved._t = setTimeout(() => flash.classList.remove('show'), 900);
+}
+function updateInboxBadge() {
+  const badge = document.getElementById('nav-inbox-count');
+  if (!badge) return;
+  const n = (state.inbox || []).length;
+  badge.textContent = n;
+  badge.style.display = n > 0 ? 'inline-block' : 'none';
+}
+function renderInbox() {
+  const el = document.getElementById('inbox-view');
+  if (!el) return;
+  const items = (state.inbox || []).slice();
+  const fmt = ts => {
+    const d = new Date(ts), now = new Date();
+    const sameDay = d.toDateString() === now.toDateString();
+    const yest = new Date(now); yest.setDate(yest.getDate() - 1);
+    const isYest = d.toDateString() === yest.toDateString();
+    const t = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    if (sameDay) return 'Today ' + t;
+    if (isYest)  return 'Yesterday ' + t;
+    return d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + t;
+  };
+  const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  const listHtml = items.length
+    ? `<ol class="inbox-list">${items.map(it => `
+        <li class="inbox-item" data-id="${it.id}">
+          <div class="inbox-item-text">${esc(it.text)}</div>
+          <div class="inbox-item-foot">
+            <span class="inbox-item-time">${fmt(it.createdAt)}</span>
+            <span class="inbox-item-actions">
+              <button class="inbox-item-btn" onclick="convertCaptureToTask('${it.id}')">→ Make task</button>
+              <button class="inbox-item-btn danger" onclick="deleteCapture('${it.id}')">Delete</button>
+            </span>
+          </div>
+        </li>`).join('')}</ol>`
+    : `<div class="inbox-empty">No captures yet. Tap the <strong>✦</strong> in the header or press <kbd>c</kbd> to dump a thought.</div>`;
+  el.innerHTML = `
+    <div class="inbox-eyebrow">Inbox</div>
+    <h1 class="inbox-title">Brain dump</h1>
+    <p class="inbox-sub">Captured thoughts. Convert into tasks when you're ready.</p>
+    ${listHtml}`;
+}
+function deleteCapture(id) {
+  if (!state.inbox) return;
+  state.inbox = state.inbox.filter(c => c.id !== id);
+  save();
+  updateInboxBadge();
+  renderInbox();
+}
+function convertCaptureToTask(id) {
+  const cap = (state.inbox || []).find(c => c.id === id);
+  if (!cap) return;
+  // Pre-fill the task modal: first line = name, rest = notes
+  const lines = cap.text.split(/\r?\n/);
+  const taskName = lines[0].trim().slice(0, 200);
+  const notes    = lines.slice(1).join('\n').trim();
+  openTaskModal();
+  setTimeout(() => {
+    const nameEl  = document.getElementById('task-name-input');
+    const notesEl = document.getElementById('task-notes-input');
+    if (nameEl)  nameEl.value  = taskName;
+    if (notesEl) notesEl.value = notes;
+  }, 20);
+  // Remove from inbox once the task modal opens; if user cancels they can re-add manually
+  state.inbox = state.inbox.filter(c => c.id !== id);
+  save();
+  updateInboxBadge();
+  renderInbox();
+}
+
+// Auto-grow textarea + keyboard shortcuts inside capture
+document.addEventListener('DOMContentLoaded', () => {
+  const ta = document.getElementById('capture-input');
+  if (!ta) return;
+  ta.addEventListener('input', () => {
+    ta.style.height = 'auto';
+    ta.style.height = Math.min(ta.scrollHeight, window.innerHeight * 0.6) + 'px';
+  });
+  ta.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      closeCapture(true);
+    } else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      const txt = ta.value.trim();
+      if (txt) saveCaptureText(txt);
+      ta.value = '';
+      ta.style.height = 'auto';
+      ta.focus();
+    } else if (e.key === 'Enter' && !e.shiftKey && !e.altKey) {
+      // Plain Enter: save and ready for next capture
+      const txt = ta.value.trim();
+      if (txt) {
+        e.preventDefault();
+        saveCaptureText(txt);
+        ta.value = '';
+        ta.style.height = 'auto';
+        ta.focus();
+      }
+    }
+  });
+});
+
+// Global "c" shortcut to open capture (when not typing in another input)
+document.addEventListener('keydown', e => {
+  if (e.key !== 'c' && e.key !== 'C') return;
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const tag = (e.target && e.target.tagName) || '';
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target && e.target.isContentEditable)) return;
+  if (document.querySelector('.modal-overlay.open')) return;
+  if (document.getElementById('capture-overlay')?.classList.contains('open')) return;
+  e.preventDefault();
+  openCapture();
+});
+
 // ── View switching ──
 function setView(v) {
   currentView = v; state.view = v; save();
@@ -3731,6 +4028,7 @@ function setView(v) {
   document.getElementById('list-view').style.display   = v==='list'   ? 'block' : 'none';
   document.getElementById('time-view').style.display   = v==='time'   ? 'block' : 'none';
   document.getElementById('today-view').style.display  = v==='today'  ? 'block' : 'none';
+  document.getElementById('inbox-view').style.display  = v==='inbox'  ? 'block' : 'none';
   document.getElementById('col-filter-bar')?.classList.toggle('visible', v==='kanban');
   document.getElementById('vbtn-kanban').className = 'view-btn'+(v==='kanban'?' active':'');
   document.getElementById('vbtn-list').className   = 'view-btn'+(v==='list'  ?' active':'');
@@ -3740,26 +4038,30 @@ function setView(v) {
   document.getElementById('nav-list').className    = 'sidebar-item'+(v==='list'  ?' active':'');
   document.getElementById('nav-time').className    = 'sidebar-item'+(v==='time'  ?' active':'');
   document.getElementById('nav-today').className   = 'sidebar-item'+(v==='today' ?' active':'');
+  document.getElementById('nav-inbox').className   = 'sidebar-item'+(v==='inbox' ?' active':'');
   document.getElementById('bnav-board')?.classList.toggle('active', v==='kanban');
   document.getElementById('bnav-list')?.classList.toggle('active', v==='list');
   document.getElementById('bnav-time')?.classList.toggle('active', v==='time');
-  // Hide per-project title and add-task button in time / today views
+  // Hide per-project title and add-task button in time / today / inbox views
   const headerTitle = document.getElementById('header-title');
-  if (headerTitle) headerTitle.style.visibility = (v==='time'||v==='today') ? 'hidden' : '';
+  if (headerTitle) headerTitle.style.visibility = (v==='time'||v==='today'||v==='inbox') ? 'hidden' : '';
   const addBtn = document.getElementById('add-task-main');
-  if (addBtn) addBtn.style.display = (v==='time'||v==='today') ? 'none' : '';
+  if (addBtn) addBtn.style.display = (v==='time'||v==='today'||v==='inbox') ? 'none' : '';
   if (v==='kanban') { renderColFilterBar(); renderKanban(); }
   else if (v==='list')  renderList();
   else if (v==='time')  renderTime();
   else if (v==='today') renderToday();
+  else if (v==='inbox') renderInbox();
 }
 
 function renderAll() {
   renderSidebar();
+  updateInboxBadge();
   if (currentView==='kanban') { renderColFilterBar(); renderKanban(); }
   else if (currentView==='list')  renderList();
   else if (currentView==='time')  renderTime();
   else if (currentView==='today') renderToday();
+  else if (currentView==='inbox') renderInbox();
   renderTimerPill();
   // If a card was open during re-render, ensure it stays in the sheet.
   // renderKanban() will have created a fresh duplicate in the kanban — move
@@ -4113,6 +4415,7 @@ function migrateRemote(data) {
   if (!data.colLabels) data.colLabels = {...STATUS_LABELS_DEFAULT};
   if (!data.timeEntries) data.timeEntries = [];
   if (!('activeTimer' in data)) data.activeTimer = null;
+  if (!data.inbox) data.inbox = [];
   data.projects.forEach(p => { if (!p.section) p.section = 'studio'; });
   // Ensure general section exists
   if (!data.sections.find(s => s.id === 'general'))
