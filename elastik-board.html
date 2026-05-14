@@ -290,10 +290,10 @@ body {
 /* ── Header (floating pill, openstandard.us-style) ── */
 #header {
   height: var(--header-h);
-  background: rgba(245,245,245,0.72);
-  backdrop-filter: blur(10px) saturate(1.6);
-  -webkit-backdrop-filter: blur(10px) saturate(1.6);
-  border: none;
+  background: rgba(255,255,255,0.55);
+  backdrop-filter: blur(14px) saturate(1.6);
+  -webkit-backdrop-filter: blur(14px) saturate(1.6);
+  border: 1px solid rgba(255,255,255,0.45);
   border-radius: 999px;
   display: flex; align-items: center;
   padding: 0 14px;
@@ -301,15 +301,18 @@ body {
   position: sticky; top: 10px; z-index: 50;
   margin: 10px 14px 0;
   width: calc(100% - 28px);
-  box-shadow: 0 1px 3px rgba(0,0,0,.05);
+  box-shadow: 0 1px 3px rgba(0,0,0,.04);
   transition: width .55s cubic-bezier(.23,1,.32,1), margin .55s cubic-bezier(.23,1,.32,1), box-shadow .35s, background .3s;
   min-width: 0;
   align-self: stretch;
 }
 [data-theme="dark"] #header {
-  background: rgba(20,20,20,0.7);
+  background: rgba(28,28,28,0.5);
+  border-color: rgba(255,255,255,0.06);
   box-shadow: 0 1px 3px rgba(0,0,0,.25);
 }
+/* Theme toggle lives in Settings now, not the header pill */
+#theme-toggle { display: none !important; }
 @media (min-width: 992px) {
   #header.scrolled {
     width: min(520px, 60%);
@@ -1415,11 +1418,10 @@ h3.ce-header { font-size: 15px; }
   }
   #header-right { gap: 4px; }
   #menu-btn { display: flex; width: 28px; height: 28px; }
-  /* Hide non-essential tools on phones to keep the pill compact */
-  #reload-btn { display: none; }
+  /* Keep reload button visible — strip out the timer pill instead */
+  #reload-btn { display: flex; width: 26px; height: 26px; }
   #timer-pill { display: none; }
   #sync-btn { width: 24px; height: 24px; }
-  #theme-toggle { width: 24px; height: 24px; }
   #header-center { display: none; }
   #header-title { font-size: 14px; }
 
@@ -4376,6 +4378,8 @@ function flushPendingSync() {
 // beforeunload or visibilitychange). Listen on all three to cover every browser.
 window.addEventListener('pagehide', flushPendingSync);
 window.addEventListener('beforeunload', flushPendingSync);
+let _resumePullAt = 0;
+let _resumePullInFlight = false;
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') {
     flushPendingSync();
@@ -4393,8 +4397,16 @@ document.addEventListener('visibilitychange', () => {
     forceSyncNow();
     return;
   }
+  // Throttle: don't fire more than once every 8s, and never overlap pulls.
+  const now = Date.now();
+  if (_resumePullInFlight || (now - _resumePullAt) < 8000) return;
+  _resumePullAt = now;
+  _resumePullInFlight = true;
   if (firebaseStream) { firebaseStream.close(); firebaseStream = null; }
-  pullFromFirebase().then(startFirebaseStream);
+  pullFromFirebase()
+    .then(startFirebaseStream)
+    .catch(err => { console.error('Resume sync error:', err); startFirebaseStream(); })
+    .finally(() => { _resumePullInFlight = false; });
 });
 
 // ── Time tracking ──
