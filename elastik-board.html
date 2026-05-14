@@ -1260,16 +1260,18 @@ h3.ce-header { font-size: 15px; }
 }
 #sync-btn:hover { background: var(--border-strong); color: var(--text); }
 #capture-btn {
-  width: 30px; height: 30px; flex-shrink: 0;
+  width: 32px; height: 32px; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
-  background: var(--surface2); border: 1px solid var(--border);
-  border-radius: var(--r); cursor: pointer;
-  color: var(--accent); font-family: inherit;
-  transition: background .15s, color .15s, transform .1s;
+  background: var(--accent); border: none;
+  border-radius: 50%; cursor: pointer;
+  color: #fff; font-family: inherit;
+  box-shadow: 0 1px 4px rgba(59,124,232,.35);
+  transition: background .15s, transform .1s, box-shadow .15s;
 }
-#capture-btn:hover { background: var(--accent-bg); transform: scale(1.05); }
-#capture-btn:active { transform: scale(.94); }
-@media (max-width: 768px) { #capture-btn { width: 26px; height: 26px; } }
+#capture-btn:hover { transform: scale(1.06); box-shadow: 0 3px 12px rgba(59,124,232,.45); }
+#capture-btn:active { transform: scale(.93); }
+#capture-btn svg { width: 16px; height: 16px; }
+@media (max-width: 768px) { #capture-btn { width: 30px; height: 30px; } }
 
 /* ── Capture overlay (distraction-free brain dump) ── */
 #capture-overlay {
@@ -2269,7 +2271,7 @@ h3.ce-header { font-size: 15px; }
           </button>
         </div>
         <button id="capture-btn" onclick="openCapture()" title="Quick capture (press C)" aria-label="Quick capture">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1l1.6 4.4 4.4 1.6-4.4 1.6L7 13l-1.6-4.4L1 7l4.4-1.6L7 1z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" fill="currentColor" fill-opacity=".18"/></svg>
+          <svg viewBox="0 0 16 16" fill="none"><path d="M3 8.5l3 3 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0"/><path d="M2.5 13L8 7.5l1.5 1.5L4 14.5l-2 .5.5-2z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" fill="currentColor" fill-opacity=".25"/><path d="M11 2.5l2.5 2.5-2 2-2.5-2.5 2-2z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" fill="currentColor" fill-opacity=".25"/></svg>
         </button>
         <button id="reload-btn" onclick="location.reload()" title="Get latest version" style="font-size:16px; line-height:1;">↺</button>
         <button id="sync-btn" onclick="openSyncModal()" title="Cloud sync">
