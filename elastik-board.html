@@ -33,16 +33,16 @@
 
     var pad   = s * 0.13;
     var dotR  = s * 0.055;
-    var lineH = s * 0.055;
-    var gap   = s * 0.028;
+    var lineH = s * 0.038;
+    var gap   = s * 0.030;
 
     var dotX   = pad + dotR;
     var lineX  = dotX + dotR + gap;
     var lineMax = (s - pad) - lineX;
 
-    // 3 evenly-spaced rows
+    // 3 evenly-spaced rows. Apple system palette.
     var rowY  = [0.32, 0.50, 0.68].map(function(f){ return s*f; });
-    var colors = ['#C8501A','#534AB7','#0F6E56'];
+    var colors = ['#FF3B30','#007AFF','#34C759'];
     var frac   = [0.92, 0.72, 0.84];
 
     for (var i = 0; i < rowY.length; i++) {
