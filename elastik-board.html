@@ -314,8 +314,16 @@ body {
 /* Theme toggle lives in Settings now, not the header pill */
 #theme-toggle { display: none !important; }
 @media (min-width: 992px) {
+  /* Wider pill on desktop — extra room for the view-toggle + Inbox + tools. */
+  #header {
+    padding: 0 18px;
+    margin: 10px 8px 0;
+    width: calc(100% - 16px);
+  }
+  #header-right { gap: 7px; }
+  #header-center { padding: 0 10px; }
   #header.scrolled {
-    width: min(520px, 60%);
+    width: min(900px, 94%);
     margin-left: auto; margin-right: auto;
     box-shadow: 0 10px 32px rgba(0,0,0,.12);
   }
@@ -362,11 +370,12 @@ body {
   border-radius: var(--r);
 }
 .view-btn {
-  padding: 4px 10px; font-size: 12px;
+  padding: 4px 9px; font-size: 12px;
   border: none; background: transparent;
   border-radius: 4px; cursor: pointer;
   color: var(--text-2); font-family: inherit;
   transition: all .1s;
+  white-space: nowrap;
 }
 .view-btn.active { background: var(--surface); color: var(--text); font-weight: 500; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
 .view-btn { display: inline-flex; align-items: center; gap: 5px; }
@@ -1708,6 +1717,14 @@ h3.ce-header { font-size: 15px; }
   white-space: nowrap;
   flex-shrink: 0;
 }
+/* When idle: compact icon-only circle to save room in the pill. Once a timer
+   is running it expands again to show the project + elapsed time. */
+.timer-pill.timer-idle {
+  width: 30px; height: 30px; padding: 0;
+  justify-content: center; border-radius: 50%;
+  gap: 0;
+}
+.timer-pill.timer-idle #timer-pill-label { display: none; }
 .timer-pill:hover { background: var(--surface2); color: var(--text); }
 .timer-pill.timer-running {
   background: rgba(232,104,104,0.12);
