@@ -2206,6 +2206,18 @@ h3.ce-header { font-size: 15px; }
 }
 #attach-lb-dl:hover { background: rgba(255,255,255,.2); color: #fff; }
 
+.section-focus-row {
+  display: flex; align-items: flex-start; gap: 10px;
+  cursor: pointer; user-select: none;
+}
+.section-focus-row input[type="checkbox"] {
+  width: 16px; height: 16px; margin-top: 2px; flex-shrink: 0;
+  accent-color: var(--accent); cursor: pointer;
+}
+.section-focus-text { display: flex; flex-direction: column; gap: 2px; }
+.section-focus-text strong { font-size: 13px; font-weight: 600; color: var(--text); }
+.section-focus-text small { font-size: 11px; color: var(--text-2); line-height: 1.4; }
+
 /* ── Coach: persistent top bar (colleague check-in) ── */
 #coach-bar {
   position: sticky; top: calc(var(--header-h) + 18px); z-index: 40;
@@ -2568,6 +2580,15 @@ h3.ce-header { font-size: 15px; }
       </div>
       <div class="color-options" id="section-color-options"></div>
     </div>
+    <div class="form-group">
+      <label class="section-focus-row">
+        <input type="checkbox" id="section-focused-input">
+        <span class="section-focus-text">
+          <strong>Coach focus</strong>
+          <small>On: full check-ins (today pins, stale WIP, pile-ups). Off: only flags overdue and blocked items.</small>
+        </span>
+      </label>
+    </div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeSectionModal()">Cancel</button>
       <button class="btn-save" onclick="saveSection()">Save</button>
@@ -2813,9 +2834,9 @@ function statusLabel(s) { return (state && state.colLabels && state.colLabels[s]
 const STATUS_COLS_ORDER = ['wip','next','nosched','done','block','archive'];
 function defaultSections() {
   return [
-    {id:'dayjob',  name:'Day Job',       color:'#C8501A'},
-    {id:'studio',  name:'Studio Work',   color:'#534AB7'},
-    {id:'general', name:'General ToDos', color:'#888780'},
+    {id:'dayjob',  name:'Day Job',       color:'#C8501A', focused:false},
+    {id:'studio',  name:'Studio Work',   color:'#534AB7', focused:true},
+    {id:'general', name:'General ToDos', color:'#888780', focused:false},
   ];
 }
 
@@ -2834,6 +2855,11 @@ function load() {
     // stale-WIP detection doesn't fire on launch for everyone.
     const _now = Date.now();
     raw.tasks.forEach(t => { if (!t.updatedAt) t.updatedAt = _now; });
+    // Backfill Coach focus: existing users keep Studio as focused-only
+    // by default; everything else starts background (overdue/blocked only).
+    raw.sections.forEach(s => {
+      if (typeof s.focused !== 'boolean') s.focused = (s.id === 'studio');
+    });
     // ensure general section always exists
     if (!raw.sections.find(s => s.id === 'general'))
       raw.sections.push({id:'general', name:'General ToDos', color:'#888780'});
@@ -4227,53 +4253,81 @@ function _coachEscape(s) {
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+// Is the task in a Coach-focused section? Focused sections get the full
+// check-in treatment (today pins, stale WIP, pile-ups, empty-Today
+// suggestions). Non-focused sections only surface in the queue when the
+// item is overdue or blocked — i.e. genuinely critical.
+function _coachIsFocused(task) {
+  const proj = getProject(task.pid);
+  if (!proj) return true;  // orphan task: treat as focused
+  const sec  = getSection(proj.section);
+  return !sec || sec.focused === true;
+}
+
 // Build the ordered queue of prompts. Higher priority first; cooldowns
 // silence prompts you've recently acknowledged so the bar advances
-// instead of nagging on the same item.
+// instead of nagging on the same item. Section focus determines which
+// prompt kinds are eligible for which sections.
 function buildCoachQueue() {
   const queue = [];
   const tasks = state.tasks || [];
 
-  // 1. Today pins still not done — you committed to these today.
+  // 1. Today pins still not done — focused sections only. A task pinned
+  // to Today from a background section is your call; the coach won't
+  // chase it.
   (todayPins || []).forEach(id => {
     if (!id) return;
     const t = getTask(id);
     if (!t || t.status === 'done') return;
+    if (!_coachIsFocused(t)) return;
     if (_coachOnCooldown('today_' + t.id, 4)) return;
     queue.push({ kind: 'today_check', task: t });
   });
 
-  // 2. Overdue (oldest first).
+  // 2. Overdue — surfaced from ALL sections (truly critical), but
+  // focused-section overdues come first within the group.
   tasks
     .filter(t => t.status !== 'done' && t.status !== 'archive' && t.dueDate && _coachDaysOverdue(t.dueDate) > 0)
-    .sort((a, b) => _coachDaysOverdue(b.dueDate) - _coachDaysOverdue(a.dueDate))
+    .sort((a, b) => {
+      const fa = _coachIsFocused(a) ? 0 : 1;
+      const fb = _coachIsFocused(b) ? 0 : 1;
+      if (fa !== fb) return fa - fb;
+      return _coachDaysOverdue(b.dueDate) - _coachDaysOverdue(a.dueDate);
+    })
     .forEach(t => {
       if (_coachOnCooldown('overdue_' + t.id, 8)) return;
       queue.push({ kind: 'overdue', task: t, days: _coachDaysOverdue(t.dueDate) });
     });
 
-  // 3. Stale WIP — marked WIP but untouched for >= COACH_STALE_WIP_DAYS.
+  // 3. Stale WIP — focused sections only. Background sections often have
+  // long-running items by design (recurring chores, etc.).
   tasks
-    .filter(t => t.status === 'wip' && _coachDaysSince(t.updatedAt) >= COACH_STALE_WIP_DAYS)
+    .filter(t => t.status === 'wip' && _coachDaysSince(t.updatedAt) >= COACH_STALE_WIP_DAYS && _coachIsFocused(t))
     .sort((a, b) => _coachDaysSince(b.updatedAt) - _coachDaysSince(a.updatedAt))
     .forEach(t => {
       if (_coachOnCooldown('stale_' + t.id, 12)) return;
       queue.push({ kind: 'stale_wip', task: t, days: _coachDaysSince(t.updatedAt) });
     });
 
-  // 4. Blocked.
+  // 4. Blocked — all sections (critical), focused first.
   tasks
     .filter(t => t.status === 'block')
+    .sort((a, b) => {
+      const fa = _coachIsFocused(a) ? 0 : 1;
+      const fb = _coachIsFocused(b) ? 0 : 1;
+      return fa - fb;
+    })
     .forEach(t => {
       if (_coachOnCooldown('blocked_' + t.id, 8)) return;
       queue.push({ kind: 'blocked', task: t });
     });
 
-  // 5. Empty Today slots — only if there's a sensible candidate to suggest.
+  // 5. Empty Today — only suggest candidates from focused sections so the
+  // coach doesn't try to pin background work to your day.
   const filled = (todayPins || []).filter(Boolean).length;
   if (filled < 3 && !_coachOnCooldown('empty_today', 4)) {
     const candidates = tasks.filter(t =>
-      t.status !== 'done' && t.status !== 'archive' && !isPinned(t.id)
+      t.status !== 'done' && t.status !== 'archive' && !isPinned(t.id) && _coachIsFocused(t)
     );
     if (candidates.length) {
       const scored = candidates.map(t => {
@@ -4294,10 +4348,11 @@ function buildCoachQueue() {
     }
   }
 
-  // 6. WIP pile-up.
-  const wipCount = tasks.filter(t => t.status === 'wip').length;
-  if (wipCount >= 5 && !_coachOnCooldown('wip_pileup', 12)) {
-    queue.push({ kind: 'wip_pileup', count: wipCount });
+  // 6. WIP pile-up — count only focused-section WIP. A pile-up of
+  // background chores isn't worth a nag.
+  const wipFocused = tasks.filter(t => t.status === 'wip' && _coachIsFocused(t)).length;
+  if (wipFocused >= 5 && !_coachOnCooldown('wip_pileup', 12)) {
+    queue.push({ kind: 'wip_pileup', count: wipFocused });
   }
 
   return queue;
@@ -4645,6 +4700,8 @@ function openSectionModal(id) {
   const opts = document.getElementById('section-color-options');
   opts.innerHTML = COLORS.map(c=>`<div class="color-opt${c===sec.color?' selected':''}" style="background:${c}" data-color="${c}" onclick="setSectionColor('${c}')"></div>`).join('');
   setSectionColor(sec.color);
+  const focusInput = document.getElementById('section-focused-input');
+  if (focusInput) focusInput.checked = sec.focused === true;
   document.getElementById('section-modal').classList.add('open');
   setTimeout(()=>document.getElementById('section-name-input').focus(), 100);
 }
@@ -4656,6 +4713,8 @@ function saveSection() {
   if (!sec) return;
   sec.name = name;
   sec.color = selectedSectionColor;
+  const focusInput = document.getElementById('section-focused-input');
+  if (focusInput) sec.focused = focusInput.checked;
   save(); closeSectionModal(); renderAll();
 }
 
@@ -4820,6 +4879,10 @@ function migrateRemote(data) {
   // doesn't misfire after a fresh pull.
   const _now = Date.now();
   (data.tasks || []).forEach(t => { if (!t.updatedAt) t.updatedAt = _now; });
+  // Backfill Coach focus flag on remote sections.
+  (data.sections || []).forEach(s => {
+    if (typeof s.focused !== 'boolean') s.focused = (s.id === 'studio');
+  });
   // Ensure general section exists
   if (!data.sections.find(s => s.id === 'general'))
     data.sections.push({id:'general', name:'General ToDos', color:'#888780'});
