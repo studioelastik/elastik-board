@@ -2218,18 +2218,12 @@ h3.ce-header { font-size: 15px; }
 .section-focus-text strong { font-size: 13px; font-weight: 600; color: var(--text); }
 .section-focus-text small { font-size: 11px; color: var(--text-2); line-height: 1.4; }
 
-/* ── Coach: persistent top bar (colleague check-in) ─────────────────
-   Pinned with position:fixed so it stays glued to the viewport
-   regardless of which scroll container is active (on mobile each view
-   scrolls internally, which breaks sticky-on-a-sibling).
-   A spacer in document flow reserves the matching vertical space so
-   content below isn't covered. */
+/* ── Coach: top bar (colleague check-in) ────────────────────────────
+   Sits in document flow at the top of the main column, below the
+   header. Scrolls away with the content when the user scrolls down —
+   intentionally NOT sticky/fixed so it doesn't follow the viewport. */
 #coach-bar {
-  position: fixed;
-  top: calc(var(--header-h) + 14px);
-  left: calc(var(--sidebar) + 14px);
-  right: 14px;
-  z-index: 45;
+  margin: 4px 14px 0;
   padding: 9px 14px;
   display: flex; align-items: center; gap: 12px;
   min-height: 46px;
@@ -2239,14 +2233,9 @@ h3.ce-header { font-size: 15px; }
   -webkit-backdrop-filter: blur(14px) saturate(1.6);
   border: 1px solid rgba(255,255,255,0.45);
   box-shadow: 0 1px 3px rgba(0,0,0,.04);
-  transition: opacity .2s ease, box-shadow .2s ease, left .55s cubic-bezier(.23,1,.32,1);
+  transition: opacity .2s ease, box-shadow .2s ease;
 }
-#app.sidebar-collapsed #coach-bar { left: 14px; }
-#coach-bar-spacer {
-  height: 54px;          /* bar (~46px) + breathing room */
-  flex-shrink: 0;
-  pointer-events: none;
-}
+#coach-bar-spacer { display: none; }
 [data-theme="dark"] #coach-bar {
   background: rgba(28,28,28,0.55);
   border-color: rgba(255,255,255,0.06);
@@ -2318,14 +2307,12 @@ h3.ce-header { font-size: 15px; }
 
 @media (max-width: 768px) {
   #coach-bar {
-    top: calc(var(--header-h) + 14px);
-    left: 12px; right: 12px;
+    margin: 4px 12px 0;
     padding: 8px 11px;
     gap: 9px;
     border-radius: 12px;
     min-height: 42px;
   }
-  #coach-bar-spacer { height: 50px; }
   #coach-bar-avatar { width: 28px; height: 28px; }
   #coach-bar-avatar svg { width: 15px; height: 15px; }
   #coach-bar-text { font-size: 13px; }
