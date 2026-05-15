@@ -369,6 +369,15 @@ body {
   transition: all .1s;
 }
 .view-btn.active { background: var(--surface); color: var(--text); font-weight: 500; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+.view-btn { display: inline-flex; align-items: center; gap: 5px; }
+.view-btn-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 16px; height: 16px; padding: 0 5px;
+  background: var(--accent); color: #fff;
+  font-size: 10px; font-weight: 600;
+  border-radius: 999px;
+  line-height: 1;
+}
 
 #add-task-main {
   display: flex; align-items: center; justify-content: center;
@@ -2274,6 +2283,7 @@ h3.ce-header { font-size: 15px; }
           <button class="view-btn active" id="vbtn-kanban" onclick="setView('kanban')">Board</button>
           <button class="view-btn" id="vbtn-list" onclick="setView('list')">List</button>
           <button class="view-btn" id="vbtn-time" onclick="setView('time')">Time</button>
+          <button class="view-btn" id="vbtn-inbox" onclick="setView('inbox')">Inbox<span id="vbtn-inbox-count" class="view-btn-badge" style="display:none"></span></button>
         </div>
       </div>
       <div id="header-right">
@@ -3927,11 +3937,17 @@ function flashCaptureSaved() {
   flashCaptureSaved._t = setTimeout(() => flash.classList.remove('show'), 900);
 }
 function updateInboxBadge() {
-  const badge = document.getElementById('nav-inbox-count');
-  if (!badge) return;
   const n = (state.inbox || []).length;
-  badge.textContent = n;
-  badge.style.display = n > 0 ? 'inline-block' : 'none';
+  const sidebarBadge = document.getElementById('nav-inbox-count');
+  if (sidebarBadge) {
+    sidebarBadge.textContent = n;
+    sidebarBadge.style.display = n > 0 ? 'inline-block' : 'none';
+  }
+  const pillBadge = document.getElementById('vbtn-inbox-count');
+  if (pillBadge) {
+    pillBadge.textContent = n;
+    pillBadge.style.display = n > 0 ? 'inline-flex' : 'none';
+  }
 }
 function renderInbox() {
   const el = document.getElementById('inbox-view');
@@ -4053,6 +4069,7 @@ function setView(v) {
   document.getElementById('vbtn-list').className   = 'view-btn'+(v==='list'  ?' active':'');
   document.getElementById('vbtn-time').className   = 'view-btn'+(v==='time'  ?' active':'');
   document.getElementById('vbtn-today').className  = 'view-btn'+(v==='today' ?' active':'');
+  document.getElementById('vbtn-inbox').className  = 'view-btn'+(v==='inbox' ?' active':'');
   document.getElementById('nav-kanban').className  = 'sidebar-item'+(v==='kanban'?' active':'');
   document.getElementById('nav-list').className    = 'sidebar-item'+(v==='list'  ?' active':'');
   document.getElementById('nav-time').className    = 'sidebar-item'+(v==='time'  ?' active':'');
