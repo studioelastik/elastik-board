@@ -2206,126 +2206,96 @@ h3.ce-header { font-size: 15px; }
 }
 #attach-lb-dl:hover { background: rgba(255,255,255,.2); color: #fff; }
 
-/* ── Coach: friendly rule-based reminder ── */
-#coach-fab {
-  position: fixed;
-  bottom: 24px; right: 24px;
-  width: 52px; height: 52px;
-  border-radius: 50%;
+/* ── Coach: persistent top bar (colleague check-in) ── */
+#coach-bar {
+  position: sticky; top: calc(var(--header-h) + 18px); z-index: 40;
+  margin: 10px 14px 0;
   background: var(--surface2);
-  color: var(--text);
-  border: none;
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 6px 20px rgba(0,0,0,.18);
-  z-index: 90;
-  transition: transform .15s ease, box-shadow .15s ease;
+  border-radius: 14px;
+  padding: 10px 14px;
+  display: flex; align-items: center; gap: 12px;
+  min-height: 52px;
+  box-shadow: 0 2px 10px rgba(0,0,0,.06);
+  transition: opacity .2s ease;
 }
-#coach-fab:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 28px rgba(0,0,0,.25);
+[data-theme="dark"] #coach-bar {
+  background: var(--surface);
+  box-shadow: 0 0 0 1px rgba(255,255,255,.04);
 }
-.coach-badge {
-  position: absolute;
-  top: -3px; right: -3px;
-  min-width: 18px; height: 18px;
-  padding: 0 5px;
+#coach-bar.coach-urgent {
+  box-shadow: 0 0 0 1px var(--accent), 0 2px 12px rgba(59,124,232,.18);
+}
+[data-theme="dark"] #coach-bar.coach-urgent {
+  box-shadow: 0 0 0 1px var(--accent), 0 0 18px rgba(91,156,246,.18);
+}
+#coach-bar-avatar {
+  flex-shrink: 0;
+  width: 32px; height: 32px;
+  border-radius: 50%;
   background: var(--accent);
   color: #fff;
-  border-radius: 9px;
-  font-size: 10px; font-weight: 700;
   display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 0 0 2px var(--bg);
 }
-.coach-panel {
-  position: fixed;
-  top: 0; right: 0; bottom: 0;
-  width: 380px; max-width: 100vw;
-  background: var(--surface);
-  box-shadow: -8px 0 40px rgba(0,0,0,.3);
-  transform: translateX(102%);
-  transition: transform .25s ease;
-  z-index: 200;
-  display: flex; flex-direction: column;
-  padding: 28px 22px 22px;
+#coach-bar-text {
+  flex: 1; min-width: 0;
+  font-size: 14px; line-height: 1.35; color: var(--text);
+  font-weight: 500;
 }
-.coach-panel.open { transform: translateX(0); }
-.coach-head {
-  display: flex; align-items: flex-start; justify-content: space-between;
-  margin-bottom: 20px; gap: 12px;
-}
-.coach-eyebrow {
-  font-size: 10px; font-weight: 700; letter-spacing: .14em;
+#coach-bar-text strong { font-weight: 700; }
+#coach-bar-text .coach-bar-label {
+  display: block;
+  font-size: 10px; font-weight: 700; letter-spacing: .12em;
   text-transform: uppercase; color: var(--text-3);
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
-.coach-greeting {
-  margin: 0; font-size: 22px; font-weight: 700; color: var(--text);
-  line-height: 1.2;
+#coach-bar-actions {
+  display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap;
+  justify-content: flex-end;
 }
-.coach-subline {
-  font-size: 13px; color: var(--text-2); margin-top: 4px;
-}
-.coach-close {
-  background: none; border: none; cursor: pointer;
-  color: var(--text-2); font-size: 16px; line-height: 1;
-  padding: 6px 9px; border-radius: 6px; flex-shrink: 0;
-  transition: color .12s, background .12s;
-}
-.coach-close:hover { color: var(--text); background: var(--surface2); }
-.coach-body {
-  flex: 1; overflow-y: auto;
-  display: flex; flex-direction: column; gap: 10px;
-  margin: 0 -4px; padding: 0 4px;
-}
-.coach-card {
-  background: var(--surface2);
-  border-radius: 10px;
-  padding: 14px 14px 12px;
-  font-size: 14px; line-height: 1.45;
-  color: var(--text);
-}
-.coach-card strong { font-weight: 600; }
-.coach-emoji { margin-right: 8px; font-size: 15px; }
-.coach-card-actions {
-  margin-top: 10px;
-  display: flex; gap: 6px; flex-wrap: wrap;
-}
-.coach-card-action {
+.coach-bar-btn {
   background: transparent;
   border: 1px solid var(--border-strong);
   color: var(--text-2);
-  padding: 5px 11px;
-  border-radius: 6px;
-  font-size: 12px; font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px; font-weight: 600;
   cursor: pointer;
-  transition: color .12s, border-color .12s, background .12s;
   font-family: inherit;
+  white-space: nowrap;
+  transition: color .12s, border-color .12s, background .12s, transform .08s;
 }
-.coach-card-action:hover {
-  color: var(--accent);
+.coach-bar-btn:hover {
+  color: var(--text);
+  border-color: var(--text-2);
+  background: var(--surface);
+}
+.coach-bar-btn.primary {
+  background: var(--accent);
   border-color: var(--accent);
+  color: #fff;
 }
-.coach-empty {
-  text-align: center;
-  padding: 40px 16px;
-  color: var(--text-2);
-  font-size: 14px;
-  line-height: 1.5;
+.coach-bar-btn.primary:hover {
+  background: var(--accent);
+  filter: brightness(1.08);
+  color: #fff;
 }
-.coach-empty-emoji {
-  font-size: 32px; display: block; margin-bottom: 12px;
-}
+.coach-bar-btn:active { transform: translateY(1px); }
+#coach-bar.coach-idle #coach-bar-avatar { background: var(--surface); color: var(--text-2); }
+#coach-bar.coach-idle { box-shadow: none; background: transparent; }
+[data-theme="dark"] #coach-bar.coach-idle { box-shadow: none; background: transparent; }
+
 @media (max-width: 768px) {
-  #coach-fab {
-    bottom: calc(74px + env(safe-area-inset-bottom));
-    right: 16px;
-    width: 46px; height: 46px;
+  #coach-bar {
+    top: calc(var(--header-h) + 14px);
+    margin: 8px 12px 0;
+    padding: 9px 11px;
+    gap: 9px;
+    border-radius: 12px;
   }
-  .coach-panel {
-    width: 100vw;
-    padding: 22px 18px calc(20px + env(safe-area-inset-bottom));
-  }
+  #coach-bar-avatar { width: 28px; height: 28px; }
+  #coach-bar-avatar svg { width: 15px; height: 15px; }
+  #coach-bar-text { font-size: 13px; }
+  .coach-bar-btn { padding: 5px 9px; font-size: 11px; }
 }
 </style>
 <!-- EditorJS core + block tools (rich-text notes editor) -->
@@ -2455,6 +2425,17 @@ h3.ce-header { font-size: 15px; }
       </div>
     </div>
 
+    <!-- Coach: persistent top bar — asks one question at a time -->
+    <div id="coach-bar" role="region" aria-label="Coach">
+      <div id="coach-bar-avatar" aria-hidden="true">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+          <path d="M21 12a8 8 0 0 1-11.6 7.1L4 21l1.9-5.4A8 8 0 1 1 21 12z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div id="coach-bar-text"></div>
+      <div id="coach-bar-actions"></div>
+    </div>
+
     <div id="col-filter-bar"></div>
     <div id="kanban-view"></div>
     <div id="list-view" style="display:none"></div>
@@ -2486,29 +2467,6 @@ h3.ce-header { font-size: 15px; }
     </button>
   </nav>
 
-  <!-- Coach: floating personal-reminder button -->
-  <button id="coach-fab" onclick="openCoach()" aria-label="Open coach" title="Coach">
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-      <path d="M21 12a8 8 0 0 1-11.6 7.1L4 21l1.9-5.4A8 8 0 1 1 21 12z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
-      <circle cx="9" cy="12" r="1" fill="currentColor"/>
-      <circle cx="13" cy="12" r="1" fill="currentColor"/>
-      <circle cx="17" cy="12" r="1" fill="currentColor"/>
-    </svg>
-    <span id="coach-badge" class="coach-badge" style="display:none">0</span>
-  </button>
-
-  <!-- Coach: slide-in panel -->
-  <aside id="coach-panel" class="coach-panel" aria-hidden="true">
-    <div class="coach-head">
-      <div>
-        <div class="coach-eyebrow">Coach</div>
-        <h2 id="coach-greeting" class="coach-greeting">Hey there</h2>
-        <div id="coach-subline" class="coach-subline"></div>
-      </div>
-      <button class="coach-close" onclick="closeCoach()" aria-label="Close">✕</button>
-    </div>
-    <div id="coach-body" class="coach-body"></div>
-  </aside>
 </div>
 
 <!-- Quick Capture overlay — distraction-free brain dump -->
@@ -2872,6 +2830,10 @@ function load() {
     if (!('activeTimer' in raw)) raw.activeTimer = null;
     if (!raw.inbox) raw.inbox = [];
     raw.projects.forEach(p => { if (!p.section) p.section = 'studio'; });
+    // Backfill updatedAt for tasks that pre-date the Coach feature so
+    // stale-WIP detection doesn't fire on launch for everyone.
+    const _now = Date.now();
+    raw.tasks.forEach(t => { if (!t.updatedAt) t.updatedAt = _now; });
     // ensure general section always exists
     if (!raw.sections.find(s => s.id === 'general'))
       raw.sections.push({id:'general', name:'General ToDos', color:'#888780'});
@@ -2957,6 +2919,7 @@ function getTask(id) { return state.tasks.find(t=>t.id===id); }
 function setTaskStatus(task, status) {
   if (status === 'archive' && task.status !== 'archive') task.archivedAt = Date.now();
   task.status = status;
+  task.updatedAt = Date.now();
 }
 function getSection(id) { return state.sections.find(s=>s.id===id); }
 function sectionTasks(sectionId) {
@@ -4219,215 +4182,239 @@ document.addEventListener('keydown', e => {
   openCapture();
 });
 
-// ── Coach: warm, rule-based personal reminder ─────────────────────────
-// Surfaces a few helpful nudges from the user's own board state. No
-// external calls, no AI — just heuristics phrased like a friendly
-// colleague would phrase them. Lives in a slide-in panel triggered by
-// the floating button at the bottom-right of the app.
+// ── Coach: persistent top-bar colleague check-in ───────────────────────
+// Anchors the top of the main content with one prompt at a time. Each
+// prompt is generated from your own board state (overdue, stale WIP,
+// blocked, today pins, empty today, WIP pile-up) and walks you through
+// triage with inline quick actions that update the underlying task and
+// stamp updatedAt. Cooldowns prevent the same prompt re-appearing too
+// soon after you've acknowledged it.
 
-function _coachEscape(s) {
-  return String(s == null ? '' : s)
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const COACH_COOLDOWN_KEY = 'elastik_coach_cooldowns_v1';
+const COACH_STALE_WIP_DAYS = 2;
+let coachCooldowns = (function() {
+  try { return JSON.parse(localStorage.getItem(COACH_COOLDOWN_KEY) || '{}'); }
+  catch(_) { return {}; }
+})();
+let coachQueue = [];
+
+function _coachSaveCooldowns() {
+  try { localStorage.setItem(COACH_COOLDOWN_KEY, JSON.stringify(coachCooldowns)); } catch(_) {}
 }
-
-function _coachGreeting() {
-  const h = new Date().getHours();
-  if (h < 5)  return "You're up late";
-  if (h < 12) return "Morning";
-  if (h < 17) return "Afternoon";
-  if (h < 21) return "Evening";
-  return "Hey, night owl";
+function _coachOnCooldown(key, hours) {
+  const t = coachCooldowns[key];
+  return t && (Date.now() - t) < hours * 3600 * 1000;
 }
-
-function _coachSubline(count) {
-  if (count === 0) return "Nothing pressing — enjoy the calm.";
-  if (count === 1) return "Just one thing on my mind.";
-  return `${count} things I wanted to flag.`;
+function _coachSetCooldown(key) {
+  coachCooldowns[key] = Date.now();
+  const cutoff = Date.now() - 7 * 86400000;
+  Object.keys(coachCooldowns).forEach(k => {
+    if (coachCooldowns[k] < cutoff) delete coachCooldowns[k];
+  });
+  _coachSaveCooldowns();
 }
-
+function _coachDaysSince(ts) {
+  if (!ts) return Infinity;
+  return Math.floor((Date.now() - ts) / 86400000);
+}
 function _coachDaysOverdue(dueStr) {
   const due = new Date(dueStr + 'T00:00:00');
   const today = new Date(); today.setHours(0, 0, 0, 0);
   return Math.floor((today - due) / 86400000);
 }
-
-// Generate the list of nudges based on current state. Order matters —
-// surfaced top to bottom in the panel.
-function generateCoachNudges() {
-  const nudges = [];
-  const tasks = state.tasks || [];
-
-  // 1. Overdue — most urgent
-  const overdue = tasks
-    .filter(t => t.status !== 'done' && t.dueDate && _coachDaysOverdue(t.dueDate) > 0)
-    .sort((a, b) => _coachDaysOverdue(b.dueDate) - _coachDaysOverdue(a.dueDate));
-  if (overdue.length) {
-    const worst = overdue[0];
-    const days = _coachDaysOverdue(worst.dueDate);
-    const dayLabel = days === 1 ? '1 day' : `${days} days`;
-    nudges.push({
-      severity: 'high',
-      emoji: '⏰',
-      text: overdue.length === 1
-        ? `<strong>${_coachEscape(worst.name)}</strong> has been overdue for ${dayLabel}. Want to tackle it?`
-        : `${overdue.length} tasks are overdue — the worst one, <strong>${_coachEscape(worst.name)}</strong>, has been sitting for ${dayLabel}. Pick one to start with?`,
-      actions: [
-        { label: 'Open it', onClick: () => { closeCoach(); openCard(worst.id); } },
-        { label: 'Pin to Today', onClick: () => { if (!isPinned(worst.id)) togglePin(worst.id); renderCoach(); } }
-      ]
-    });
-  }
-
-  // 2. Due today
-  const dueToday = tasks.filter(t =>
-    t.status !== 'done' && t.dueDate && _coachDaysOverdue(t.dueDate) === 0
-  );
-  if (dueToday.length) {
-    const first = dueToday[0];
-    nudges.push({
-      severity: 'med',
-      emoji: '📅',
-      text: dueToday.length === 1
-        ? `<strong>${_coachEscape(first.name)}</strong> is due today.`
-        : `You've got ${dueToday.length} things due today — first up: <strong>${_coachEscape(first.name)}</strong>.`,
-      actions: [{ label: 'Open', onClick: () => { closeCoach(); openCard(first.id); } }]
-    });
-  }
-
-  // 3. Empty Today slots — suggest a candidate
-  const filled = (todayPins || []).filter(Boolean).length;
-  if (filled < 3) {
-    const slots = 3 - filled;
-    // Best candidates: due-today/overdue first, then WIP, then next
-    const candidates = [
-      ...overdue.filter(t => !isPinned(t.id)),
-      ...dueToday.filter(t => !isPinned(t.id)),
-      ...tasks.filter(t => t.status === 'wip' && !isPinned(t.id)),
-      ...tasks.filter(t => t.status === 'next' && !isPinned(t.id))
-    ];
-    // Dedupe by id, take first
-    const seen = new Set();
-    const pick = candidates.find(t => seen.has(t.id) ? false : (seen.add(t.id), true));
-    if (pick) {
-      nudges.push({
-        severity: 'low',
-        emoji: '✨',
-        text: `Your Today list has ${slots} empty slot${slots > 1 ? 's' : ''}. <strong>${_coachEscape(pick.name)}</strong> looks like a fair pick — want to pin it?`,
-        actions: [
-          { label: 'Pin it', onClick: () => { togglePin(pick.id); renderCoach(); } },
-          { label: 'Open', onClick: () => { closeCoach(); openCard(pick.id); } }
-        ]
-      });
-    }
-  }
-
-  // 4. Blocked items
-  const blocked = tasks.filter(t => t.status === 'block');
-  if (blocked.length) {
-    const first = blocked[0];
-    nudges.push({
-      severity: 'med',
-      emoji: '🚧',
-      text: blocked.length === 1
-        ? `<strong>${_coachEscape(first.name)}</strong> is blocked. Anything moved on the unblock side?`
-        : `${blocked.length} tasks are blocked. Worth a quick triage?`,
-      actions: blocked.length === 1
-        ? [{ label: 'Open', onClick: () => { closeCoach(); openCard(first.id); } }]
-        : []
-    });
-  }
-
-  // 5. WIP pile-up — too many things in flight
-  const wip = tasks.filter(t => t.status === 'wip');
-  if (wip.length >= 5) {
-    nudges.push({
-      severity: 'low',
-      emoji: '🌀',
-      text: `You've got <strong>${wip.length}</strong> tasks in flight at once. Pick one to close out before starting anything new?`
-    });
-  }
-
-  // 6. Gentle win recognition if there's something done and not much else to nag about
-  if (nudges.length < 2) {
-    const done = tasks.filter(t => t.status === 'done').length;
-    if (done > 0) {
-      nudges.push({
-        severity: 'low',
-        emoji: '🎉',
-        text: `${done} task${done > 1 ? 's' : ''} closed out so far. That's not nothing — nice.`
-      });
-    }
-  }
-
-  return nudges;
+function _coachEscape(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-function renderCoach() {
-  const greetEl = document.getElementById('coach-greeting');
-  const subEl   = document.getElementById('coach-subline');
-  const body    = document.getElementById('coach-body');
-  if (!body) return;
-  const nudges = generateCoachNudges();
-  if (greetEl) greetEl.textContent = _coachGreeting();
-  if (subEl)   subEl.textContent   = _coachSubline(nudges.length);
+// Build the ordered queue of prompts. Higher priority first; cooldowns
+// silence prompts you've recently acknowledged so the bar advances
+// instead of nagging on the same item.
+function buildCoachQueue() {
+  const queue = [];
+  const tasks = state.tasks || [];
 
-  if (!nudges.length) {
-    body.innerHTML = `
-      <div class="coach-empty">
-        <span class="coach-empty-emoji">☕️</span>
-        Nothing pressing right now. You're on top of it.
-      </div>`;
-    refreshCoachBadge();
+  // 1. Today pins still not done — you committed to these today.
+  (todayPins || []).forEach(id => {
+    if (!id) return;
+    const t = getTask(id);
+    if (!t || t.status === 'done') return;
+    if (_coachOnCooldown('today_' + t.id, 4)) return;
+    queue.push({ kind: 'today_check', task: t });
+  });
+
+  // 2. Overdue (oldest first).
+  tasks
+    .filter(t => t.status !== 'done' && t.status !== 'archive' && t.dueDate && _coachDaysOverdue(t.dueDate) > 0)
+    .sort((a, b) => _coachDaysOverdue(b.dueDate) - _coachDaysOverdue(a.dueDate))
+    .forEach(t => {
+      if (_coachOnCooldown('overdue_' + t.id, 8)) return;
+      queue.push({ kind: 'overdue', task: t, days: _coachDaysOverdue(t.dueDate) });
+    });
+
+  // 3. Stale WIP — marked WIP but untouched for >= COACH_STALE_WIP_DAYS.
+  tasks
+    .filter(t => t.status === 'wip' && _coachDaysSince(t.updatedAt) >= COACH_STALE_WIP_DAYS)
+    .sort((a, b) => _coachDaysSince(b.updatedAt) - _coachDaysSince(a.updatedAt))
+    .forEach(t => {
+      if (_coachOnCooldown('stale_' + t.id, 12)) return;
+      queue.push({ kind: 'stale_wip', task: t, days: _coachDaysSince(t.updatedAt) });
+    });
+
+  // 4. Blocked.
+  tasks
+    .filter(t => t.status === 'block')
+    .forEach(t => {
+      if (_coachOnCooldown('blocked_' + t.id, 8)) return;
+      queue.push({ kind: 'blocked', task: t });
+    });
+
+  // 5. Empty Today slots — only if there's a sensible candidate to suggest.
+  const filled = (todayPins || []).filter(Boolean).length;
+  if (filled < 3 && !_coachOnCooldown('empty_today', 4)) {
+    const candidates = tasks.filter(t =>
+      t.status !== 'done' && t.status !== 'archive' && !isPinned(t.id)
+    );
+    if (candidates.length) {
+      const scored = candidates.map(t => {
+        let score = 0;
+        if (t.dueDate) {
+          const d = _coachDaysOverdue(t.dueDate);
+          if (d > 0)       score += 100 + d;
+          else if (d === 0) score += 80;
+          else if (d > -3)  score += 40;
+        }
+        if (t.status === 'wip')   score += 30;
+        else if (t.status === 'next') score += 10;
+        return { t, score };
+      }).sort((a, b) => b.score - a.score);
+      if (scored[0].score > 0) {
+        queue.push({ kind: 'empty_today', task: scored[0].t, slots: 3 - filled });
+      }
+    }
+  }
+
+  // 6. WIP pile-up.
+  const wipCount = tasks.filter(t => t.status === 'wip').length;
+  if (wipCount >= 5 && !_coachOnCooldown('wip_pileup', 12)) {
+    queue.push({ kind: 'wip_pileup', count: wipCount });
+  }
+
+  return queue;
+}
+
+// Render the head-of-queue prompt into the persistent top bar.
+function renderCoachBar() {
+  const text    = document.getElementById('coach-bar-text');
+  const actions = document.getElementById('coach-bar-actions');
+  const bar     = document.getElementById('coach-bar');
+  if (!text || !actions || !bar) return;
+
+  coachQueue = buildCoachQueue();
+  bar.classList.remove('coach-urgent', 'coach-idle');
+
+  if (!coachQueue.length) {
+    bar.classList.add('coach-idle');
+    text.innerHTML = `<span class="coach-bar-label">All clear</span>Nothing pressing — go do the work.`;
+    actions.innerHTML = '';
     return;
   }
 
-  body.innerHTML = nudges.map((n, i) => {
-    const actionsHtml = (n.actions && n.actions.length)
-      ? `<div class="coach-card-actions">${n.actions.map((a, j) =>
-            `<button class="coach-card-action" data-i="${i}" data-j="${j}">${_coachEscape(a.label)}</button>`
-          ).join('')}</div>`
-      : '';
-    return `<div class="coach-card"><span class="coach-emoji">${n.emoji}</span>${n.text}${actionsHtml}</div>`;
-  }).join('');
+  const item = coachQueue[0];
+  let label = '', html = '', buttons = [];
 
-  body.querySelectorAll('.coach-card-action').forEach(btn => {
+  switch (item.kind) {
+    case 'today_check':
+      label = 'Pinned for today';
+      html = `Making progress on <strong>${_coachEscape(item.task.name)}</strong>?`;
+      buttons = [
+        { label: 'Done ✓',      primary: true, action: () => _coachMarkStatus(item.task, 'done') },
+        { label: 'Still going', action: () => _coachAck('today_' + item.task.id) },
+        { label: 'Stuck',       action: () => _coachMarkStatus(item.task, 'block') },
+        { label: 'Open',        action: () => openCard(item.task.id) }
+      ];
+      break;
+    case 'overdue':
+      label = `Overdue · ${item.days}d`;
+      bar.classList.add('coach-urgent');
+      html = `<strong>${_coachEscape(item.task.name)}</strong> was due ${item.days === 1 ? 'yesterday' : item.days + ' days ago'}. What's the move?`;
+      buttons = [
+        { label: 'Done ✓',  primary: true, action: () => _coachMarkStatus(item.task, 'done') },
+        { label: 'Push +1d', action: () => _coachShiftDue(item.task, 1) },
+        { label: 'Push +1w', action: () => _coachShiftDue(item.task, 7) },
+        { label: 'Open',    action: () => openCard(item.task.id) }
+      ];
+      break;
+    case 'stale_wip':
+      label = `Stale · ${item.days}d untouched`;
+      html = `<strong>${_coachEscape(item.task.name)}</strong> has been WIP for ${item.days} days. Still on it?`;
+      buttons = [
+        { label: 'Done ✓',     primary: true, action: () => _coachMarkStatus(item.task, 'done') },
+        { label: 'Yes',        action: () => _coachAck('stale_' + item.task.id) },
+        { label: 'Park (Next)', action: () => _coachMarkStatus(item.task, 'next') },
+        { label: 'Open',       action: () => openCard(item.task.id) }
+      ];
+      break;
+    case 'blocked':
+      label = 'Blocked';
+      html = `<strong>${_coachEscape(item.task.name)}</strong> is blocked. Did anything shift?`;
+      buttons = [
+        { label: 'Unblocked → WIP', primary: true, action: () => _coachMarkStatus(item.task, 'wip') },
+        { label: 'Still blocked',   action: () => _coachAck('blocked_' + item.task.id) },
+        { label: 'Open',            action: () => openCard(item.task.id) }
+      ];
+      break;
+    case 'empty_today':
+      label = `Today · ${item.slots} empty slot${item.slots > 1 ? 's' : ''}`;
+      html = `Want to pin <strong>${_coachEscape(item.task.name)}</strong> for today?`;
+      buttons = [
+        { label: 'Pin it',  primary: true, action: () => { togglePin(item.task.id); _coachAck('empty_today'); } },
+        { label: 'Not now', action: () => _coachAck('empty_today') },
+        { label: 'Open',    action: () => openCard(item.task.id) }
+      ];
+      break;
+    case 'wip_pileup':
+      label = 'Pile-up';
+      html = `You've got <strong>${item.count}</strong> tasks in flight. Pick one to finish before starting anything new?`;
+      buttons = [
+        { label: 'Got it', primary: true, action: () => _coachAck('wip_pileup') }
+      ];
+      break;
+  }
+
+  text.innerHTML = `<span class="coach-bar-label">${label}</span>${html}`;
+  actions.innerHTML = buttons.map((b, i) =>
+    `<button class="coach-bar-btn${b.primary ? ' primary' : ''}" data-i="${i}">${_coachEscape(b.label)}</button>`
+  ).join('');
+  actions.querySelectorAll('.coach-bar-btn').forEach(btn => {
     const i = parseInt(btn.dataset.i, 10);
-    const j = parseInt(btn.dataset.j, 10);
-    const n = nudges[i];
-    if (n && n.actions && n.actions[j]) btn.onclick = n.actions[j].onClick;
+    btn.onclick = () => { buttons[i].action(); };
   });
-
-  refreshCoachBadge();
 }
 
-function openCoach() {
-  renderCoach();
-  const panel = document.getElementById('coach-panel');
-  if (panel) {
-    panel.classList.add('open');
-    panel.setAttribute('aria-hidden', 'false');
-  }
+// Quick-action helpers used by the bar's buttons. Each mutates a task,
+// stamps updatedAt, persists, and re-renders (which re-builds the queue
+// and shows the next prompt).
+function _coachMarkStatus(task, status) {
+  setTaskStatus(task, status);
+  task.updatedAt = Date.now();
+  save();
+  renderAll();
 }
-
-function closeCoach() {
-  const panel = document.getElementById('coach-panel');
-  if (panel) {
-    panel.classList.remove('open');
-    panel.setAttribute('aria-hidden', 'true');
-  }
+function _coachShiftDue(task, days) {
+  const base = task.dueDate ? new Date(task.dueDate + 'T00:00:00') : new Date();
+  base.setDate(base.getDate() + days);
+  const y = base.getFullYear();
+  const m = String(base.getMonth() + 1).padStart(2, '0');
+  const d = String(base.getDate()).padStart(2, '0');
+  task.dueDate = `${y}-${m}-${d}`;
+  task.updatedAt = Date.now();
+  save();
+  renderAll();
 }
-
-// Cheap badge count — runs on every renderAll() so the FAB always shows
-// the current urgent-item count without opening the panel.
-function refreshCoachBadge() {
-  const b = document.getElementById('coach-badge');
-  if (!b) return;
-  const tasks = state.tasks || [];
-  const overdue = tasks.filter(t => t.status !== 'done' && t.dueDate && _coachDaysOverdue(t.dueDate) > 0).length;
-  const blocked = tasks.filter(t => t.status === 'block').length;
-  const n = overdue + blocked;
-  if (n > 0) { b.textContent = n > 99 ? '99+' : n; b.style.display = 'flex'; }
-  else b.style.display = 'none';
+function _coachAck(cooldownKey) {
+  _coachSetCooldown(cooldownKey);
+  renderCoachBar();
 }
 
 // ── View switching ──
@@ -4473,7 +4460,7 @@ function renderAll() {
   else if (currentView==='today') renderToday();
   else if (currentView==='inbox') renderInbox();
   renderTimerPill();
-  if (typeof refreshCoachBadge === 'function') refreshCoachBadge();
+  if (typeof renderCoachBar === 'function') renderCoachBar();
   // If a card was open during re-render, ensure it stays in the sheet.
   // renderKanban() will have created a fresh duplicate in the kanban — move
   // the right one into the sheet (by ID), remove the kanban duplicate.
@@ -4556,8 +4543,9 @@ function saveTask() {
   if (editingTaskId) {
     const t = getTask(editingTaskId);
     t.name=name; t.pid=pid; setTaskStatus(t, status); t.notes=notes; t.dueDate=dueDate;
+    t.updatedAt = Date.now();
   } else {
-    const t = {id:uid(),pid,name,status,notes,dueDate};
+    const t = {id:uid(),pid,name,status,notes,dueDate,updatedAt:Date.now()};
     if (status === 'archive') t.archivedAt = Date.now();
     state.tasks.push(t);
   }
@@ -4687,7 +4675,7 @@ document.getElementById('ctx-delete').onclick = () => { hideCtx(); deleteTask(ct
 function hideCtx() { document.getElementById('ctx-menu').style.display = 'none'; }
 document.addEventListener('click', hideCtx);
 document.addEventListener('keydown', e => {
-  if (e.key==='Escape') { closeTaskModal(); closeProjectModal(); closeSectionModal(); closeSyncModal(); hideCtx(); closeDrawer(); closeCoach(); }
+  if (e.key==='Escape') { closeTaskModal(); closeProjectModal(); closeSectionModal(); closeSyncModal(); hideCtx(); closeDrawer(); }
   if (e.key==='Enter' && document.getElementById('task-modal').classList.contains('open') && document.activeElement.tagName!=='TEXTAREA') saveTask();
 });
 
@@ -4828,6 +4816,10 @@ function migrateRemote(data) {
   if (!('activeTimer' in data)) data.activeTimer = null;
   if (!data.inbox) data.inbox = [];
   data.projects.forEach(p => { if (!p.section) p.section = 'studio'; });
+  // Backfill updatedAt on remote-side tasks too, so stale-WIP detection
+  // doesn't misfire after a fresh pull.
+  const _now = Date.now();
+  (data.tasks || []).forEach(t => { if (!t.updatedAt) t.updatedAt = _now; });
   // Ensure general section exists
   if (!data.sections.find(s => s.id === 'general'))
     data.sections.push({id:'general', name:'General ToDos', color:'#888780'});
