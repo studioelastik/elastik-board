@@ -2219,14 +2219,17 @@ h3.ce-header { font-size: 15px; }
 .section-focus-text small { font-size: 11px; color: var(--text-2); line-height: 1.4; }
 
 /* ── Coach: persistent top bar (colleague check-in) ─────────────────
-   Docked as a sub-pill directly below the floating header. Same
-   translucent blur so when scrolling, content behind both pills reads
-   as one unified header zone instead of two separated strips. */
+   Pinned with position:fixed so it stays glued to the viewport
+   regardless of which scroll container is active (on mobile each view
+   scrolls internally, which breaks sticky-on-a-sibling).
+   A spacer in document flow reserves the matching vertical space so
+   content below isn't covered. */
 #coach-bar {
-  position: sticky;
+  position: fixed;
   top: calc(var(--header-h) + 14px);
+  left: calc(var(--sidebar) + 14px);
+  right: 14px;
   z-index: 45;
-  margin: 4px 14px 0;
   padding: 9px 14px;
   display: flex; align-items: center; gap: 12px;
   min-height: 46px;
@@ -2236,7 +2239,13 @@ h3.ce-header { font-size: 15px; }
   -webkit-backdrop-filter: blur(14px) saturate(1.6);
   border: 1px solid rgba(255,255,255,0.45);
   box-shadow: 0 1px 3px rgba(0,0,0,.04);
-  transition: opacity .2s ease, box-shadow .2s ease;
+  transition: opacity .2s ease, box-shadow .2s ease, left .55s cubic-bezier(.23,1,.32,1);
+}
+#app.sidebar-collapsed #coach-bar { left: 14px; }
+#coach-bar-spacer {
+  height: 54px;          /* bar (~46px) + breathing room */
+  flex-shrink: 0;
+  pointer-events: none;
 }
 [data-theme="dark"] #coach-bar {
   background: rgba(28,28,28,0.55);
@@ -2310,12 +2319,13 @@ h3.ce-header { font-size: 15px; }
 @media (max-width: 768px) {
   #coach-bar {
     top: calc(var(--header-h) + 14px);
-    margin: 5px 12px 0;
+    left: 12px; right: 12px;
     padding: 8px 11px;
     gap: 9px;
     border-radius: 12px;
     min-height: 42px;
   }
+  #coach-bar-spacer { height: 50px; }
   #coach-bar-avatar { width: 28px; height: 28px; }
   #coach-bar-avatar svg { width: 15px; height: 15px; }
   #coach-bar-text { font-size: 13px; }
@@ -2449,7 +2459,9 @@ h3.ce-header { font-size: 15px; }
       </div>
     </div>
 
-    <!-- Coach: persistent top bar — asks one question at a time -->
+    <!-- Coach: persistent top bar — asks one question at a time.
+         Fixed-positioned to stay glued to the viewport; spacer below
+         reserves the same vertical space in document flow. -->
     <div id="coach-bar" role="region" aria-label="Coach">
       <div id="coach-bar-avatar" aria-hidden="true">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -2459,6 +2471,7 @@ h3.ce-header { font-size: 15px; }
       <div id="coach-bar-text"></div>
       <div id="coach-bar-actions"></div>
     </div>
+    <div id="coach-bar-spacer" aria-hidden="true"></div>
 
     <div id="col-filter-bar"></div>
     <div id="kanban-view"></div>
