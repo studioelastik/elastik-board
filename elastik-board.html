@@ -185,16 +185,15 @@ body {
 #sidebar-logo.synced  .logo-accent { color: #5DBB5D; }
 #sidebar-logo.syncing .logo-accent { color: #E8A84B; animation: blink .9s infinite; }
 #sidebar-logo.error   .logo-accent { color: #E86868; }
-/* Brand mark — small kanban-style glyph; color tracks sync state via
-   currentColor (set on the parent #sidebar-sync-dot class transitions). */
-#sidebar-logo .logo-mark {
+#sidebar-logo .dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--text-3);          /* default: grey until sync state set */
   flex-shrink: 0;
-  color: var(--text-2);
-  transition: color .3s;
+  transition: background .3s;
 }
-#sidebar-logo .logo-mark.synced  { color: #5DBB5D; }
-#sidebar-logo .logo-mark.syncing { color: #E8A84B; animation: blink .9s infinite; }
-#sidebar-logo .logo-mark.error   { color: #E86868; }
+#sidebar-logo .dot.synced  { background: #5DBB5D; }
+#sidebar-logo .dot.syncing { background: #E8A84B; animation: blink .9s infinite; }
+#sidebar-logo .dot.error   { background: #E86868; }
 #sidebar-views {
   padding: 8px 0 14px;
 }
@@ -321,7 +320,7 @@ body {
     margin: 10px 8px 0;
     width: calc(100% - 16px);
   }
-  #header-right { gap: 5px; }
+  #header-right { gap: 7px; }
   #header-center { padding: 0 10px; }
   #header.scrolled {
     width: min(900px, 94%);
@@ -1271,16 +1270,15 @@ h3.ce-header { font-size: 15px; }
 
 /* ── Sync button ── */
 #sync-btn {
-  width: 26px; height: 26px; position: relative; flex-shrink: 0;
+  width: 30px; height: 30px; position: relative; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
   background: var(--surface2); border: 1px solid var(--border);
   border-radius: var(--r); cursor: pointer; color: var(--text-2);
   transition: background .15s, color .15s;
 }
 #sync-btn:hover { background: var(--border-strong); color: var(--text); }
-#sync-btn svg { width: 12px; height: 12px; }
 #capture-btn {
-  width: 28px; height: 28px; flex-shrink: 0;
+  width: 32px; height: 32px; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
   background: #F5C518; border: none;
   border-radius: 50%; cursor: pointer;
@@ -1290,8 +1288,8 @@ h3.ce-header { font-size: 15px; }
 }
 #capture-btn:hover { transform: scale(1.06); box-shadow: 0 3px 12px rgba(245,197,24,.55); }
 #capture-btn:active { transform: scale(.93); }
-#capture-btn svg { width: 14px; height: 14px; }
-@media (max-width: 768px) { #capture-btn { width: 26px; height: 26px; } }
+#capture-btn svg { width: 16px; height: 16px; }
+@media (max-width: 768px) { #capture-btn { width: 30px; height: 30px; } }
 
 /* ── Capture overlay (distraction-free brain dump) ── */
 #capture-overlay {
@@ -1421,11 +1419,10 @@ h3.ce-header { font-size: 15px; }
   padding: 1px 7px; border-radius: 999px; min-width: 18px; text-align: center;
 }
 #reload-btn {
-  width: 26px; height: 26px; flex-shrink: 0;
+  width: 30px; height: 30px; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
   background: var(--surface2); border: 1px solid var(--border);
   border-radius: var(--r); cursor: pointer; color: var(--text-2);
-  font-size: 14px;
   transition: background .15s, color .15s;
 }
 #reload-btn:hover { background: var(--border-strong); color: var(--text); }
@@ -2352,11 +2349,7 @@ h3.ce-header { font-size: 15px; }
   <!-- Sidebar -->
   <nav id="sidebar">
     <div id="sidebar-logo">
-      <svg class="logo-mark" id="sidebar-sync-dot" width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-        <rect x="1.5" y="2.5" width="3.5" height="13" rx="1.2" fill="currentColor" opacity=".45"/>
-        <rect x="7.25" y="2.5" width="3.5" height="9" rx="1.2" fill="currentColor"/>
-        <rect x="13" y="2.5" width="3.5" height="11" rx="1.2" fill="currentColor" opacity=".45"/>
-      </svg>
+      <div class="dot" id="sidebar-sync-dot"></div>
       <span>Mission <span class="logo-accent">Control</span></span>
       <button id="sidebar-close-btn" onclick="closeDrawer()">
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
@@ -2445,6 +2438,10 @@ h3.ce-header { font-size: 15px; }
         <button id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
           <svg id="theme-icon-sun" width="15" height="15" viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="7.5" r="3" stroke="currentColor" stroke-width="1.3"/><path d="M7.5 1v1.5M7.5 12.5V14M1 7.5h1.5M12.5 7.5H14M3 3l1 1M11 11l1 1M11 3l-1 1M3 11l1-1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
           <svg id="theme-icon-moon" width="15" height="15" viewBox="0 0 15 15" fill="none" style="display:none"><path d="M12 9.5A5.5 5.5 0 015.5 3c0-.41.05-.81.13-1.2A6 6 0 1013.2 9.87 5.5 5.5 0 0112 9.5z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+        </button>
+        <button id="add-task-main" onclick="openTaskModal()">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <span class="btn-label">Add task</span>
         </button>
       </div>
     </div>
@@ -4834,9 +4831,9 @@ function setSyncStatus(s, msg) {
   dot.className = '';
   if (s === 'synced')  dot.classList.add('synced');
   if (s === 'syncing') dot.classList.add('syncing');
-  // Mirror state on the sidebar logo mark + logo text colour
+  // Mirror state on the sidebar logo dot + logo text colour
   const sideDot = document.getElementById('sidebar-sync-dot');
-  if (sideDot) { sideDot.setAttribute('class', 'logo-mark' + (s ? ' ' + s : '')); }
+  if (sideDot) { sideDot.className = 'dot' + (s ? ' ' + s : ''); }
   const logo = document.getElementById('sidebar-logo');
   if (logo) { logo.className = s || ''; }
   if (s === 'error')   dot.classList.add('error');
