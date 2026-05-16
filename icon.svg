@@ -1,14 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#1F1F1F"/>
-      <stop offset="100%" stop-color="#050505"/>
-    </linearGradient>
-  </defs>
-  <!-- Squircle background -->
-  <rect width="100" height="100" rx="22" fill="url(#bg)"/>
-  <!-- Three kanban bars: middle one accent blue (WIP), sides white at low opacity -->
-  <rect x="22" y="30" width="14" height="40" rx="3.5" fill="#FFFFFF" opacity="0.45"/>
-  <rect x="43" y="30" width="14" height="28" rx="3.5" fill="#5B9CF6"/>
-  <rect x="64" y="30" width="14" height="34" rx="3.5" fill="#FFFFFF" opacity="0.7"/>
+  <!-- White rounded square paper -->
+  <rect x="8" y="8" width="84" height="84" rx="12" fill="#FFFFFF"/>
+  <!-- Three list rows centred vertically, 18-unit spacing -->
+  <circle cx="22" cy="32" r="4" fill="#FF3B30"/>
+  <rect x="30" y="30.5" width="50" height="3" rx="1.5" fill="#111111"/>
+  <circle cx="22" cy="50" r="4" fill="#34C759"/>
+  <rect x="30" y="48.5" width="44" height="3" rx="1.5" fill="#111111"/>
+  <circle cx="22" cy="68" r="4" fill="#007AFF"/>
+  <rect x="30" y="66.5" width="46" height="3" rx="1.5" fill="#111111"/>
 </svg>
