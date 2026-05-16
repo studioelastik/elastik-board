@@ -2306,17 +2306,35 @@ h3.ce-header { font-size: 15px; }
 #coach-bar.coach-idle { opacity: .55; }
 
 @media (max-width: 768px) {
+  /* Stack on mobile: text wraps freely on row 1 (with avatar),
+     actions get their own row below so 4 buttons don't squeeze the
+     text into a narrow column. */
   #coach-bar {
     margin: 4px 12px 0;
-    padding: 8px 11px;
-    gap: 9px;
+    padding: 10px 12px;
+    gap: 10px;
     border-radius: 12px;
-    min-height: 42px;
+    min-height: 0;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    row-gap: 10px;
   }
-  #coach-bar-avatar { width: 28px; height: 28px; }
+  #coach-bar-avatar { width: 28px; height: 28px; margin-top: 2px; }
   #coach-bar-avatar svg { width: 15px; height: 15px; }
-  #coach-bar-text { font-size: 13px; }
-  .coach-bar-btn { padding: 5px 9px; font-size: 11px; }
+  #coach-bar-text {
+    flex: 1 1 0;
+    min-width: 0;
+    font-size: 13px;
+  }
+  #coach-bar-actions {
+    flex: 1 0 100%;           /* drops to its own row, full width */
+    justify-content: flex-start;
+    gap: 6px;
+  }
+  .coach-bar-btn {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
 }
 </style>
 <!-- EditorJS core + block tools (rich-text notes editor) -->
