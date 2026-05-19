@@ -529,7 +529,7 @@ body {
   background: var(--surface);
   box-shadow: var(--shadow-card);
   border-radius: var(--r-lg);
-  padding: 12px 14px;
+  padding: 7px 12px 8px;
   cursor: grab;
   user-select: none;
   transition: box-shadow .15s, transform .1s, background .15s;
@@ -537,6 +537,21 @@ body {
   overflow: hidden;   /* prevent inline-editor fields from bleeding outside */
   min-width: 0;       /* flex child shrink fix */
 }
+/* Column-position number, shown to the left of the task name next to
+   the colored project bar. */
+.task-card-num {
+  position: absolute;
+  left: 9px; top: 8px;
+  font-size: 11px; font-weight: 600;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+  min-width: 14px;
+  line-height: 1.45;
+  pointer-events: none;
+}
+/* Strikethrough for archived tasks */
+.task-card.task-archived .task-name { text-decoration: line-through; opacity: .7; }
+.task-card.expanded .task-card-num { display: none; }
 /* Drag handle — inline in the meta row, touch only */
 .drag-handle {
   display: none;
@@ -569,20 +584,14 @@ body {
 .task-name {
   font-size: 13px; line-height: 1.45;
   color: var(--text);
-  padding-left: 8px;
-  margin-bottom: 3px;
+  padding-left: 28px;     /* room for the column-position number */
+  margin-bottom: 2px;
   /* cap to 1 line so all cards stay the same height */
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-/* Always rendered — empty div keeps consistent card height */
-.task-note-preview {
-  font-size: 11.5px;
-  height: 17px; line-height: 17px;
-  color: var(--text-3);
-  padding-left: 8px;
-  margin-bottom: 5px;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
+/* Note preview removed from compact cards; rule retained as no-op
+   so older render code doesn't visually regress if it still renders. */
+.task-note-preview { display: none; }
 .note-preview-link {
   color: var(--accent); text-decoration: none;
   display: inline-flex; align-items: center; gap: 3px;
@@ -592,7 +601,7 @@ body {
 .note-preview-link:hover { text-decoration: underline; }
 .task-meta {
   display: flex; align-items: center; gap: 6px;
-  padding-left: 8px;
+  padding-left: 28px;
   flex-wrap: nowrap;
   min-height: 20px;
 }
@@ -2862,6 +2871,64 @@ const STATUSES = ['next','wip','done','block','nosched','archive'];
 const STATUS_LABELS_DEFAULT = {wip:'In progress',next:'Up next',nosched:'No schedule',done:'Done',block:'Blocked',archive:'Archive'};
 function statusLabel(s) { return (state && state.colLabels && state.colLabels[s]) || STATUS_LABELS_DEFAULT[s] || s; }
 const STATUS_COLS_ORDER = ['wip','next','nosched','done','block','archive'];
+
+// ── Time-bucket columns (kanban view) ──────────────────────────────
+// The kanban now groups tasks by due-date proximity rather than by
+// workflow status. Status is still tracked (Coach uses it for done /
+// blocked detection, etc.) but the columns are time-focused.
+const TIME_COLS = [
+  { id: 'today',       label: 'Today' },
+  { id: 'this_week',   label: 'This Week' },
+  { id: 'no_schedule', label: 'No Schedule' },
+  { id: 'archive',     label: 'Archive' },
+];
+
+function _daysUntilDue(dueStr) {
+  const due = new Date(dueStr + 'T00:00:00');
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  return Math.floor((due - today) / 86400000);
+}
+
+// Which kanban column does this task belong in? Returns null for
+// done tasks (they're hidden from the kanban; still reachable via
+// List view and the Coach).
+function taskTimeCol(t) {
+  if (t.status === 'archive') return 'archive';
+  if (t.status === 'done')    return null;
+  if (!t.dueDate)             return 'no_schedule';
+  const d = _daysUntilDue(t.dueDate);
+  if (d <= 0)  return 'today';        // today or overdue
+  if (d <= 7)  return 'this_week';
+  return 'no_schedule';                // dated beyond 7 days → treated as unscheduled
+}
+
+function _yyyymmdd(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+// Drop-target translation: when a card is dropped into a time-bucket
+// column, adjust dueDate (and status, for archive) accordingly.
+function setTaskCol(task, colId) {
+  task.updatedAt = Date.now();
+  if (colId === 'archive') {
+    if (task.status !== 'archive') task.archivedAt = Date.now();
+    task.status = 'archive';
+    return;
+  }
+  // Coming back from archive — revive as in-progress
+  if (task.status === 'archive') task.status = 'wip';
+  if (colId === 'today') {
+    task.dueDate = _yyyymmdd(new Date());
+  } else if (colId === 'this_week') {
+    const d = new Date(); d.setDate(d.getDate() + 3);
+    task.dueDate = _yyyymmdd(d);
+  } else if (colId === 'no_schedule') {
+    task.dueDate = '';
+  }
+}
 function defaultSections() {
   return [
     {id:'dayjob',  name:'Day Job',       color:'#C8501A', focused:false},
@@ -3087,11 +3154,11 @@ function renderColFilterBar() {
   const bar = document.getElementById('col-filter-bar');
   if (!bar) return;
   bar.innerHTML = '';
-  STATUS_COLS_ORDER.forEach(s => {
+  TIME_COLS.forEach(c => {
     const btn = document.createElement('button');
-    btn.className = 'col-filter-pill' + (hiddenStatuses.has(s) ? '' : ' on');
-    btn.textContent = statusLabel(s);
-    btn.onclick = () => toggleStatusFilter(s);
+    btn.className = 'col-filter-pill' + (hiddenStatuses.has(c.id) ? '' : ' on');
+    btn.textContent = c.label;
+    btn.onclick = () => toggleStatusFilter(c.id);
     bar.appendChild(btn);
   });
 }
@@ -3501,43 +3568,70 @@ function renderKanban() {
     cols.className = 'swimlane-cols';
     cols.id = 'lane-cols-' + sec.id;
 
-    STATUS_COLS_ORDER.filter(s => !hiddenStatuses.has(s)).forEach(status => {
-      let colTasks = tasks.filter(t=>t.status===status);
-      // Archive sorts newest first by archivedAt timestamp
-      if (status === 'archive') {
-        colTasks = colTasks.slice().sort((a,b) => (b.archivedAt||0) - (a.archivedAt||0));
+    TIME_COLS.filter(c => !hiddenStatuses.has(c.id)).forEach(colDef => {
+      const colId = colDef.id;
+      let colTasks = tasks.filter(t => taskTimeCol(t) === colId);
+      if (colId === 'archive') {
+        colTasks = colTasks.slice().sort((a, b) => (b.archivedAt || 0) - (a.archivedAt || 0));
+      } else if (colId === 'today') {
+        // Most overdue first, then today
+        colTasks = colTasks.slice().sort((a, b) => (_daysUntilDue(a.dueDate || '9999-12-31')) - (_daysUntilDue(b.dueDate || '9999-12-31')));
+      } else if (colId === 'this_week') {
+        colTasks = colTasks.slice().sort((a, b) => _daysUntilDue(a.dueDate) - _daysUntilDue(b.dueDate));
       }
-      const collapsed = isColCollapsed(sec.id, status);
+      const collapsed = isColCollapsed(sec.id, colId);
       const col = document.createElement('div');
-      col.className = 'kanban-col' + (status === 'archive' ? ' kanban-col-archive' : '') + (collapsed ? ' kanban-col-collapsed' : '');
-      col.dataset.status = status;
+      col.className = 'kanban-col'
+        + (colId === 'archive' ? ' kanban-col-archive' : '')
+        + (collapsed ? ' kanban-col-collapsed' : '');
+      col.dataset.status = colId;
       col.innerHTML = `
         <div class="col-header">
-          <button class="col-collapse-btn" onclick="toggleColCollapse('${sec.id}','${status}')" title="${collapsed ? 'Expand' : 'Collapse'} column" aria-label="${collapsed ? 'Expand' : 'Collapse'} column">
+          <button class="col-collapse-btn" onclick="toggleColCollapse('${sec.id}','${colId}')" title="${collapsed ? 'Expand' : 'Collapse'} column" aria-label="${collapsed ? 'Expand' : 'Collapse'} column">
             <svg width="10" height="10" viewBox="0 0 10 10" fill="none" class="col-chev${collapsed ? ' col-chev-collapsed' : ''}"><path d="M2.5 3.5L5 6l2.5-2.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
-          <span class="col-title" onclick="editColTitle(this,'${status}')" title="Click to rename">${statusLabel(status)}</span>
+          <span class="col-title">${colDef.label}</span>
           <span class="col-count">${colTasks.length}</span>
         </div>`;
 
       const list = document.createElement('div');
       list.className = 'task-list';
-      list.dataset.status = status;
+      list.dataset.status = colId;
       list.dataset.section = sec.id;
 
       if (colTasks.length === 0) {
         list.innerHTML = `<div class="empty-col">Drop tasks here</div>`;
       } else {
-        colTasks.forEach(t => list.appendChild(makeTaskCard(t)));
+        colTasks.forEach((t, i) => {
+          const card = makeTaskCard(t);
+          // Card number on the left, next to the project color bar
+          const num = document.createElement('span');
+          num.className = 'task-card-num';
+          num.textContent = i + 1;
+          card.prepend(num);
+          if (t.status === 'archive') card.classList.add('task-archived');
+          list.appendChild(card);
+        });
       }
       col.appendChild(list);
 
       // No add button for archive — items reach it only via drop
-      if (status !== 'archive') {
+      if (colId !== 'archive') {
         const addBtn = document.createElement('div');
         addBtn.className = 'col-add-btn';
         addBtn.innerHTML = `<svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M5.5 1v9M1 5.5h9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg> Add task`;
-        addBtn.onclick = () => openTaskModal(null, status, sec.id);
+        // Defaults: tasks created here pre-fill the right dueDate
+        addBtn.onclick = () => {
+          openTaskModal(null, 'wip', sec.id);
+          // Pre-fill due date based on column
+          setTimeout(() => {
+            const dueInput = document.getElementById('task-due-input');
+            if (!dueInput) return;
+            if (colId === 'today') dueInput.value = _yyyymmdd(new Date());
+            else if (colId === 'this_week') { const d = new Date(); d.setDate(d.getDate() + 3); dueInput.value = _yyyymmdd(d); }
+            else dueInput.value = '';
+          }, 50);
+        };
         col.appendChild(addBtn);
       }
 
@@ -3640,7 +3734,6 @@ function makeTaskCard(t) {
   card.innerHTML = `
     <div class="task-project-bar" style="background:${color}"></div>
     <div class="task-name">${t.name}</div>
-    <div class="task-note-preview">${notePreview(t.notes)}</div>
     <div class="task-meta">
       ${showBadge ? `<span class="project-badge" style="background:${color};color:${pillTextColor(color)}">${shortName}</span>` : ''}
       <span class="task-meta-spacer"></span>
@@ -3830,7 +3923,7 @@ function endTouchDrag() {
   if (list && draggedId) {
     const task = getTask(draggedId);
     if (task) {
-      setTaskStatus(task, list.dataset.status);
+      setTaskCol(task, list.dataset.status);
       applyDropOrder(list, draggedId);
       save();
     }
@@ -3849,7 +3942,7 @@ function setupDropZone(list) {
     if (!dragPlaceholder) {
       dragPlaceholder = document.createElement('div');
       dragPlaceholder.className = 'task-card drag-placeholder';
-      dragPlaceholder.style.height = '60px';
+      dragPlaceholder.style.height = '40px';
     }
     const afterEl = getDragAfterElement(list, e.clientY);
     const empty = list.querySelector('.empty-col');
