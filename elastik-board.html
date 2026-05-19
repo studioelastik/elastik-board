@@ -4338,6 +4338,9 @@ document.addEventListener('keydown', e => {
 // triage with inline quick actions that update the underlying task and
 // stamp updatedAt. Cooldowns prevent the same prompt re-appearing too
 // soon after you've acknowledged it.
+//
+// Set COACH_ENABLED = true to turn the bar back on.
+const COACH_ENABLED = false;
 
 const COACH_COOLDOWN_KEY = 'elastik_coach_cooldowns_v1';
 const COACH_STALE_WIP_DAYS = 2;
@@ -4487,6 +4490,8 @@ function renderCoachBar() {
   const actions = document.getElementById('coach-bar-actions');
   const bar     = document.getElementById('coach-bar');
   if (!text || !actions || !bar) return;
+  if (!COACH_ENABLED) { bar.style.display = 'none'; return; }
+  bar.style.display = '';
 
   coachQueue = buildCoachQueue();
   bar.classList.remove('coach-urgent', 'coach-idle');
