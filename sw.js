@@ -1,5 +1,5 @@
 // Mission Control — Service Worker
-const CACHE = 'mission-control-v37';
+const CACHE = 'mission-control-v38';
 // Only same-origin assets are precached. CDN scripts (EditorJS etc.) are
 // fetched fresh each load — precaching them is fragile (one 404 breaks the
 // whole install) and the editor scripts are small enough to load on demand.
@@ -28,8 +28,12 @@ self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
   // All cross-origin (CDN scripts, Firebase, Google APIs, fonts): bypass SW
   if (url.origin !== self.location.origin) return;
-  // Same-origin: network first, fall back to cache when offline
+  // App-shell files always fetched from the network with the browser HTTP
+  // cache bypassed, so a GitHub-Pages republish reaches the PWA on the next
+  // launch. The SW cache is only the offline fallback.
+  const isAppShell = /\.(html|js|css|svg|json)$/i.test(url.pathname) || url.pathname === '/' || url.pathname.endsWith('/');
+  const init = isAppShell ? { cache: 'no-store' } : undefined;
   e.respondWith(
-    fetch(e.request).catch(() => caches.match(e.request))
+    fetch(e.request, init).catch(() => caches.match(e.request))
   );
 });
