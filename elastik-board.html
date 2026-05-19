@@ -3962,7 +3962,7 @@ function setupDropZone(list) {
     if (!draggedId) return;
     const task = getTask(draggedId);
     if (!task) return;
-    setTaskStatus(task, list.dataset.status);
+    setTaskCol(task, list.dataset.status);
     applyDropOrder(list, draggedId);
     if (dragPlaceholder) { dragPlaceholder.remove(); dragPlaceholder = null; }
     draggedId = null;
