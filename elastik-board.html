@@ -523,13 +523,18 @@ body {
   transition: background .15s;
   border-radius: var(--r-lg);
 }
-.task-list.drag-over { background: rgba(200,80,26,.04); }
+.task-list.drag-over {
+  background: var(--accent-bg);
+  outline: 2px dashed var(--accent);
+  outline-offset: -4px;
+  border-radius: 8px;
+}
 
 .task-card {
   background: var(--surface);
   box-shadow: var(--shadow-card);
   border-radius: var(--r-lg);
-  padding: 7px 12px 8px;
+  padding: 9px 12px 10px;
   cursor: grab;
   user-select: none;
   transition: box-shadow .15s, transform .1s, background .15s;
@@ -541,11 +546,12 @@ body {
    the colored project bar. */
 .task-card-num {
   position: absolute;
-  left: 9px; top: 8px;
-  font-size: 11px; font-weight: 600;
+  left: 9px; top: 10px;
+  font-size: 11px; font-weight: 500;
   color: var(--text-3);
+  opacity: .55;
   font-variant-numeric: tabular-nums;
-  min-width: 14px;
+  min-width: 12px;
   line-height: 1.45;
   pointer-events: none;
 }
@@ -584,7 +590,7 @@ body {
 .task-name {
   font-size: 13px; line-height: 1.45;
   color: var(--text);
-  padding-left: 28px;     /* room for the column-position number */
+  padding-left: 24px;     /* room for the column-position number */
   margin-bottom: 2px;
   /* cap to 1 line so all cards stay the same height */
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -601,7 +607,7 @@ body {
 .note-preview-link:hover { text-decoration: underline; }
 .task-meta {
   display: flex; align-items: center; gap: 6px;
-  padding-left: 28px;
+  padding-left: 24px;
   flex-wrap: nowrap;
   min-height: 20px;
 }
@@ -3571,13 +3577,10 @@ function renderKanban() {
     TIME_COLS.filter(c => !hiddenStatuses.has(c.id)).forEach(colDef => {
       const colId = colDef.id;
       let colTasks = tasks.filter(t => taskTimeCol(t) === colId);
+      // Only archive is force-sorted (newest archived first). Today and
+      // This Week keep state.tasks order so a drag-drop position sticks.
       if (colId === 'archive') {
         colTasks = colTasks.slice().sort((a, b) => (b.archivedAt || 0) - (a.archivedAt || 0));
-      } else if (colId === 'today') {
-        // Most overdue first, then today
-        colTasks = colTasks.slice().sort((a, b) => (_daysUntilDue(a.dueDate || '9999-12-31')) - (_daysUntilDue(b.dueDate || '9999-12-31')));
-      } else if (colId === 'this_week') {
-        colTasks = colTasks.slice().sort((a, b) => _daysUntilDue(a.dueDate) - _daysUntilDue(b.dueDate));
       }
       const collapsed = isColCollapsed(sec.id, colId);
       const col = document.createElement('div');
