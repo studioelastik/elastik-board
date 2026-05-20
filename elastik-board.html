@@ -1916,6 +1916,11 @@ h3.ce-header { font-size: 15px; }
   .today-task-name { font-size: 17px; }
 }
 
+/* Today view disabled — hide its tab, sidebar item, card pin dots and
+   context-menu pin action. Remove this block to re-enable. */
+#vbtn-today, #nav-today, #ctx-pin { display: none !important; }
+.pin-dot { display: none !important; }
+
 /* ── Pin dot — task-card meta ── */
 .pin-dot {
   width: 14px; height: 14px; border-radius: 50%;
@@ -4605,6 +4610,7 @@ function _coachAck(cooldownKey) {
 
 // ── View switching ──
 function setView(v) {
+  if (v === 'today') v = 'kanban';   // Today view is disabled
   currentView = v; state.view = v; save();
   document.getElementById('kanban-view').style.display = v==='kanban' ? 'flex'  : 'none';
   document.getElementById('list-view').style.display   = v==='list'   ? 'block' : 'none';
