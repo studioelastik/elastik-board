@@ -3564,6 +3564,17 @@ document.getElementById('card-backdrop').addEventListener('click', () => closeCa
 // ── Render kanban ──
 function renderKanban() {
   const el = document.getElementById('kanban-view');
+
+  // Preserve scroll positions across the full rebuild so a drop (which
+  // triggers renderAll) doesn't jump the whole view. Capture the vertical
+  // scroll of the board plus the horizontal scroll of each swimlane's
+  // columns (keyed by lane id), then restore after re-rendering.
+  const prevScrollTop = el.scrollTop;
+  const prevColScroll = {};
+  el.querySelectorAll('.swimlane-cols').forEach(c => {
+    if (c.id) prevColScroll[c.id] = c.scrollLeft;
+  });
+
   el.innerHTML = '';
 
   const cs = getComputedStyle(document.documentElement);
@@ -3670,6 +3681,13 @@ function renderKanban() {
 
     lane.appendChild(cols);
     el.appendChild(lane);
+  });
+
+  // Restore scroll positions captured before the rebuild.
+  el.scrollTop = prevScrollTop;
+  Object.keys(prevColScroll).forEach(id => {
+    const c = document.getElementById(id);
+    if (c) c.scrollLeft = prevColScroll[id];
   });
 }
 
