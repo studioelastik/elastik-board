@@ -620,11 +620,18 @@ body {
   flex-wrap: nowrap;
   min-height: 20px;
 }
-.task-meta-spacer { flex: 1; }
+.task-meta-spacer { flex: 1 1 auto; min-width: 4px; }
 .project-badge {
   font-size: 10px; font-weight: 500;
   padding: 2px 7px; border-radius: 8px;
   letter-spacing: .02em;
+  /* Single line: truncate with an ellipsis instead of wrapping to two
+     rows when the meta row is tight (e.g. badge + attachment + due). */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 55%;
+  flex-shrink: 1;
 }
 .status-dot {
   width: 6px; height: 6px; border-radius: 50%; margin-left: auto;
@@ -1072,7 +1079,7 @@ h3.ce-header { font-size: 15px; }
   font-size: 11px; font-weight: 500;
   padding: 2px 7px; border-radius: 8px;
   display: inline-flex; align-items: center;
-  flex-shrink: 0;
+  flex-shrink: 0; white-space: nowrap;
 }
 .task-due.due-future  { background: var(--surface2); color: var(--text-3); }
 .task-due.due-today   { background: var(--accent-bg); color: var(--accent); }
@@ -2127,6 +2134,7 @@ h3.ce-header { font-size: 15px; }
 .attach-count {
   font-size: 10.5px; color: var(--text-3);
   display: inline-flex; align-items: center; gap: 2px;
+  white-space: nowrap; flex-shrink: 0;
 }
 .task-card.expanded.file-drag-over {
   outline: 2.5px dashed var(--accent);
