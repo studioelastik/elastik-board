@@ -588,23 +588,22 @@ body {
   border-radius: var(--r-lg) 0 0 var(--r-lg);
 }
 .task-name {
-  font-size: 13px; line-height: 1.45;
+  font-size: 13px; line-height: 1.35;
   color: var(--text);
   padding-left: 24px;     /* room for the column-position number */
-  margin-bottom: 2px;
+  margin-bottom: 1px;
   /* cap to 1 line so all cards stay the same height */
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-/* Note preview removed from compact cards; rule retained as no-op
-   so older render code doesn't visually regress if it still renders. */
-/* Second line: first line of the note/content. Always rendered (empty
-   when there's no note) so every card is a consistent three rows tall. */
+/* Second line: first line of the note/content. Only rendered when the
+   task actually has a note (see makeTaskCard) so empty cards don't
+   reserve a blank row of wasted vertical space. */
 .task-note-preview {
   font-size: 11.5px;
-  min-height: 16px; line-height: 16px;
+  line-height: 15px;
   color: var(--text-3);
   padding-left: 24px;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .note-preview-link {
@@ -1625,9 +1624,8 @@ h3.ce-header { font-size: 15px; }
   #col-filter-bar { padding: 10px 16px; }
   #header-right { gap: 4px; }
   #menu-btn { display: flex; width: 28px; height: 28px; }
-  /* Keep reload button visible — strip out the timer pill instead */
+  /* Keep reload + timer visible; timer collapses to an icon when idle */
   #reload-btn { display: flex; width: 26px; height: 26px; }
-  #timer-pill { display: none; }
   #sync-btn { width: 24px; height: 24px; }
   #header-center { display: none; }
   #header-title { font-size: 14px; }
@@ -3786,10 +3784,11 @@ function makeTaskCard(t) {
   const shortName = showBadge ? proj.name.split('—')[0].trim() : '';
   const dueHtml = dueDateDisplay(t.dueDate);
 
+  const notePrev = notePreview(t.notes);
   card.innerHTML = `
     <div class="task-project-bar" style="background:${color}"></div>
     <div class="task-name">${t.name}</div>
-    <div class="task-note-preview">${notePreview(t.notes)}</div>
+    ${notePrev ? `<div class="task-note-preview">${notePrev}</div>` : ''}
     <div class="task-meta">
       ${showBadge ? `<span class="project-badge" style="background:${color};color:${pillTextColor(color)}">${shortName}</span>` : ''}
       <span class="task-meta-spacer"></span>
