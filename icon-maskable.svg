@@ -1,10 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <!-- Maskable: paper inside the centre 80% safe zone, 14-unit row spacing -->
-  <rect x="16" y="16" width="68" height="68" rx="10" fill="#FFFFFF"/>
-  <circle cx="28" cy="36" r="3" fill="#FF3B30"/>
-  <rect x="34" y="34.75" width="38" height="2.5" rx="1.25" fill="#111111"/>
-  <circle cx="28" cy="50" r="3" fill="#34C759"/>
-  <rect x="34" y="48.75" width="34" height="2.5" rx="1.25" fill="#111111"/>
-  <circle cx="28" cy="64" r="3" fill="#007AFF"/>
-  <rect x="34" y="62.75" width="36" height="2.5" rx="1.25" fill="#111111"/>
+  <!-- Maskable: full-bleed white, content kept inside the centre 80%
+       safe zone so iOS/Android can crop to a circle without clipping. -->
+  <rect width="100" height="100" fill="#FFFFFF"/>
+  <circle cx="31" cy="38" r="4" fill="#FF3B30"/>
+  <rect x="41" y="36" width="31" height="4" rx="2" fill="#111111"/>
+  <circle cx="31" cy="50" r="4" fill="#34C759"/>
+  <rect x="41" y="48" width="27" height="4" rx="2" fill="#111111"/>
+  <circle cx="31" cy="62" r="4" fill="#007AFF"/>
+  <rect x="41" y="60" width="29" height="4" rx="2" fill="#111111"/>
 </svg>

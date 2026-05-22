@@ -1,11 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <!-- White rounded square paper -->
-  <rect x="8" y="8" width="84" height="84" rx="12" fill="#FFFFFF"/>
-  <!-- Three list rows centred vertically, 18-unit spacing -->
-  <circle cx="22" cy="32" r="4" fill="#FF3B30"/>
-  <rect x="30" y="30.5" width="50" height="3" rx="1.5" fill="#111111"/>
-  <circle cx="22" cy="50" r="4" fill="#34C759"/>
-  <rect x="30" y="48.5" width="44" height="3" rx="1.5" fill="#111111"/>
-  <circle cx="22" cy="68" r="4" fill="#007AFF"/>
-  <rect x="30" y="66.5" width="46" height="3" rx="1.5" fill="#111111"/>
+  <!-- Full-bleed white squircle (macOS draws no mask, so the icon owns
+       its rounded corners). Fills the whole tile — no floating inset. -->
+  <rect width="100" height="100" rx="23" fill="#FFFFFF"/>
+  <!-- Three list rows, vertically centred -->
+  <circle cx="27" cy="34" r="4.5" fill="#FF3B30"/>
+  <rect x="38" y="31.75" width="40" height="4.5" rx="2.25" fill="#111111"/>
+  <circle cx="27" cy="50" r="4.5" fill="#34C759"/>
+  <rect x="38" y="47.75" width="35" height="4.5" rx="2.25" fill="#111111"/>
+  <circle cx="27" cy="66" r="4.5" fill="#007AFF"/>
+  <rect x="38" y="63.75" width="37" height="4.5" rx="2.25" fill="#111111"/>
 </svg>
