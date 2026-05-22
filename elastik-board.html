@@ -597,7 +597,16 @@ body {
 }
 /* Note preview removed from compact cards; rule retained as no-op
    so older render code doesn't visually regress if it still renders. */
-.task-note-preview { display: none; }
+/* Second line: first line of the note/content. Always rendered (empty
+   when there's no note) so every card is a consistent three rows tall. */
+.task-note-preview {
+  font-size: 11.5px;
+  min-height: 16px; line-height: 16px;
+  color: var(--text-3);
+  padding-left: 24px;
+  margin-bottom: 4px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 .note-preview-link {
   color: var(--accent); text-decoration: none;
   display: inline-flex; align-items: center; gap: 3px;
@@ -782,6 +791,17 @@ body.card-open { overflow: hidden; }
 }
 .card-field::placeholder { color: var(--text-3); }
 .card-field-name { font-weight: 500; font-size: 13px; margin-bottom: 4px; }
+/* iOS zooms the viewport when a focused text field is < 16px. Bump all
+   text-entry fields (incl. the rich-text editor) to 16px on touch so
+   typing / hitting return never triggers an auto-zoom we'd have to undo. */
+@media (max-width: 768px) {
+  .card-field, .card-field-name,
+  input[type="text"], input[type="email"], input[type="password"],
+  input[type="date"], input[type="url"], input[type="number"], input[type="search"],
+  textarea, [contenteditable="true"], .ce-paragraph, .ce-block {
+    font-size: 16px !important;
+  }
+}
 /* Editor slot: lives inside .task-body, fills remaining height in fullscreen */
 .editor-slot { display: none; }
 .task-card.expanded .editor-slot {
@@ -1051,7 +1071,8 @@ h3.ce-header { font-size: 15px; }
 .task-due {
   font-size: 11px; font-weight: 500;
   padding: 2px 7px; border-radius: 8px;
-  display: inline-block; margin-bottom: 6px;
+  display: inline-flex; align-items: center;
+  flex-shrink: 0;
 }
 .task-due.due-future  { background: var(--surface2); color: var(--text-3); }
 .task-due.due-today   { background: var(--accent-bg); color: var(--accent); }
@@ -3742,6 +3763,7 @@ function makeTaskCard(t) {
   card.innerHTML = `
     <div class="task-project-bar" style="background:${color}"></div>
     <div class="task-name">${t.name}</div>
+    <div class="task-note-preview">${notePreview(t.notes)}</div>
     <div class="task-meta">
       ${showBadge ? `<span class="project-badge" style="background:${color};color:${pillTextColor(color)}">${shortName}</span>` : ''}
       <span class="task-meta-spacer"></span>
@@ -3918,8 +3940,15 @@ function moveTouchDrag(touch) {
   const empty = list.querySelector('.empty-col');
   if (empty) empty.remove();
   const after = getDragAfterElement(list, touch.clientY);
-  if (!after) list.appendChild(dragPlaceholder);
-  else list.insertBefore(dragPlaceholder, after);
+  // Only re-insert the placeholder when the target position actually
+  // changes. Re-inserting on every touchmove reflows the list, which
+  // shifts the cards under the finger and makes the placeholder oscillate
+  // ("cards jump around erratically"). Skipping no-op moves keeps it calm.
+  if (after == null) {
+    if (list.lastElementChild !== dragPlaceholder) list.appendChild(dragPlaceholder);
+  } else if (after !== dragPlaceholder && dragPlaceholder.nextElementSibling !== after) {
+    list.insertBefore(dragPlaceholder, after);
+  }
 }
 
 function endTouchDrag() {
