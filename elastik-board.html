@@ -2740,6 +2740,17 @@ h3.ce-header { font-size: 15px; }
         <span id="settings-theme-label">Light</span>
       </button>
     </div>
+    <div class="settings-row">
+      <div>
+        <div class="settings-label">Data</div>
+        <div class="settings-sub">Download a local backup or restore from one</div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button class="zoom-btn" onclick="exportDataJSON()" title="Download JSON backup" style="width:auto;padding:0 10px;gap:6px;font-size:12px;">Export</button>
+        <button class="zoom-btn" onclick="document.getElementById('import-data-input').click()" title="Restore from JSON backup" style="width:auto;padding:0 10px;gap:6px;font-size:12px;">Import</button>
+        <input type="file" id="import-data-input" accept="application/json,.json" style="display:none" onchange="importDataJSON(event)">
+      </div>
+    </div>
     <div class="modal-actions" style="margin-top:8px">
       <button class="btn-cancel" onclick="closeSettingsModal()">Close</button>
     </div>
@@ -2814,6 +2825,7 @@ h3.ce-header { font-size: 15px; }
         <span class="sync-connected-label">Syncing live</span>
       </div>
       <div class="sync-connected-url" id="sync-connected-url"></div>
+      <p id="sync-last-synced" style="font-size:11px;color:var(--text-3);margin-top:4px;letter-spacing:.02em;"></p>
       <p style="font-size:12px;color:var(--text-2);margin-top:12px;line-height:1.5">
         All changes save instantly. Open this page on any device to stay in sync.
       </p>
@@ -3085,7 +3097,12 @@ function defaultData() {
 }
 
 let state = load();
-let currentView = state.view || 'kanban';
+// Current view is a device-local pref — no reason to sync it (and syncing
+// used to cost a Firebase write on every tab switch).
+let currentView = (function(){
+  try { return localStorage.getItem('elastik_view') || state.view || 'kanban'; }
+  catch(_) { return state.view || 'kanban'; }
+})();
 let filterSection = state.filterSection || null;
 let filterProject = state.filterProject || null;
 let editingTaskId = null;
@@ -4762,7 +4779,8 @@ function _coachAck(cooldownKey) {
 // ── View switching ──
 function setView(v) {
   if (v === 'today') v = 'kanban';   // Today view is disabled
-  currentView = v; state.view = v; save();
+  currentView = v;
+  try { localStorage.setItem('elastik_view', v); } catch(_) {}
   document.getElementById('kanban-view').style.display = v==='kanban' ? 'flex'  : 'none';
   document.getElementById('list-view').style.display   = v==='list'   ? 'block' : 'none';
   document.getElementById('time-view').style.display   = v==='time'   ? 'block' : 'none';
@@ -5111,11 +5129,12 @@ async function firebaseFetch(url, options = {}) {
   return res;
 }
 
+let _lastSyncedAt = null;
 function setSyncStatus(s, msg) {
   const dot = document.getElementById('sync-dot');
   if (!dot) return;
   dot.className = '';
-  if (s === 'synced')  dot.classList.add('synced');
+  if (s === 'synced')  { dot.classList.add('synced'); _lastSyncedAt = Date.now(); }
   if (s === 'syncing') dot.classList.add('syncing');
   // Mirror state on the sidebar logo dot + logo text colour
   const sideDot = document.getElementById('sidebar-sync-dot');
@@ -5125,7 +5144,31 @@ function setSyncStatus(s, msg) {
   if (s === 'error')   dot.classList.add('error');
   const errEl = document.getElementById('sync-error-msg');
   if (errEl) errEl.textContent = (s === 'error' && msg) ? msg : '';
+  updateLastSyncedLabel();
 }
+
+function formatRelativeAge(ts) {
+  if (!ts) return 'not yet';
+  const sec = Math.round((Date.now() - ts) / 1000);
+  if (sec < 5)   return 'just now';
+  if (sec < 60)  return sec + 's ago';
+  const min = Math.round(sec / 60);
+  if (min < 60)  return min + 'm ago';
+  const h = Math.round(min / 60);
+  if (h < 24)    return h + 'h ago';
+  const d = Math.round(h / 24);
+  return d + 'd ago';
+}
+function updateLastSyncedLabel() {
+  const el = document.getElementById('sync-last-synced');
+  if (!el) return;
+  el.textContent = _lastSyncedAt ? 'Last synced ' + formatRelativeAge(_lastSyncedAt) : '';
+}
+// Keep the label fresh while the sync modal is open.
+setInterval(() => {
+  const modal = document.getElementById('sync-modal');
+  if (modal && modal.classList.contains('open')) updateLastSyncedLabel();
+}, 15000);
 
 function scheduleSyncToFirebase() {
   if (!firebaseURL) return;
@@ -5201,7 +5244,7 @@ async function pullFromFirebase() {
     const data = await res.json();
     if (data && data.tasks) {
       state = migrateRemote(data);
-      currentView = state.view || 'kanban';
+      // Keep the device-local view; don't clobber it with what another device wrote.
       localStorage.setItem('elastik_v3', JSON.stringify(state));
       renderAll(); setView(currentView);
     }
@@ -5229,7 +5272,7 @@ function startFirebaseStream() {
       if (JSON.stringify({...remote, filterSection:null, filterProject:null}) ===
           JSON.stringify({...state,  filterSection:null, filterProject:null})) return;
       state = migrateRemote(remote);
-      currentView = state.view || 'kanban';
+      // Keep the device-local view; don't clobber it with what another device wrote.
       localStorage.setItem('elastik_v3', JSON.stringify(state));
       renderAll(); setView(currentView);
       setSyncStatus('synced');
@@ -5267,6 +5310,7 @@ function openSyncModal() {
     if (keyEl && !keyEl.value) keyEl.value = FIREBASE_DEFAULT_APIKEY;
   }
   document.getElementById('sync-modal').classList.add('open');
+  updateLastSyncedLabel();
 }
 function closeSyncModal() { document.getElementById('sync-modal').classList.remove('open'); }
 
@@ -5379,6 +5423,56 @@ function changeZoom(delta) {
   uiScale = Math.round(Math.min(2.0, Math.max(0.7, uiScale + delta)) * 10) / 10;
   localStorage.setItem('elastik_zoom', uiScale);
   applyZoom();
+}
+
+function exportDataJSON() {
+  try {
+    const payload = { ...state, exportedAt: new Date().toISOString(), exportVersion: 1 };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'mission-control-' + new Date().toISOString().slice(0,10) + '.json';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    showToast('Backup downloaded');
+  } catch(e) {
+    console.error('Export failed:', e);
+    showToast('Export failed: ' + e.message);
+  }
+}
+function importDataJSON(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    let data;
+    try { data = JSON.parse(e.target.result); }
+    catch(err) { showToast('Not a valid JSON file'); event.target.value = ''; return; }
+    if (!data || !Array.isArray(data.tasks)) {
+      showToast('This file doesn’t look like a Mission Control backup');
+      event.target.value = '';
+      return;
+    }
+    if (!confirm('Replace all local data with this backup? Your current board will be overwritten.')) {
+      event.target.value = ''; return;
+    }
+    const snapshot = JSON.parse(JSON.stringify(state));
+    state = migrateRemote(data);
+    try { localStorage.setItem('elastik_v3', JSON.stringify(state)); } catch(_) {}
+    save();
+    renderAll();
+    showToast('Backup restored', {
+      undoLabel: 'Revert',
+      duration: 8000,
+      undo: () => {
+        state = snapshot;
+        try { localStorage.setItem('elastik_v3', JSON.stringify(state)); } catch(_) {}
+        save(); renderAll();
+      }
+    });
+    event.target.value = '';
+  };
+  reader.readAsText(file);
 }
 
 function openSettingsModal() {
