@@ -2383,6 +2383,40 @@ h3.ce-header { font-size: 15px; }
     font-size: 12px;
   }
 }
+
+/* ── Undo toast stack ── */
+#toast-stack {
+  position: fixed;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 24px);
+  left: 50%; transform: translateX(-50%);
+  z-index: 2000;
+  display: flex; flex-direction: column-reverse; gap: 8px;
+  pointer-events: none;
+  max-width: calc(100% - 40px);
+}
+@media (max-width: 768px) {
+  #toast-stack { bottom: calc(env(safe-area-inset-bottom, 0px) + 88px); }
+}
+.toast {
+  background: var(--text); color: var(--surface);
+  padding: 10px 16px 10px 18px; border-radius: 999px;
+  font-size: 13px; font-weight: 500;
+  display: flex; align-items: center; gap: 16px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.22);
+  pointer-events: auto;
+  opacity: 0; transform: translateY(10px);
+  transition: opacity .2s ease, transform .2s ease;
+  white-space: nowrap;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast-undo {
+  background: transparent; border: none;
+  color: #7BB3FF; cursor: pointer;
+  font-family: inherit; font-size: 13px; font-weight: 700;
+  padding: 0; letter-spacing: .02em;
+}
+.toast-undo:hover { text-decoration: underline; }
+[data-theme="dark"] .toast-undo { color: #7BB3FF; }
 </style>
 <!-- EditorJS core + block tools (rich-text notes editor) -->
 <script src="https://cdn.jsdelivr.net/npm/@editorjs/editorjs@2.30.6"></script>
@@ -2559,6 +2593,9 @@ h3.ce-header { font-size: 15px; }
 </div>
 
 <!-- Quick Capture overlay — distraction-free brain dump -->
+<!-- Toast stack (undo notifications, etc.) -->
+<div id="toast-stack"></div>
+
 <div id="capture-overlay" onclick="if(event.target===this)closeCapture(true)">
   <div id="capture-stage">
     <textarea id="capture-input" placeholder="Brain dump — anything. Hit ⏎ to save another, esc to close." rows="1" autocomplete="off" autocorrect="off"></textarea>
@@ -4322,10 +4359,19 @@ function renderInbox() {
 }
 function deleteCapture(id) {
   if (!state.inbox) return;
-  state.inbox = state.inbox.filter(c => c.id !== id);
+  const idx = state.inbox.findIndex(c => c.id === id);
+  if (idx === -1) return;
+  const snapshot = state.inbox[idx];
+  state.inbox.splice(idx, 1);
   save();
   updateInboxBadge();
   renderInbox();
+  showToast('Capture deleted', {
+    undo: () => {
+      state.inbox.splice(idx, 0, snapshot);
+      save(); updateInboxBadge(); renderInbox();
+    }
+  });
 }
 function convertCaptureToTask(id) {
   const cap = (state.inbox || []).find(c => c.id === id);
@@ -4381,16 +4427,67 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-// Global "c" shortcut to open capture (when not typing in another input)
+// ── Undo toast utility ──
+function showToast(message, opts) {
+  opts = opts || {};
+  const stack = document.getElementById('toast-stack');
+  if (!stack) return;
+  const t = document.createElement('div');
+  t.className = 'toast';
+  const label = document.createElement('span');
+  label.textContent = message;
+  t.appendChild(label);
+  let dismissed = false;
+  const dismiss = () => {
+    if (dismissed) return; dismissed = true;
+    t.classList.remove('show');
+    setTimeout(() => t.remove(), 250);
+  };
+  if (opts.undo) {
+    const btn = document.createElement('button');
+    btn.className = 'toast-undo';
+    btn.textContent = opts.undoLabel || 'Undo';
+    btn.onclick = () => { try { opts.undo(); } catch(_){} dismiss(); };
+    t.appendChild(btn);
+  }
+  stack.appendChild(t);
+  requestAnimationFrame(() => t.classList.add('show'));
+  setTimeout(dismiss, opts.duration || 5000);
+}
+
+// ── Global keyboard shortcuts ──
 document.addEventListener('keydown', e => {
-  if (e.key !== 'c' && e.key !== 'C') return;
-  if (e.metaKey || e.ctrlKey || e.altKey) return;
   const tag = (e.target && e.target.tagName) || '';
-  if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target && e.target.isContentEditable)) return;
-  if (document.querySelector('.modal-overlay.open')) return;
-  if (document.getElementById('capture-overlay')?.classList.contains('open')) return;
-  e.preventDefault();
-  openCapture();
+  const inTextInput = tag === 'INPUT' || tag === 'TEXTAREA' || (e.target && e.target.isContentEditable);
+  const modalOpen = document.querySelector('.modal-overlay.open')
+                 || document.getElementById('capture-overlay')?.classList.contains('open');
+
+  // Cmd/Ctrl+K anywhere -> open capture (works even inside text inputs so you
+  // never lose a stray thought while typing something else).
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+    if (modalOpen) return;
+    e.preventDefault();
+    openCapture();
+    return;
+  }
+
+  // Everything else only fires when NOT typing and no modal is up.
+  if (inTextInput || modalOpen) return;
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+  if (e.key === 'c' || e.key === 'C') {
+    e.preventDefault();
+    openCapture();
+    return;
+  }
+
+  // Number keys -> view switching. Today is currently disabled, so the
+  // active order is Inbox, Board, List, Time.
+  const viewMap = { '1':'inbox', '2':'kanban', '3':'list', '4':'time' };
+  if (viewMap[e.key]) {
+    e.preventDefault();
+    setView(viewMap[e.key]);
+  }
 });
 
 // ── Coach: persistent top-bar colleague check-in ───────────────────────
@@ -4798,8 +4895,18 @@ function saveTask() {
   save(); closeTaskModal(); renderAll();
 }
 function deleteTask(id) {
-  state.tasks = state.tasks.filter(t=>t.id!==id);
+  const idx = state.tasks.findIndex(t => t.id === id);
+  if (idx === -1) return;
+  const snapshot = state.tasks[idx];
+  state.tasks.splice(idx, 1);
   save(); renderAll();
+  showToast('Task deleted', {
+    undo: () => {
+      // Reinsert at original position so the board doesn't visually reorder.
+      state.tasks.splice(idx, 0, snapshot);
+      save(); renderAll();
+    }
+  });
 }
 
 // ── Project modal ──
@@ -5859,11 +5966,22 @@ function saveEntry() {
   if (currentView === 'time') renderTime();
 }
 function deleteEntry(id) {
-  if (!confirm('Delete this time entry?')) return;
-  state.timeEntries = (state.timeEntries || []).filter(e => e.id !== id);
+  const entries = state.timeEntries || [];
+  const idx = entries.findIndex(e => e.id === id);
+  if (idx === -1) return;
+  const snapshot = entries[idx];
+  entries.splice(idx, 1);
   save();
   forceSyncNow();
   if (currentView === 'time') renderTime();
+  showToast('Time entry deleted', {
+    undo: () => {
+      entries.splice(idx, 0, snapshot);
+      save();
+      forceSyncNow();
+      if (currentView === 'time') renderTime();
+    }
+  });
 }
 function deleteEntryFromModal() {
   if (!editingEntryId) { closeEntryModal(); return; }
