@@ -1319,6 +1319,16 @@ h3.ce-header { font-size: 15px; }
   transition: background .15s, color .15s;
 }
 #sync-btn:hover { background: var(--border-strong); color: var(--text); }
+#search-btn {
+  width: 30px; height: 30px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--r); cursor: pointer; color: var(--text-2);
+  transition: background .15s, color .15s;
+}
+#search-btn:hover { background: var(--border-strong); color: var(--text); }
+@media (max-width: 768px) { #search-btn { display: none; } }
+
 #capture-btn {
   width: 32px; height: 32px; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
@@ -2384,6 +2394,89 @@ h3.ce-header { font-size: 15px; }
   }
 }
 
+/* ── Global search overlay (Cmd/Ctrl + /) ── */
+#search-overlay {
+  position: fixed; inset: 0; z-index: 1200;
+  background: rgba(245,245,245,.78);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  display: none;
+  padding: max(env(safe-area-inset-top), 40px) 24px 24px;
+  opacity: 0; transition: opacity .18s ease;
+}
+[data-theme="dark"] #search-overlay { background: rgba(8,8,12,.85); }
+#search-overlay.open { display: block; opacity: 1; }
+#search-stage {
+  width: 100%; max-width: 640px; margin: 0 auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 12px 40px rgba(0,0,0,.14);
+  overflow: hidden;
+}
+[data-theme="dark"] #search-stage { box-shadow: 0 12px 40px rgba(0,0,0,.55); }
+#search-input-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-2);
+}
+#search-input {
+  flex: 1; border: none; background: transparent; outline: none;
+  font-family: inherit; font-size: 17px; color: var(--text);
+  min-width: 0;
+}
+#search-input::placeholder { color: var(--text-3); }
+#search-hint { font-size: 11px; color: var(--text-3); white-space: nowrap; }
+#search-hint .cap-hint-key {
+  font-family: 'DM Mono', ui-monospace, monospace;
+  padding: 1px 6px; border-radius: 4px;
+  background: var(--surface2); color: var(--text-2);
+  margin-right: 2px;
+}
+#search-results { max-height: 60vh; overflow-y: auto; }
+.sr-empty {
+  padding: 32px 20px; text-align: center;
+  color: var(--text-3); font-size: 13px;
+}
+.sr-group-label {
+  font-size: 10px; font-weight: 700; letter-spacing: .12em;
+  color: var(--text-3); text-transform: uppercase;
+  padding: 12px 16px 6px;
+}
+.sr-item {
+  display: block; width: 100%; text-align: left;
+  padding: 10px 16px; border: none; background: transparent;
+  color: var(--text); font-family: inherit; font-size: 14px;
+  cursor: pointer;
+  border-top: 1px solid transparent;
+  border-bottom: 1px solid transparent;
+}
+.sr-item:hover, .sr-item.sr-focused {
+  background: var(--accent-bg);
+  border-top-color: var(--border);
+  border-bottom-color: var(--border);
+}
+.sr-item-title {
+  display: flex; align-items: center; gap: 8px;
+  font-weight: 500;
+}
+.sr-item-title .sr-proj-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+}
+.sr-item-title mark {
+  background: rgba(59,124,232,.22); color: inherit;
+  padding: 0 2px; border-radius: 3px;
+}
+.sr-item-sub {
+  margin-top: 3px; font-size: 12px; color: var(--text-2);
+  display: flex; gap: 8px; align-items: center;
+}
+.sr-item-sub .sr-status {
+  padding: 1px 7px; border-radius: 999px; font-size: 10px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .04em;
+}
+
 /* ── Undo toast stack ── */
 #toast-stack {
   position: fixed;
@@ -2526,6 +2619,9 @@ h3.ce-header { font-size: 15px; }
             <svg width="9" height="9" viewBox="0 0 9 9" fill="none"><rect x="1" y="1" width="7" height="7" rx="1" fill="currentColor"/></svg>
           </button>
         </div>
+        <button id="search-btn" onclick="openSearch()" title="Search (press /)" aria-label="Search">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M11 11l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </button>
         <button id="capture-btn" onclick="openCapture()" title="Quick capture (press C)" aria-label="Quick capture">
           <svg viewBox="0 0 16 16" fill="none"><path d="M9 1L3 9h4l-1 6 6-8H8l1-6z" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/></svg>
         </button>
@@ -2595,6 +2691,18 @@ h3.ce-header { font-size: 15px; }
 <!-- Quick Capture overlay — distraction-free brain dump -->
 <!-- Toast stack (undo notifications, etc.) -->
 <div id="toast-stack"></div>
+
+<!-- Global search overlay -->
+<div id="search-overlay" onclick="if(event.target===this)closeSearch()">
+  <div id="search-stage">
+    <div id="search-input-row">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="opacity:.55"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M11 11l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <input id="search-input" type="text" placeholder="Search tasks, notes, captures…" autocomplete="off" autocorrect="off" spellcheck="false">
+      <span id="search-hint"><span class="cap-hint-key">esc</span> close</span>
+    </div>
+    <div id="search-results"></div>
+  </div>
+</div>
 
 <div id="capture-overlay" onclick="if(event.target===this)closeCapture(true)">
   <div id="capture-stage">
@@ -4444,6 +4552,110 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
+// ── Global search ──
+function openSearch() {
+  const ov = document.getElementById('search-overlay');
+  const inp = document.getElementById('search-input');
+  if (!ov || !inp) return;
+  ov.classList.add('open');
+  inp.value = '';
+  document.getElementById('search-results').innerHTML =
+    '<div class="sr-empty">Start typing to search across every task, note, and capture.</div>';
+  document.body.style.overflow = 'hidden';
+  setTimeout(() => inp.focus({ preventScroll: true }), 30);
+}
+function closeSearch() {
+  document.getElementById('search-overlay')?.classList.remove('open');
+  document.body.style.overflow = '';
+}
+function _searchHighlight(text, query) {
+  const q = query.trim();
+  if (!q) return escapeHTML(text);
+  const idx = text.toLowerCase().indexOf(q.toLowerCase());
+  if (idx < 0) return escapeHTML(text);
+  return escapeHTML(text.slice(0, idx))
+       + '<mark>' + escapeHTML(text.slice(idx, idx + q.length)) + '</mark>'
+       + escapeHTML(text.slice(idx + q.length));
+}
+function runSearch(query) {
+  const box = document.getElementById('search-results');
+  if (!box) return;
+  const q = (query || '').trim().toLowerCase();
+  if (!q) {
+    box.innerHTML = '<div class="sr-empty">Start typing to search across every task, note, and capture.</div>';
+    return;
+  }
+  const matchesText = t => t && t.toLowerCase().includes(q);
+  // Notes are stored as either a string or an EditorJS blob; strip tags for match.
+  const noteText = notes => {
+    if (!notes) return '';
+    if (typeof notes === 'string') return notes;
+    try {
+      const blocks = notes.blocks || [];
+      return blocks.map(b => (b.data && (b.data.text || b.data.caption || (b.data.items||[]).join(' '))) || '').join(' ');
+    } catch(_) { return ''; }
+  };
+  const tasks = (state.tasks || []).filter(t =>
+    matchesText(t.name) || matchesText(noteText(t.notes))
+  ).slice(0, 40);
+  const captures = (state.inbox || []).filter(c => matchesText(c.text)).slice(0, 20);
+  if (!tasks.length && !captures.length) {
+    box.innerHTML = '<div class="sr-empty">No matches for “' + escapeHTML(query) + '”.</div>';
+    return;
+  }
+  let html = '';
+  if (tasks.length) {
+    html += '<div class="sr-group-label">Tasks · ' + tasks.length + '</div>';
+    html += tasks.map(t => {
+      const proj = getProject(t.pid);
+      const projColor = proj ? proj.color : 'var(--text-3)';
+      const projName = proj ? proj.name : '';
+      const status = statusLabel(t.status || 'nosched');
+      return `<button class="sr-item" data-kind="task" data-id="${t.id}">
+        <div class="sr-item-title">
+          <span class="sr-proj-dot" style="background:${projColor}"></span>
+          <span>${_searchHighlight(t.name || 'Untitled', query)}</span>
+        </div>
+        <div class="sr-item-sub">
+          <span class="sr-status" style="background:${projColor};color:${pillTextColor ? pillTextColor(projColor) : '#fff'}">${escapeHTML(status)}</span>
+          <span>${escapeHTML(projName)}</span>
+        </div>
+      </button>`;
+    }).join('');
+  }
+  if (captures.length) {
+    html += '<div class="sr-group-label">Inbox captures · ' + captures.length + '</div>';
+    html += captures.map(c => `<button class="sr-item" data-kind="capture" data-id="${c.id}">
+      <div class="sr-item-title"><span>${_searchHighlight(c.text.slice(0, 200), query)}</span></div>
+    </button>`).join('');
+  }
+  box.innerHTML = html;
+  // Wire clicks
+  box.querySelectorAll('.sr-item').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const kind = btn.dataset.kind, id = btn.dataset.id;
+      closeSearch();
+      if (kind === 'task') {
+        if (typeof openCard === 'function') openCard(id);
+      } else if (kind === 'capture') {
+        setView('inbox');
+      }
+    });
+  });
+}
+document.addEventListener('DOMContentLoaded', () => {
+  const inp = document.getElementById('search-input');
+  if (!inp) return;
+  inp.addEventListener('input', () => runSearch(inp.value));
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { e.preventDefault(); closeSearch(); return; }
+    if (e.key === 'Enter') {
+      const first = document.querySelector('#search-results .sr-item');
+      if (first) first.click();
+    }
+  });
+});
+
 // ── Undo toast utility ──
 function showToast(message, opts) {
   opts = opts || {};
@@ -4479,22 +4691,37 @@ document.addEventListener('keydown', e => {
   const modalOpen = document.querySelector('.modal-overlay.open')
                  || document.getElementById('capture-overlay')?.classList.contains('open');
 
+  const searchOpen = document.getElementById('search-overlay')?.classList.contains('open');
+
   // Cmd/Ctrl+K anywhere -> open capture (works even inside text inputs so you
   // never lose a stray thought while typing something else).
   if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-    if (modalOpen) return;
+    if (modalOpen || searchOpen) return;
     e.preventDefault();
     openCapture();
     return;
   }
 
+  // Cmd/Ctrl+/ (or plain '/') -> open global search.
+  if ((e.metaKey || e.ctrlKey) && e.key === '/') {
+    if (modalOpen) return;
+    e.preventDefault();
+    openSearch();
+    return;
+  }
+
   // Everything else only fires when NOT typing and no modal is up.
-  if (inTextInput || modalOpen) return;
+  if (inTextInput || modalOpen || searchOpen) return;
   if (e.metaKey || e.ctrlKey || e.altKey) return;
 
   if (e.key === 'c' || e.key === 'C') {
     e.preventDefault();
     openCapture();
+    return;
+  }
+  if (e.key === '/') {
+    e.preventDefault();
+    openSearch();
     return;
   }
 
