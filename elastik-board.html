@@ -1464,6 +1464,12 @@ h3.ce-header { font-size: 15px; }
 }
 .inbox-item-btn:hover { background: var(--accent-bg); color: var(--accent); border-color: var(--accent); }
 .inbox-item-btn.danger:hover { background: rgba(232,104,104,.1); color: #e86868; border-color: rgba(232,104,104,.4); }
+@media (max-width: 768px) {
+  /* Apple HIG recommends 44px tap targets; strike a balance so the row
+     stays compact but each button is still finger-friendly. */
+  .inbox-item-btn { font-size: 13px; padding: 9px 14px; border-radius: 8px; }
+  .inbox-item-actions { gap: 8px; }
+}
 .sidebar-item-badge {
   margin-left: auto;
   background: var(--accent); color: #fff;
@@ -3061,6 +3067,32 @@ h3.ce-header { font-size: 15px; }
 <input type="file" id="attach-file-input" multiple style="display:none">
 
 <script>
+// ── Safe localStorage helpers (Safari private mode throws on write). ──
+function prefGet(key, fallback) {
+  try {
+    const v = localStorage.getItem(key);
+    return v == null ? (fallback == null ? null : fallback) : v;
+  } catch(_) { return fallback == null ? null : fallback; }
+}
+function prefSet(key, value) {
+  try { localStorage.setItem(key, value); return true; }
+  catch(_) { return false; }
+}
+function prefRemove(key) {
+  try { localStorage.removeItem(key); return true; }
+  catch(_) { return false; }
+}
+function prefGetJSON(key, fallback) {
+  const raw = prefGet(key);
+  if (raw == null) return fallback === undefined ? null : fallback;
+  try { return JSON.parse(raw); }
+  catch(_) { return fallback === undefined ? null : fallback; }
+}
+function prefSetJSON(key, value) {
+  try { return prefSet(key, JSON.stringify(value)); }
+  catch(_) { return false; }
+}
+
 const COLORS = ['#C8501A','#534AB7','#0F6E56','#C03F6E','#185FA5','#BA7517','#888780','#1D9E75','#D85A30','#C0913A','#2D9CDB','#8E44AD'];
 const STATUSES = ['next','wip','done','block','nosched','archive'];
 const STATUS_LABELS_DEFAULT = {wip:'In progress',next:'Up next',nosched:'No schedule',done:'Done',block:'Blocked',archive:'Archive'};
@@ -3132,34 +3164,39 @@ function defaultSections() {
   ];
 }
 
+// Applies all shape migrations to a raw state blob. Used both when
+// loading local state on startup and when a remote Firebase snapshot
+// arrives — both need the same defaults, backfills, and invariants.
+function applyMigrations(raw) {
+  if (!raw.projects) raw.projects = defaultData().projects;
+  if (!raw.tasks)    raw.tasks    = [];
+  if (!raw.sections) raw.sections = defaultSections();
+  if (!raw.colLabels) raw.colLabels = {...STATUS_LABELS_DEFAULT};
+  if (!raw.timeEntries) raw.timeEntries = [];
+  if (!('activeTimer' in raw)) raw.activeTimer = null;
+  if (!raw.inbox) raw.inbox = [];
+  raw.projects.forEach(p => { if (!p.section) p.section = 'studio'; });
+  // Backfill updatedAt for tasks that pre-date the Coach feature so
+  // stale-WIP detection doesn't fire on launch for everyone.
+  const _now = Date.now();
+  raw.tasks.forEach(t => { if (!t.updatedAt) t.updatedAt = _now; });
+  // Backfill Coach focus: existing users keep Studio as focused-only
+  // by default; everything else starts background (overdue/blocked only).
+  raw.sections.forEach(s => {
+    if (typeof s.focused !== 'boolean') s.focused = (s.id === 'studio');
+  });
+  // Ensure general section always exists.
+  if (!raw.sections.find(s => s.id === 'general'))
+    raw.sections.push({id:'general', name:'General ToDos', color:'#888780'});
+  // Ensure _todos project always exists.
+  if (!raw.projects.find(p => p.id === '_todos'))
+    raw.projects.push({id:'_todos', name:'General', color:'#888780', section:'general'});
+  return raw;
+}
+
 function load() {
-  const raw = JSON.parse(localStorage.getItem('elastik_v3') || 'null');
-  if (raw) {
-    if (!raw.projects) raw.projects = defaultData().projects;
-    if (!raw.tasks)    raw.tasks    = [];
-    if (!raw.sections) raw.sections = defaultSections();
-    if (!raw.colLabels) raw.colLabels = {...STATUS_LABELS_DEFAULT};
-    if (!raw.timeEntries) raw.timeEntries = [];
-    if (!('activeTimer' in raw)) raw.activeTimer = null;
-    if (!raw.inbox) raw.inbox = [];
-    raw.projects.forEach(p => { if (!p.section) p.section = 'studio'; });
-    // Backfill updatedAt for tasks that pre-date the Coach feature so
-    // stale-WIP detection doesn't fire on launch for everyone.
-    const _now = Date.now();
-    raw.tasks.forEach(t => { if (!t.updatedAt) t.updatedAt = _now; });
-    // Backfill Coach focus: existing users keep Studio as focused-only
-    // by default; everything else starts background (overdue/blocked only).
-    raw.sections.forEach(s => {
-      if (typeof s.focused !== 'boolean') s.focused = (s.id === 'studio');
-    });
-    // ensure general section always exists
-    if (!raw.sections.find(s => s.id === 'general'))
-      raw.sections.push({id:'general', name:'General ToDos', color:'#888780'});
-    // ensure _todos project always exists
-    if (!raw.projects.find(p => p.id === '_todos'))
-      raw.projects.push({id:'_todos', name:'General', color:'#888780', section:'general'});
-    return raw;
-  }
+  const raw = prefGetJSON('elastik_v3');
+  if (raw) return applyMigrations(raw);
   return defaultData();
 }
 function save() {
@@ -5437,27 +5474,9 @@ async function pushToFirebase() {
 }
 
 function migrateRemote(data) {
-  if (!data.sections) data.sections = defaultSections();
-  if (!data.colLabels) data.colLabels = {...STATUS_LABELS_DEFAULT};
-  if (!data.timeEntries) data.timeEntries = [];
-  if (!('activeTimer' in data)) data.activeTimer = null;
-  if (!data.inbox) data.inbox = [];
-  data.projects.forEach(p => { if (!p.section) p.section = 'studio'; });
-  // Backfill updatedAt on remote-side tasks too, so stale-WIP detection
-  // doesn't misfire after a fresh pull.
-  const _now = Date.now();
-  (data.tasks || []).forEach(t => { if (!t.updatedAt) t.updatedAt = _now; });
-  // Backfill Coach focus flag on remote sections.
-  (data.sections || []).forEach(s => {
-    if (typeof s.focused !== 'boolean') s.focused = (s.id === 'studio');
-  });
-  // Ensure general section exists
-  if (!data.sections.find(s => s.id === 'general'))
-    data.sections.push({id:'general', name:'General ToDos', color:'#888780'});
-  // Ensure _todos project exists
-  if (!data.projects.find(p => p.id === '_todos'))
-    data.projects.push({id:'_todos', name:'General', color:'#888780', section:'general'});
-  // Keep device-local filter state
+  applyMigrations(data);
+  // Keep device-local filter state — these live on the device, not in
+  // the shared cloud snapshot.
   data.filterSection = filterSection;
   data.filterProject = filterProject;
   return data;
