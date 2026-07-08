@@ -1828,6 +1828,10 @@ h3.ce-header { font-size: 15px; }
   .timer-pill.timer-idle { padding: 0; width: 26px; justify-content: center; }
   .timer-pill.timer-idle #timer-pill-label { display: none; }
   #timer-pill-label { max-width: 130px; }
+  /* When running, the floating badge above the bottom nav takes over —
+     the tiny header hasn't room for project + elapsed time. Idle keeps
+     the icon circle as the "start a timer" entry point. */
+  .timer-pill.timer-running { display: none; }
 }
 
 /* ── Time view ── */
@@ -2487,6 +2491,41 @@ h3.ce-header { font-size: 15px; }
   text-transform: uppercase; letter-spacing: .04em;
 }
 
+/* ── Floating timer badge (mobile) ── */
+#timer-float {
+  display: none;
+  position: fixed;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 74px);
+  right: 12px;
+  z-index: 90;
+  align-items: center; gap: 7px;
+  background: rgba(232,104,104,.14);
+  border: 1px solid rgba(232,104,104,.5);
+  color: var(--text);
+  font-family: 'DM Mono', ui-monospace, monospace;
+  font-size: 12px;
+  padding: 7px 12px; border-radius: 999px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 4px 14px rgba(0,0,0,.18);
+  cursor: pointer;
+  max-width: 70vw;
+  white-space: nowrap; overflow: hidden;
+}
+#timer-float .tf-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #E86868; flex-shrink: 0;
+  animation: tf-pulse 1.6s ease-in-out infinite;
+}
+@keyframes tf-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .35; }
+}
+#timer-float-label { overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 768px) {
+  #timer-float.active { display: flex; }
+}
+
 /* ── Undo toast stack ── */
 #toast-stack {
   position: fixed;
@@ -2701,6 +2740,13 @@ h3.ce-header { font-size: 15px; }
 <!-- Quick Capture overlay — distraction-free brain dump -->
 <!-- Toast stack (undo notifications, etc.) -->
 <div id="toast-stack"></div>
+
+<!-- Floating timer badge — mobile only; the header timer-pill is hidden
+     there, so a running timer would otherwise be invisible. -->
+<button id="timer-float" onclick="onTimerPillClick()" aria-label="Running timer">
+  <span class="tf-dot"></span>
+  <span id="timer-float-label"></span>
+</button>
 
 <!-- Global search overlay -->
 <div id="search-overlay" onclick="if(event.target===this)closeSearch()">
@@ -5963,6 +6009,21 @@ function renderTimerPill() {
     stopBtn.style.display = 'none';
     if (timerTickInterval) { clearInterval(timerTickInterval); timerTickInterval = null; }
   }
+  renderTimerFloat();
+}
+// Mirror the timer state onto the mobile floating badge.
+function renderTimerFloat() {
+  const float = document.getElementById('timer-float');
+  const label = document.getElementById('timer-float-label');
+  if (!float || !label) return;
+  const t = state.activeTimer;
+  if (t) {
+    float.classList.add('active');
+    const cName = shortName(projectNameFor(t.projectId));
+    label.textContent = `${cName} · ${formatDurationLive(Date.now() - t.startedAt)}`;
+  } else {
+    float.classList.remove('active');
+  }
 }
 
 function tickTimer() {
@@ -5983,6 +6044,8 @@ function tickTimer() {
   const tName = taskNameFor(t.taskId);
   const display = tName ? `${cName} — ${tName}` : cName;
   label.textContent = `${display} · ${formatDurationLive(Date.now() - t.startedAt)}`;
+  const floatLabel = document.getElementById('timer-float-label');
+  if (floatLabel) floatLabel.textContent = `${cName} · ${formatDurationLive(Date.now() - t.startedAt)}`;
 }
 function startTimerTick() {
   if (timerTickInterval) clearInterval(timerTickInterval);
