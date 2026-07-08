@@ -1438,6 +1438,10 @@ h3.ce-header { font-size: 15px; }
   font-family: 'DM Mono', ui-monospace, monospace; font-size: 11px;
   color: var(--text-2); margin: 0 1px;
 }
+.inbox-bulk {
+  display: flex; gap: 8px; justify-content: flex-end;
+  margin-bottom: 14px;
+}
 .inbox-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
 .inbox-item {
   background: var(--surface); border: 1px solid var(--border);
@@ -4512,12 +4516,62 @@ function renderInbox() {
             </span>
           </div>
         </li>`).join('')}</ol>`
-    : `<div class="inbox-empty">No captures yet. Tap the <strong>✦</strong> in the header or press <kbd>c</kbd> to dump a thought.</div>`;
+    : `<div class="inbox-empty">No captures yet. Tap the <strong>⚡</strong> in the header or press <kbd>c</kbd> to dump a thought.</div>`;
+  const bulkHtml = items.length >= 2
+    ? `<div class="inbox-bulk">
+        <button class="inbox-item-btn" onclick="convertAllCaptures()">→ Convert all to tasks</button>
+        <button class="inbox-item-btn danger" onclick="clearAllCaptures()">Clear all</button>
+      </div>`
+    : '';
   el.innerHTML = `
     <div class="inbox-eyebrow">Inbox</div>
     <h1 class="inbox-title">Brain dump</h1>
     <p class="inbox-sub">Captured thoughts. Convert into tasks when you're ready.</p>
+    ${bulkHtml}
     ${listHtml}`;
+}
+// Bulk actions: convert every capture into a General task (first line ->
+// name, rest -> notes), or wipe the inbox. Both undoable via toast.
+function convertAllCaptures() {
+  const items = (state.inbox || []).slice();
+  if (!items.length) return;
+  const snapshot = items.slice();
+  const created = [];
+  items.forEach(cap => {
+    const lines = cap.text.split(/\r?\n/);
+    created.push({
+      id: uid(), pid: '_todos',
+      name: lines[0].trim().slice(0, 200) || 'Untitled',
+      status: 'nosched',
+      notes: lines.slice(1).join('\n').trim(),
+      updatedAt: Date.now()
+    });
+  });
+  state.tasks.push(...created);
+  state.inbox = [];
+  save(); updateInboxBadge(); renderInbox();
+  showToast(created.length + ' tasks created in General', {
+    duration: 8000,
+    undo: () => {
+      const ids = new Set(created.map(t => t.id));
+      state.tasks = state.tasks.filter(t => !ids.has(t.id));
+      state.inbox = snapshot;
+      save(); updateInboxBadge(); renderAll();
+    }
+  });
+}
+function clearAllCaptures() {
+  const snapshot = (state.inbox || []).slice();
+  if (!snapshot.length) return;
+  state.inbox = [];
+  save(); updateInboxBadge(); renderInbox();
+  showToast(snapshot.length + ' captures cleared', {
+    duration: 8000,
+    undo: () => {
+      state.inbox = snapshot;
+      save(); updateInboxBadge(); renderInbox();
+    }
+  });
 }
 function deleteCapture(id) {
   if (!state.inbox) return;
@@ -5394,6 +5448,7 @@ async function firebaseFetch(url, options = {}) {
 }
 
 let _lastSyncedAt = null;
+let _lastSyncErrorToastAt = 0;
 function setSyncStatus(s, msg) {
   const dot = document.getElementById('sync-dot');
   if (!dot) return;
@@ -5405,7 +5460,16 @@ function setSyncStatus(s, msg) {
   if (sideDot) { sideDot.className = 'dot' + (s ? ' ' + s : ''); }
   const logo = document.getElementById('sidebar-logo');
   if (logo) { logo.className = s || ''; }
-  if (s === 'error')   dot.classList.add('error');
+  if (s === 'error') {
+    dot.classList.add('error');
+    // Surface the failure — a red dot alone is easy to miss and edits
+    // silently pile up unsynced. Throttled to one toast per 5 minutes so
+    // a dead connection doesn't spam (retries fire on every save()).
+    if (typeof showToast === 'function' && Date.now() - _lastSyncErrorToastAt > 5 * 60 * 1000) {
+      _lastSyncErrorToastAt = Date.now();
+      showToast('Sync failed — changes are saved locally', { duration: 6000 });
+    }
+  }
   const errEl = document.getElementById('sync-error-msg');
   if (errEl) errEl.textContent = (s === 'error' && msg) ? msg : '';
   updateLastSyncedLabel();
