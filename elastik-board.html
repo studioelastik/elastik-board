@@ -74,9 +74,12 @@ if ('serviceWorker' in navigator) {
 
 :root {
   --r: 6px;
-  --r-lg: 10px;
+  --r-lg: 12px;
   --sidebar: 220px;
   --header-h: 52px;
+  /* Motion tokens — one snappy ease-out and one gentle spring overshoot */
+  --ease-out: cubic-bezier(.2,.8,.2,1);
+  --ease-spring: cubic-bezier(.32,1.25,.42,1);
 }
 
 /* ── Light theme ── */
@@ -92,8 +95,9 @@ if ('serviceWorker' in navigator) {
   --accent: #3B7CE8;
   --accent-bg: #EDF4FF;
   --theme-icon: '☀';
-  --shadow-card: 0 1px 2px rgba(0,0,0,.05), 0 1px 3px rgba(0,0,0,.04);
-  --shadow-card-hover: 0 4px 14px rgba(0,0,0,.09), 0 2px 4px rgba(0,0,0,.05);
+  --shadow-card: 0 1px 2px rgba(26,25,22,.05), 0 2px 6px rgba(26,25,22,.04);
+  --shadow-card-hover: 0 2px 4px rgba(26,25,22,.05), 0 10px 24px rgba(26,25,22,.10);
+  --shadow-pop: 0 4px 12px rgba(26,25,22,.08), 0 12px 32px rgba(26,25,22,.14);
 
   --s-done-bg: #EAF3DE;   --s-done-text: #3B6D11;   --s-done-border: #C0DD97;
   --s-wip-bg: #FAEEDA;    --s-wip-text: #854F0B;    --s-wip-border: #FAC775;
@@ -124,9 +128,11 @@ if ('serviceWorker' in navigator) {
   --accent-bg: #0A1626;
   --theme-icon: '☾';
   /* Pure-black bg makes drop shadows invisible — use a tone shift instead.
-     Cards lift via slightly lighter surface; hover lifts further. */
-  --shadow-card: none;
-  --shadow-card-hover: 0 0 0 1px rgba(255,255,255,.05);
+     Cards lift via slightly lighter surface + a hairline top highlight;
+     hover adds a ring and ambient glow. */
+  --shadow-card: inset 0 1px 0 rgba(255,255,255,.04);
+  --shadow-card-hover: inset 0 1px 0 rgba(255,255,255,.06), 0 0 0 1px rgba(255,255,255,.07), 0 10px 28px rgba(0,0,0,.5);
+  --shadow-pop: 0 0 0 1px rgba(255,255,255,.08), 0 12px 32px rgba(0,0,0,.6);
 
   --s-done-bg: #162510;   --s-done-text: #7DC948;   --s-done-border: #2D5020;
   --s-wip-bg: #281A07;    --s-wip-text: #E8A84B;    --s-wip-border: #4A3010;
@@ -149,6 +155,53 @@ body {
   color: var(--text);
   min-height: 100vh;
   overflow-x: hidden;
+}
+
+::selection { background: color-mix(in srgb, var(--accent) 24%, transparent); }
+input, textarea, [contenteditable="true"] { caret-color: var(--accent); }
+
+/* Keyboard-focus rings — visible only when navigating by keyboard */
+button:focus-visible, a:focus-visible, [tabindex]:focus-visible,
+.sidebar-item:focus-visible, select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Soft crossfade when the theme flips (View Transitions API) */
+::view-transition-old(root), ::view-transition-new(root) {
+  animation-duration: .3s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
+
+/* ── Instant tooltips (data-tip) — replace the sluggish native title ── */
+[data-tip] { position: relative; }
+[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  top: calc(100% + 8px); left: 50%;
+  transform: translateX(-50%) translateY(-3px);
+  background: var(--text); color: var(--surface);
+  font-size: 11px; font-weight: 500; letter-spacing: .01em;
+  padding: 4px 9px; border-radius: 6px;
+  white-space: nowrap;
+  opacity: 0; pointer-events: none;
+  transition: opacity .15s ease, transform .15s ease;
+  z-index: 400;
+}
+[data-tip]:hover::after {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+  transition-delay: .4s;
+}
+@media (pointer: coarse) {
+  [data-tip]::after { display: none; }
 }
 
 /* ── Layout ── */
@@ -207,12 +260,13 @@ body {
 }
 .sidebar-item {
   display: flex; align-items: center; gap: 8px;
-  padding: 6px 18px;
+  margin: 0 8px 1px;
+  padding: 6px 10px;
   font-size: 13px;
   color: var(--text-2);
   cursor: pointer;
-  border-radius: 0;
-  transition: background .1s, color .1s;
+  border-radius: 8px;
+  transition: background .12s, color .12s;
   text-decoration: none;
 }
 .sidebar-item:hover { background: var(--surface2); color: var(--text); }
@@ -223,10 +277,12 @@ body {
 #project-list { list-style: none; }
 .proj-item {
   display: flex; align-items: center; gap: 8px;
-  padding: 5px 18px;
+  margin: 0 8px 1px;
+  padding: 5px 10px;
   font-size: 13px; color: var(--text-2);
   cursor: pointer;
-  transition: background .1s;
+  border-radius: 8px;
+  transition: background .12s;
 }
 .proj-item:hover { background: var(--surface2); }
 .proj-item.active { color: var(--text); font-weight: 500; }
@@ -246,7 +302,7 @@ body {
 }
 .proj-section-item { margin-top: 8px; }
 .proj-section-item:first-of-type { margin-top: 0; }
-.proj-child-item { padding-left: 30px; }
+.proj-child-item { padding-left: 22px; }
 .proj-chevron {
   width: 16px; height: 16px; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
@@ -301,7 +357,7 @@ body {
   position: sticky; top: 10px; z-index: 50;
   margin: 10px 14px 0;
   width: calc(100% - 28px);
-  box-shadow: 0 1px 3px rgba(0,0,0,.04);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.5), 0 1px 3px rgba(0,0,0,.04);
   transition: width .55s cubic-bezier(.23,1,.32,1), margin .55s cubic-bezier(.23,1,.32,1), box-shadow .35s, background .3s;
   min-width: 0;
   align-self: stretch;
@@ -309,7 +365,7 @@ body {
 [data-theme="dark"] #header {
   background: rgba(28,28,28,0.5);
   border-color: rgba(255,255,255,0.06);
-  box-shadow: 0 1px 3px rgba(0,0,0,.25);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 1px 3px rgba(0,0,0,.25);
 }
 /* Theme toggle lives in Settings now, not the header pill */
 #theme-toggle { display: none !important; }
@@ -325,10 +381,10 @@ body {
   #header.scrolled {
     width: min(900px, 94%);
     margin-left: auto; margin-right: auto;
-    box-shadow: 0 10px 32px rgba(0,0,0,.12);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.5), 0 10px 32px rgba(0,0,0,.12);
   }
   [data-theme="dark"] #header.scrolled {
-    box-shadow: 0 10px 32px rgba(0,0,0,.55);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 10px 32px rgba(0,0,0,.55);
   }
   #header.scrolled #header-title { opacity: 0; max-width: 0; padding: 0; margin: 0; overflow: hidden; pointer-events: none; }
   #header.scrolled #header-title,
@@ -537,7 +593,7 @@ body {
   padding: 9px 12px 10px;
   cursor: grab;
   user-select: none;
-  transition: box-shadow .15s, transform .1s, background .15s;
+  transition: box-shadow .18s var(--ease-out), transform .18s var(--ease-out), background .15s;
   position: relative;
   overflow: hidden;   /* prevent inline-editor fields from bleeding outside */
   min-width: 0;       /* flex child shrink fix */
@@ -570,7 +626,10 @@ body {
   .drag-handle { display: flex; }
   .drag-handle span { display: block; width: 14px; height: 1.5px; background: currentColor; border-radius: 1px; }
 }
-.task-card:hover { box-shadow: var(--shadow-card-hover); }
+.task-card:not(.expanded):not(.dragging):hover {
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-1px);
+}
 /* Mobile dark-mode: lift card surface so it reads as a card against pure black */
 @media (max-width: 768px) {
   [data-theme="dark"] .task-card { background: #2A2A2A; }
@@ -1151,8 +1210,9 @@ h3.ce-header { font-size: 15px; }
   width: 16px; height: 16px; border: 1.5px solid var(--border-strong);
   border-radius: 4px; flex-shrink: 0; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
-  transition: all .1s;
+  transition: background .18s var(--ease-spring), border-color .18s, transform .18s var(--ease-spring);
 }
+.list-task-check:hover { border-color: var(--accent); transform: scale(1.1); }
 .list-task-check.done { background: var(--s-done-bg); border-color: var(--s-done-border); }
 .list-row.task-done td { color: var(--text-3); }
 .list-row.task-done .list-task-name span { text-decoration: line-through; }
@@ -1203,7 +1263,9 @@ h3.ce-header { font-size: 15px; }
 /* ── Modal ── */
 .modal-overlay {
   position: fixed; inset: 0;
-  background: rgba(0,0,0,.35);
+  background: rgba(0,0,0,.3);
+  backdrop-filter: blur(6px) saturate(1.2);
+  -webkit-backdrop-filter: blur(6px) saturate(1.2);
   z-index: 200;
   display: flex; align-items: center; justify-content: center;
   opacity: 0; pointer-events: none;
@@ -1212,14 +1274,14 @@ h3.ce-header { font-size: 15px; }
 .modal-overlay.open { opacity: 1; pointer-events: all; }
 .modal {
   background: var(--surface);
-  border-radius: var(--r-lg);
+  border-radius: 14px;
   width: 420px; max-width: 95vw;
   padding: 24px;
   box-shadow: 0 8px 40px rgba(0,0,0,.18);
-  transform: translateY(8px);
-  transition: transform .2s;
+  transform: translateY(10px) scale(.97);
+  transition: transform .3s var(--ease-spring);
 }
-.modal-overlay.open .modal { transform: translateY(0); }
+.modal-overlay.open .modal { transform: translateY(0) scale(1); }
 .modal h3 { font-size: 15px; font-weight: 500; margin-bottom: 18px; }
 .form-group { margin-bottom: 14px; }
 .form-group label { display: block; font-size: 11px; font-weight: 500; letter-spacing: .05em; text-transform: uppercase; color: var(--text-3); margin-bottom: 5px; }
@@ -1294,17 +1356,24 @@ h3.ce-header { font-size: 15px; }
 #ctx-menu {
   position: fixed; z-index: 300;
   background: var(--surface);
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--border);
   border-radius: var(--r-lg);
-  box-shadow: 0 4px 16px rgba(0,0,0,.14);
-  padding: 4px 0;
-  min-width: 140px;
+  box-shadow: var(--shadow-pop);
+  padding: 4px;
+  min-width: 150px;
   display: none;
+  animation: menu-pop .16s var(--ease-spring);
+  transform-origin: top left;
+}
+@keyframes menu-pop {
+  from { opacity: 0; transform: scale(.95) translateY(-3px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 .ctx-item {
-  padding: 7px 14px; font-size: 13px;
+  padding: 7px 11px; font-size: 13px;
   cursor: pointer; color: var(--text);
   display: flex; align-items: center; gap: 8px;
+  border-radius: 7px;
 }
 .ctx-item:hover { background: var(--surface2); }
 .ctx-item.danger { color: #A32D2D; }
@@ -1328,6 +1397,13 @@ h3.ce-header { font-size: 15px; }
 }
 #search-btn:hover { background: var(--border-strong); color: var(--text); }
 @media (max-width: 768px) { #search-btn { display: none; } }
+
+/* Tactile press feedback on the small icon buttons */
+#search-btn, #sync-btn, #reload-btn, #menu-btn, .zoom-btn, .view-btn, .task-action-btn {
+  transition: background .15s, color .15s, transform .12s var(--ease-out);
+}
+#search-btn:active, #sync-btn:active, #reload-btn:active, #menu-btn:active,
+.zoom-btn:active, .view-btn:active, .task-action-btn:active { transform: scale(.92); }
 
 #capture-btn {
   width: 32px; height: 32px; flex-shrink: 0;
@@ -1693,7 +1769,8 @@ h3.ce-header { font-size: 15px; }
   /* List view touch targets */
   .list-row td { padding: 12px 14px; }
   .list-task-check { width: 22px; height: 22px; border-radius: 6px; flex-shrink: 0; }
-  .proj-item { padding: 10px 18px; }
+  .proj-item { padding: 10px; }
+  .sidebar-item { padding: 10px; }
   .ctx-item { padding: 12px 16px; font-size: 14px; }
 
   /* Bottom nav */
@@ -2668,14 +2745,14 @@ h3.ce-header { font-size: 15px; }
             <svg width="9" height="9" viewBox="0 0 9 9" fill="none"><rect x="1" y="1" width="7" height="7" rx="1" fill="currentColor"/></svg>
           </button>
         </div>
-        <button id="search-btn" onclick="openSearch()" title="Search (press /)" aria-label="Search">
+        <button id="search-btn" onclick="openSearch()" data-tip="Search  ·  /" aria-label="Search">
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M11 11l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
         </button>
-        <button id="capture-btn" onclick="openCapture()" title="Quick capture (press C)" aria-label="Quick capture">
+        <button id="capture-btn" onclick="openCapture()" data-tip="Quick capture  ·  C" aria-label="Quick capture">
           <svg viewBox="0 0 16 16" fill="none"><path d="M9 1L3 9h4l-1 6 6-8H8l1-6z" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/></svg>
         </button>
-        <button id="reload-btn" onclick="location.reload()" title="Get latest version" style="font-size:16px; line-height:1;">↺</button>
-        <button id="sync-btn" onclick="openSyncModal()" title="Cloud sync">
+        <button id="reload-btn" onclick="location.reload()" data-tip="Get latest version" aria-label="Reload" style="font-size:16px; line-height:1;">↺</button>
+        <button id="sync-btn" onclick="openSyncModal()" data-tip="Cloud sync" aria-label="Cloud sync">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M10.5 9.5a2.5 2.5 0 000-5 2.5 2.5 0 00-4.9-.5A2 2 0 103.5 8h.5M7 10l-1.5 1.5L7 13M7 10v4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           <span id="sync-dot"></span>
         </button>
@@ -2683,7 +2760,7 @@ h3.ce-header { font-size: 15px; }
           <svg id="theme-icon-sun" width="15" height="15" viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="7.5" r="3" stroke="currentColor" stroke-width="1.3"/><path d="M7.5 1v1.5M7.5 12.5V14M1 7.5h1.5M12.5 7.5H14M3 3l1 1M11 11l1 1M11 3l-1 1M3 11l1-1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
           <svg id="theme-icon-moon" width="15" height="15" viewBox="0 0 15 15" fill="none" style="display:none"><path d="M12 9.5A5.5 5.5 0 015.5 3c0-.41.05-.81.13-1.2A6 6 0 1013.2 9.87 5.5 5.5 0 0112 9.5z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
         </button>
-        <button id="add-task-main" onclick="openTaskModal()">
+        <button id="add-task-main" onclick="openTaskModal()" data-tip="New task  ·  N" aria-label="New task">
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg>
           <span class="btn-label">Add task</span>
         </button>
@@ -4856,6 +4933,11 @@ document.addEventListener('keydown', e => {
     openCapture();
     return;
   }
+  if (e.key === 'n' || e.key === 'N') {
+    e.preventDefault();
+    openTaskModal();
+    return;
+  }
   if (e.key === '/') {
     e.preventDefault();
     openSearch();
@@ -5732,8 +5814,14 @@ function applyTheme(theme) {
 }
 function toggleTheme() {
   const current = document.documentElement.getAttribute('data-theme');
-  applyTheme(current==='dark' ? 'light' : 'dark');
-  renderKanban();
+  const next = current==='dark' ? 'light' : 'dark';
+  const apply = () => { applyTheme(next); renderKanban(); };
+  // Crossfade the whole page between themes where supported
+  if (document.startViewTransition && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    document.startViewTransition(apply);
+  } else {
+    apply();
+  }
 }
 
 // ── Zoom / display size ──
