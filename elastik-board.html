@@ -1345,12 +1345,65 @@ h3.ce-header { font-size: 15px; }
   .color-opt { width: 32px; height: 32px; }
 }
 
-/* ── Empty state ── */
+/* ── Empty states ── */
 .empty-col {
-  text-align: center; padding: 24px 12px;
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  text-align: center; padding: 22px 12px;
   font-size: 12px; color: var(--text-3);
-  border: 1px dashed var(--border); border-radius: var(--r-lg);
+  border: 1.5px dashed var(--border-strong); border-radius: var(--r-lg);
+  cursor: pointer; user-select: none;
+  transition: border-color .18s, color .18s, background .18s;
 }
+.empty-col svg { flex-shrink: 0; }
+.empty-col:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }
+.empty-col.empty-col-static { cursor: default; }
+.empty-col.empty-col-static:hover { border-color: var(--border-strong); color: var(--text-3); background: transparent; }
+
+/* Hero empty state — used by Inbox and Time views */
+.empty-hero {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 64px 20px; text-align: center;
+}
+.empty-hero-icon {
+  width: 54px; height: 54px; border-radius: 50%;
+  background: var(--accent-bg); color: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 8px;
+  animation: hero-pop .4s var(--ease-spring) both;
+}
+.empty-hero-icon.is-yellow { background: rgba(245,197,24,.16); color: #B08A00; }
+[data-theme="dark"] .empty-hero-icon.is-yellow { color: #F5C518; }
+@keyframes hero-pop {
+  from { opacity: 0; transform: scale(.7); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.empty-hero-title { font-size: 16px; font-weight: 600; color: var(--text); }
+.empty-hero-sub { font-size: 13px; color: var(--text-2); line-height: 1.55; max-width: 340px; }
+.empty-hero-sub kbd {
+  display: inline-block; padding: 2px 7px; border-radius: 4px;
+  background: var(--surface2); border: 1px solid var(--border);
+  font-family: 'DM Mono', ui-monospace, monospace; font-size: 11px;
+  color: var(--text-2); margin: 0 1px;
+}
+.empty-hero-actions {
+  display: flex; gap: 8px; margin-top: 16px;
+  flex-wrap: wrap; justify-content: center;
+}
+.empty-cta {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 9px 18px; border-radius: 999px;
+  background: var(--accent); color: #fff; border: none;
+  font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer;
+  box-shadow: 0 2px 10px rgba(59,124,232,.25);
+  transition: transform .15s var(--ease-out), box-shadow .15s, opacity .15s;
+}
+.empty-cta:hover { box-shadow: 0 4px 16px rgba(59,124,232,.35); transform: translateY(-1px); }
+.empty-cta:active { transform: scale(.96); }
+.empty-cta.ghost {
+  background: transparent; color: var(--text-2);
+  border: 1px solid var(--border-strong); box-shadow: none;
+}
+.empty-cta.ghost:hover { color: var(--text); border-color: var(--text-2); background: var(--surface); transform: translateY(-1px); }
 
 /* ── Context menu ── */
 #ctx-menu {
@@ -1507,13 +1560,6 @@ h3.ce-header { font-size: 15px; }
 }
 .inbox-title { font-size: 22px; font-weight: 700; margin: 0 0 6px; }
 .inbox-sub { font-size: 13px; color: var(--text-2); margin-bottom: 24px; }
-.inbox-empty { padding: 60px 0; text-align: center; color: var(--text-3); font-size: 13px; }
-.inbox-empty kbd {
-  display: inline-block; padding: 2px 7px; border-radius: 4px;
-  background: var(--surface2); border: 1px solid var(--border);
-  font-family: 'DM Mono', ui-monospace, monospace; font-size: 11px;
-  color: var(--text-2); margin: 0 1px;
-}
 .inbox-bulk {
   display: flex; gap: 8px; justify-content: flex-end;
   margin-bottom: 14px;
@@ -2169,11 +2215,6 @@ h3.ce-header { font-size: 15px; }
   display: flex; align-items: center; justify-content: center;
 }
 .time-entry-delete:hover { background: var(--surface2); color: #E86868; }
-
-.time-empty {
-  text-align: center; padding: 60px 20px;
-  color: var(--text-3); font-size: 13px;
-}
 
 @media (max-width: 768px) {
   .time-entry {
@@ -3972,7 +4013,12 @@ function renderKanban() {
       list.dataset.section = sec.id;
 
       if (colTasks.length === 0) {
-        list.innerHTML = `<div class="empty-col">Drop tasks here</div>`;
+        list.innerHTML = colId === 'archive'
+          ? `<div class="empty-col empty-col-static">Drop tasks here</div>`
+          : `<div class="empty-col" onclick="addTaskInCol('${sec.id}','${colId}')" role="button" aria-label="Add a task">
+               <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M5.5 1v9M1 5.5h9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+               Add or drop a task
+             </div>`;
       } else {
         colTasks.forEach((t, i) => {
           const card = makeTaskCard(t);
@@ -3992,18 +4038,7 @@ function renderKanban() {
         const addBtn = document.createElement('div');
         addBtn.className = 'col-add-btn';
         addBtn.innerHTML = `<svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M5.5 1v9M1 5.5h9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg> Add task`;
-        // Defaults: tasks created here pre-fill the right dueDate
-        addBtn.onclick = () => {
-          openTaskModal(null, 'wip', sec.id);
-          // Pre-fill due date based on column
-          setTimeout(() => {
-            const dueInput = document.getElementById('task-due-input');
-            if (!dueInput) return;
-            if (colId === 'today') dueInput.value = _yyyymmdd(new Date());
-            else if (colId === 'this_week') { const d = new Date(); d.setDate(d.getDate() + 3); dueInput.value = _yyyymmdd(d); }
-            else dueInput.value = '';
-          }, 50);
-        };
+        addBtn.onclick = () => addTaskInCol(sec.id, colId);
         col.appendChild(addBtn);
       }
 
@@ -4021,6 +4056,20 @@ function renderKanban() {
     const c = document.getElementById(id);
     if (c) c.scrollLeft = prevColScroll[id];
   });
+}
+
+// Open the task modal pre-filled for a section + column. Used by the
+// column "Add task" button and the empty-column drop zone.
+function addTaskInCol(secId, colId) {
+  openTaskModal(null, 'wip', secId);
+  // Pre-fill due date based on column
+  setTimeout(() => {
+    const dueInput = document.getElementById('task-due-input');
+    if (!dueInput) return;
+    if (colId === 'today') dueInput.value = _yyyymmdd(new Date());
+    else if (colId === 'this_week') { const d = new Date(); d.setDate(d.getDate() + 3); dueInput.value = _yyyymmdd(d); }
+    else dueInput.value = '';
+  }, 50);
 }
 
 // Single-line card preview: detects phone / URL / email / address, else plain first line
@@ -4639,7 +4688,16 @@ function renderInbox() {
             </span>
           </div>
         </li>`).join('')}</ol>`
-    : `<div class="inbox-empty">No captures yet. Tap the <strong>⚡</strong> in the header or press <kbd>c</kbd> to dump a thought.</div>`;
+    : `<div class="empty-hero">
+        <div class="empty-hero-icon is-yellow">
+          <svg width="22" height="22" viewBox="0 0 16 16" fill="none"><path d="M9 1L3 9h4l-1 6 6-8H8l1-6z" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="empty-hero-title">Inbox zero</div>
+        <div class="empty-hero-sub">Every stray thought lands here. Press <kbd>C</kbd> anywhere to capture one, then sort it into a project when you're ready.</div>
+        <div class="empty-hero-actions">
+          <button class="empty-cta" onclick="openCapture()">Capture a thought</button>
+        </div>
+      </div>`;
   const bulkHtml = items.length >= 2
     ? `<div class="inbox-bulk">
         <button class="inbox-item-btn" onclick="convertAllCaptures()">→ Convert all to tasks</button>
@@ -6402,7 +6460,17 @@ function renderTime() {
 
   // Entries
   if (visible.length === 0) {
-    html += `<div class="time-empty">No entries in this range. Tap <strong>Track time</strong> in the header to start, or <strong>Add entry</strong> to log past time.</div>`;
+    html += `<div class="empty-hero">
+      <div class="empty-hero-icon">
+        <svg width="24" height="24" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7.5" r="5.5" stroke="currentColor" stroke-width="1.3"/><path d="M7 4.5V7.5l2 1.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div class="empty-hero-title">Nothing tracked in this range</div>
+      <div class="empty-hero-sub">Start a timer when you begin working, or log past hours by hand.</div>
+      <div class="empty-hero-actions">
+        <button class="empty-cta" onclick="onTimerPillClick()">Start timer</button>
+        <button class="empty-cta ghost" onclick="openEntryModal()">Log past time</button>
+      </div>
+    </div>`;
   } else {
     sortedDayKeys.forEach(key => {
       const dayEntries = groups[key].sort((a,b) => b.startedAt - a.startedAt);
