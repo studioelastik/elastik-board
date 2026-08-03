@@ -1,0 +1,21 @@
+{
+  "name": "willhaben-agent",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Self-hosted willhaben.at search agent with near-real-time push notifications",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "probe": "node src/probe.js",
+    "keys": "node src/keys.js",
+    "test": "node --test \"test/*.test.js\""
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "web-push": "^3.6.7"
+  }
+}

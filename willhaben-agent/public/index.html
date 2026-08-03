@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="willhaben agent">
+<meta name="theme-color" content="#F5F5F5">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="stylesheet" href="styles.css">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<title>willhaben agent</title>
+</head>
+<body>
+
+<div id="login" class="login" hidden>
+  <div class="card">
+    <h3 style="margin:0 0 12px">willhaben agent</h3>
+    <label class="field">Access token
+      <input type="password" id="login-token" autocomplete="current-password" placeholder="AGENT_TOKEN">
+    </label>
+    <button class="btn primary" id="login-btn" style="width:100%;margin-top:12px">Unlock</button>
+  </div>
+</div>
+
+<div id="app" hidden>
+  <header class="topbar">
+    <div class="brand">
+      <span class="dot" id="live-dot"></span>
+      willhaben agent
+      <small id="live-label">connecting…</small>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn icon ghost theme-toggle" id="theme-btn" title="Toggle theme"></button>
+    <button class="btn icon ghost" id="settings-btn" title="Settings">⚙</button>
+    <button class="btn primary" id="add-btn">+ Search</button>
+  </header>
+
+  <main>
+    <div id="push-banner" class="banner" hidden>
+      <span id="push-banner-text">Turn on notifications to get pinged the moment something new appears.</span>
+      <div class="spacer"></div>
+      <button class="btn primary" id="push-enable">Enable notifications</button>
+    </div>
+
+    <section>
+      <h2>Searches <span class="count" id="search-count">0</span></h2>
+      <div id="searches"></div>
+    </section>
+
+    <section>
+      <h2>
+        Found <span class="count" id="hit-count">0</span>
+        <span class="spacer"></span>
+        <button class="btn ghost" id="clear-hits" style="font-size:12px;padding:4px 9px">Clear</button>
+      </h2>
+      <div id="hits"></div>
+    </section>
+  </main>
+</div>
+
+<div id="toasts"></div>
+
+<!-- Add / edit a search -->
+<dialog id="search-dialog">
+  <form method="dialog" id="search-form">
+    <div class="dialog-body">
+      <h3 id="dialog-title">New search</h3>
+      <label class="field">willhaben search URL
+        <input type="url" id="f-url" required placeholder="https://www.willhaben.at/iad/kaufen-und-verkaufen/…">
+      </label>
+      <p class="hint">
+        Build the search on willhaben.at in your browser — all the categories, price bands and
+        location filters you want — then paste the address bar here. Sorting is forced to
+        <code>newest first</code> and only page 1 is polled, which is where new adverts land.
+      </p>
+
+      <div class="grid2">
+        <label class="field">Name
+          <input type="text" id="f-name" placeholder="Rennrad 56cm">
+        </label>
+        <label class="field">Check every (seconds)
+          <input type="number" id="f-interval" min="20" step="5" value="60">
+        </label>
+      </div>
+
+      <div class="grid3">
+        <label class="field">Min price €
+          <input type="number" id="f-min" min="0" placeholder="—">
+        </label>
+        <label class="field">Max price €
+          <input type="number" id="f-max" min="0" placeholder="—">
+        </label>
+        <label class="field">Seller
+          <select id="f-seller">
+            <option value="any">Anyone</option>
+            <option value="private">Private only</option>
+            <option value="dealer">Dealers only</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="grid2">
+        <label class="field">Title must contain any of
+          <input type="text" id="f-include" placeholder="carbon, ultegra">
+        </label>
+        <label class="field">Skip if it contains
+          <input type="text" id="f-exclude" placeholder="damen, defekt, tausch">
+        </label>
+      </div>
+      <p class="hint">Comma separated, case-insensitive. Adverts with no price are never filtered out by the price range.</p>
+
+      <div id="preview-slot"></div>
+    </div>
+    <div class="dialog-foot">
+      <button class="btn ghost" type="button" id="preview-btn">Test</button>
+      <div class="spacer"></div>
+      <button class="btn" type="button" id="cancel-btn">Cancel</button>
+      <button class="btn primary" type="submit" id="save-btn">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Settings -->
+<dialog id="settings-dialog">
+  <form method="dialog" id="settings-form">
+    <div class="dialog-body">
+      <h3>Settings</h3>
+
+      <div class="card" style="display:grid;gap:10px">
+        <strong style="font-size:14px">Browser push</strong>
+        <p class="hint" id="push-state">—</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn" type="button" id="push-toggle">Enable on this device</button>
+          <button class="btn" type="button" id="test-notification">Send test</button>
+        </div>
+      </div>
+
+      <div class="card" style="display:grid;gap:10px">
+        <label style="display:flex;align-items:center;gap:10px;font-size:14px;font-weight:600">
+          <span class="switch"><input type="checkbox" id="s-tg-enabled"><span></span></span>
+          Telegram
+        </label>
+        <p class="hint">
+          The most reliable channel on a phone: talk to <code>@BotFather</code>, create a bot, then message
+          your bot once and read the chat id from
+          <code>api.telegram.org/bot&lt;token&gt;/getUpdates</code>.
+        </p>
+        <label class="field">Bot token <input type="password" id="s-tg-token" placeholder="123456:ABC-…"></label>
+        <label class="field">Chat id <input type="text" id="s-tg-chat" placeholder="123456789"></label>
+      </div>
+
+      <div class="card" style="display:grid;gap:10px">
+        <label style="display:flex;align-items:center;gap:10px;font-size:14px;font-weight:600">
+          <span class="switch"><input type="checkbox" id="s-wh-enabled"><span></span></span>
+          Webhook
+        </label>
+        <p class="hint">POSTs every find. Point it at an <code>ntfy.sh</code> topic (text mode) or your own endpoint (JSON).</p>
+        <label class="field">URL <input type="url" id="s-wh-url" placeholder="https://ntfy.sh/my-willhaben-topic"></label>
+        <label class="field">Format
+          <select id="s-wh-format"><option value="json">JSON</option><option value="text">Plain text (ntfy)</option></select>
+        </label>
+      </div>
+
+      <label style="display:flex;align-items:center;gap:10px;font-size:14px">
+        <span class="switch"><input type="checkbox" id="s-err"><span></span></span>
+        Notify me when a search starts failing
+      </label>
+    </div>
+    <div class="dialog-foot">
+      <button class="btn" type="button" id="settings-cancel">Close</button>
+      <button class="btn primary" type="submit">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<script src="app.js" type="module"></script>
+</body>
+</html>
