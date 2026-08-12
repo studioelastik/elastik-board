@@ -2748,7 +2748,7 @@ h3.ce-header { font-size: 15px; }
 #status-bar { display: none; }
 
 @media (min-width: 769px) {
-  :root { --sidebar: 260px; --header-h: 46px; }
+  :root { --sidebar: 260px; --header-h: 46px; --pane-gap: 10px; --pane-r: 10px; }
 
   /* Vibrancy materials + separator, per theme.
      --sidebar-mat is deliberately a step darker than the content pane:
@@ -2758,6 +2758,8 @@ h3.ce-header { font-size: 15px; }
     --chrome: rgba(246,246,246,.72);
     --sidebar-mat: rgba(232,232,234,.82);
     --hairline: rgba(0,0,0,.13);
+    --ground: #DCDCDE;
+    --pane-shadow: 0 0 0 .5px rgba(0,0,0,.10), 0 6px 20px rgba(0,0,0,.10);
     --seg-sel: #FFFFFF;
     --seg-shadow: 0 1px 2px rgba(0,0,0,.16), 0 0 0 .5px rgba(0,0,0,.06);
   }
@@ -2765,6 +2767,8 @@ h3.ce-header { font-size: 15px; }
     --chrome: rgba(30,30,32,.72);
     --sidebar-mat: rgba(38,38,41,.82);
     --hairline: rgba(255,255,255,.12);
+    --ground: #000000;
+    --pane-shadow: 0 0 0 .5px rgba(255,255,255,.10), 0 6px 20px rgba(0,0,0,.5);
     --seg-sel: #55555A;
     --seg-shadow: 0 1px 2px rgba(0,0,0,.4);
   }
@@ -2843,11 +2847,14 @@ h3.ce-header { font-size: 15px; }
   /* Flat list under the header — no extra indent */
   .proj-child-item { padding-left: 8px; }
 
+  /* Stock SwiftUI metrics on macOS: .body 13pt for row titles,
+     .caption 10pt for the sub-line, ~11pt semibold for Section headers. */
   .proj-total {
-    font-size: 11px; color: var(--text-3);
+    font-size: 10px; color: var(--text-3);
     font-variant-numeric: tabular-nums;
     flex-shrink: 0;
   }
+  .proj-sub { font-size: 10px; }
 
   /* "All projects" marks scope with its checkmark, not a selection fill —
      otherwise two blue rows compete for the eye at once. */
@@ -3047,6 +3054,55 @@ h3.ce-header { font-size: 15px; }
     overflow: hidden; text-overflow: ellipsis;
   }
   #status-right { color: var(--text-3); }
+
+  /* ── macOS 26 split layout ──────────────────────────────────────
+     Sidebar and content are two rounded panels floating on the window
+     ground, inset from every edge, rather than two regions divided by a
+     hairline. Because each panel is its own fixed box, the page stops
+     scrolling as a whole: the toolbar and status bar become frame, and
+     only the active view scrolls between them — the same structure as
+     the reference's VStack. */
+  html, body { height: 100%; overflow: hidden; }
+  body { background: var(--ground); }
+
+  #sidebar {
+    top: var(--pane-gap);
+    left: var(--pane-gap);
+    bottom: var(--pane-gap);
+    border-right: none;
+    border-radius: var(--pane-r);
+    overflow: hidden;
+    box-shadow: var(--pane-shadow);
+  }
+
+  #main {
+    position: fixed;
+    top: var(--pane-gap);
+    right: var(--pane-gap);
+    bottom: var(--pane-gap);
+    left: calc(var(--sidebar) + var(--pane-gap) * 2);
+    margin: 0;
+    max-width: none;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-radius: var(--pane-r);
+    background: var(--bg);
+    box-shadow: var(--pane-shadow);
+  }
+  #app.sidebar-collapsed #main { left: var(--pane-gap); }
+
+  /* Frame, not content — the panel clips them, so neither needs sticky */
+  #header, #status-bar { position: static; flex: 0 0 auto; }
+  #col-filter-bar, #coach-bar, #coach-bar-spacer { flex: 0 0 auto; }
+
+  /* Only the active view scrolls */
+  #kanban-view, #list-view, #time-view, #today-view, #inbox-view {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+  }
 }
 </style>
 <!-- EditorJS core + block tools (rich-text notes editor) -->
