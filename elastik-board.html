@@ -2740,6 +2740,8 @@ h3.ce-header { font-size: 15px; }
 .proj-sub { display: none; }
 /* The scope checkmark is accent-tinted at every breakpoint */
 .proj-check { display: flex; align-items: center; color: var(--accent); flex-shrink: 0; }
+.proj-glyph { display: flex; align-items: center; flex-shrink: 0; cursor: pointer; }
+.proj-glyph svg { width: 14px; height: 14px; }
 
 /* Off unless the desktop breakpoint turns it on. */
 #header-search { display: none; }
@@ -2748,15 +2750,20 @@ h3.ce-header { font-size: 15px; }
 @media (min-width: 769px) {
   :root { --sidebar: 260px; --header-h: 46px; }
 
-  /* Vibrancy materials + separator, per theme */
+  /* Vibrancy materials + separator, per theme.
+     --sidebar-mat is deliberately a step darker than the content pane:
+     macOS sidebars recede behind the window body, and Mission Control had
+     it inverted (white sidebar, grey content) next to Drive Catalog. */
   [data-theme="light"] {
     --chrome: rgba(246,246,246,.72);
+    --sidebar-mat: rgba(232,232,234,.82);
     --hairline: rgba(0,0,0,.13);
     --seg-sel: #FFFFFF;
     --seg-shadow: 0 1px 2px rgba(0,0,0,.16), 0 0 0 .5px rgba(0,0,0,.06);
   }
   [data-theme="dark"] {
     --chrome: rgba(30,30,32,.72);
+    --sidebar-mat: rgba(38,38,41,.82);
     --hairline: rgba(255,255,255,.12);
     --seg-sel: #55555A;
     --seg-shadow: 0 1px 2px rgba(0,0,0,.4);
@@ -2765,7 +2772,7 @@ h3.ce-header { font-size: 15px; }
   /* ── Sidebar (NavigationSplitView column) ── */
   #sidebar {
     width: var(--sidebar);
-    background: var(--chrome);
+    background: var(--sidebar-mat);
     backdrop-filter: blur(30px) saturate(1.8);
     -webkit-backdrop-filter: blur(30px) saturate(1.8);
     border-right: 1px solid var(--hairline);
@@ -2798,8 +2805,44 @@ h3.ce-header { font-size: 15px; }
   /* Leading glyphs carry the accent, the way Drive Catalog tints its
      drive symbols — 8px dots read as noise next to a 15px SF Symbol. */
   .sidebar-item svg { width: 15px; height: 15px; color: var(--accent); }
+  .proj-glyph svg { width: 15px; height: 15px; }
   .proj-dot { width: 11px; height: 11px; }
-  .proj-child-item .proj-dot { width: 11px; height: 11px; }
+
+  /* Sections read as list headers, not as rows — Drive Catalog groups with
+     a "Search scope" header over a flat list, with nothing indented. They
+     stay clickable (filter) and collapsible, just at header weight. */
+  .proj-item.proj-section-item {
+    min-height: 0;
+    margin: 14px 7px 2px;
+    padding: 0 8px 0 2px;
+    gap: 5px;
+    border-radius: 4px;
+    background: transparent;
+    font-size: 11px;
+    color: var(--text-2);
+  }
+  .proj-item.proj-section-item:first-of-type { margin-top: 4px; }
+  .proj-section-item .proj-name {
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    color: var(--text-2);
+  }
+  .proj-section-item .proj-sub { display: none; }
+  .proj-section-item .proj-dot { width: 7px; height: 7px; }
+  .proj-section-item .proj-chevron { width: 13px; height: 13px; }
+  .proj-section-item:hover { background: transparent; }
+  .proj-section-item:hover .proj-name { color: var(--text); }
+  /* A filtered section is marked by its label, not a selection fill */
+  .proj-item.proj-section-item.active { background: transparent; }
+  .proj-section-item.active .proj-name { color: var(--accent); }
+  .proj-section-item.active .proj-chevron,
+  .proj-section-item.active .proj-edit-btn { color: var(--text-3); }
+  .proj-section-item .proj-total,
+  .proj-section-item .proj-count { display: none; }
+
+  /* Flat list under the header — no extra indent */
+  .proj-child-item { padding-left: 8px; }
+
   .proj-total {
     font-size: 11px; color: var(--text-3);
     font-variant-numeric: tabular-nums;
@@ -2832,6 +2875,9 @@ h3.ce-header { font-size: 15px; }
     font-weight: 500;
   }
   .sidebar-item.active svg { color: #FFFFFF; }
+  /* The glyph's project colour is set inline, so override it explicitly —
+     a mid-tone symbol on the accent fill has almost no contrast. */
+  .proj-item.active .proj-glyph { color: #FFFFFF !important; }
   .proj-item.active .proj-sub,
   .proj-item.active .proj-total,
   .proj-item.active .proj-count { color: rgba(255,255,255,.75); }
@@ -3975,8 +4021,12 @@ function renderSidebar() {
         const openCount = projTasks.filter(t=>t.status!=='done' && t.status!=='archive').length;
         const li = document.createElement('li');
         li.className = 'proj-item proj-child-item' + (filterProject===p.id?' active':'');
+        // A filled glyph in the project colour, not a bullet — Drive Catalog
+        // leads every row with a symbol at this weight.
         li.innerHTML = `
-          <div class="proj-dot" style="background:${p.color};cursor:pointer" onclick="event.stopPropagation();openProjectModal('${p.id}')"></div>
+          <span class="proj-glyph" style="color:${p.color}" title="Edit project" onclick="event.stopPropagation();openProjectModal('${p.id}')">
+            <svg viewBox="0 0 16 16" fill="none"><path d="M1.4 4.3c0-.72.58-1.3 1.3-1.3h3.1l1.35 1.55h6.15c.72 0 1.3.58 1.3 1.3v6.15c0 .72-.58 1.3-1.3 1.3H2.7c-.72 0-1.3-.58-1.3-1.3V4.3z" fill="currentColor"/></svg>
+          </span>
           <div class="proj-text">
             <span class="proj-name">${p.name}</span>
             <span class="proj-sub">${plural(count,'task')}${openCount ? ' · ' + openCount + ' open' : ''}</span>
