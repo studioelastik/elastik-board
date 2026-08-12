@@ -1,0 +1,7 @@
+# Isolated checkouts created for background tasks — never part of the repo
+.claude/worktrees/
+
+# Build output from mac/build.sh
+mac/.build/
+
+.DS_Store
