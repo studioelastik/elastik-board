@@ -68,7 +68,6 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js');
 }
 </script>
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -77,6 +76,9 @@ if ('serviceWorker' in navigator) {
   --r-lg: 12px;
   --sidebar: 220px;
   --header-h: 52px;
+  /* System font stack — SF on Apple platforms, sane fallbacks elsewhere */
+  --ui: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
   /* Motion tokens — one snappy ease-out and one gentle spring overshoot */
   --ease-out: cubic-bezier(.2,.8,.2,1);
   --ease-spring: cubic-bezier(.32,1.25,.42,1);
@@ -150,7 +152,8 @@ if ('serviceWorker' in navigator) {
 }
 
 body {
-  font-family: 'DM Sans', sans-serif;
+  font-family: var(--ui);
+  -webkit-font-smoothing: antialiased;
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
@@ -1073,7 +1076,7 @@ h3.ce-header { font-size: 15px; }
   color: var(--text) !important;
   border: 1px solid var(--border) !important;
   border-radius: var(--r) !important;
-  font-family: 'DM Mono', ui-monospace, monospace !important;
+  font-family: var(--mono) !important;
   font-size: 13px !important;
 }
 .cdx-marker {
@@ -1084,7 +1087,7 @@ h3.ce-header { font-size: 15px; }
   background: var(--surface2);
   padding: 1px 5px;
   border-radius: 3px;
-  font-family: 'DM Mono', ui-monospace, monospace;
+  font-family: var(--mono);
   font-size: 13px;
 }
 
@@ -1373,7 +1376,7 @@ h3.ce-header { font-size: 15px; }
   width: 100%; height: 100%; cursor: pointer; border: none; padding: 0;
 }
 .cpicker-hex {
-  flex: 1; font-family: 'DM Mono', monospace;
+  flex: 1; font-family: var(--mono);
   font-size: 13px; letter-spacing: .04em; text-transform: uppercase;
 }
 .color-options { display: flex; gap: 7px; flex-wrap: wrap; }
@@ -1426,7 +1429,7 @@ h3.ce-header { font-size: 15px; }
 .empty-hero-sub kbd {
   display: inline-block; padding: 2px 7px; border-radius: 4px;
   background: var(--surface2); border: 1px solid var(--border);
-  font-family: 'DM Mono', ui-monospace, monospace; font-size: 11px;
+  font-family: var(--mono); font-size: 11px;
   color: var(--text-2); margin: 0 1px;
 }
 .empty-hero-actions {
@@ -1561,7 +1564,7 @@ h3.ce-header { font-size: 15px; }
   align-self: flex-end;
 }
 #capture-hint .cap-hint-key {
-  font-family: 'DM Mono', ui-monospace, monospace;
+  font-family: var(--mono);
   padding: 1px 6px; border-radius: 4px;
   background: var(--surface2);
   color: var(--text-2);
@@ -1678,7 +1681,7 @@ h3.ce-header { font-size: 15px; }
   font-size: 11px; font-weight: 600; color: var(--text-2); margin-top: 1px;
 }
 .sync-step code {
-  font-family: 'DM Mono', monospace; font-size: 11px;
+  font-family: var(--mono); font-size: 11px;
   background: var(--surface2); padding: 1px 5px; border-radius: 3px;
   color: var(--text); word-break: break-all;
 }
@@ -1695,7 +1698,7 @@ h3.ce-header { font-size: 15px; }
 .sync-connected-label { font-size: 13px; font-weight: 500; color: var(--s-done-text); }
 .sync-connected-url {
   font-size: 11px; color: var(--text-3);
-  font-family: 'DM Mono', monospace; word-break: break-all; margin-top: 4px;
+  font-family: var(--mono); word-break: break-all; margin-top: 4px;
 }
 .btn-danger {
   padding: 7px 14px; font-size: 13px; font-family: inherit;
@@ -1937,7 +1940,7 @@ h3.ce-header { font-size: 15px; }
   border: 1px solid var(--border-strong);
   background: var(--surface);
   color: var(--text-2);
-  font-family: 'DM Mono', ui-monospace, monospace;
+  font-family: var(--mono);
   font-size: 12px;
   cursor: pointer;
   user-select: none;
@@ -2208,7 +2211,7 @@ h3.ce-header { font-size: 15px; }
 }
 .time-total-value {
   font-size: 20px; font-weight: 500; color: var(--text);
-  font-family: 'DM Mono', ui-monospace, monospace;
+  font-family: var(--mono);
   margin-top: 4px;
 }
 .time-total-card.grand .time-total-value { font-size: 22px; }
@@ -2220,7 +2223,7 @@ h3.ce-header { font-size: 15px; }
   border-bottom: 1px solid var(--border);
 }
 .time-day-label { font-size: 13px; font-weight: 500; color: var(--text); }
-.time-day-total { font-size: 12px; color: var(--text-2); font-family: 'DM Mono', ui-monospace, monospace; }
+.time-day-total { font-size: 12px; color: var(--text-2); font-family: var(--mono); }
 
 .time-entry {
   display: grid;
@@ -2234,7 +2237,7 @@ h3.ce-header { font-size: 15px; }
 .time-entry:hover { background: var(--surface2); }
 .time-entry-time {
   font-size: 12px; color: var(--text-2);
-  font-family: 'DM Mono', ui-monospace, monospace;
+  font-family: var(--mono);
 }
 .time-entry-client {
   display: inline-flex; align-items: center; gap: 6px;
@@ -2250,7 +2253,7 @@ h3.ce-header { font-size: 15px; }
 }
 .time-entry-duration {
   font-size: 13px; color: var(--text);
-  font-family: 'DM Mono', ui-monospace, monospace;
+  font-family: var(--mono);
   text-align: right;
 }
 .time-entry-delete {
@@ -2605,7 +2608,7 @@ h3.ce-header { font-size: 15px; }
 #search-input::placeholder { color: var(--text-3); }
 #search-hint { font-size: 11px; color: var(--text-3); white-space: nowrap; }
 #search-hint .cap-hint-key {
-  font-family: 'DM Mono', ui-monospace, monospace;
+  font-family: var(--mono);
   padding: 1px 6px; border-radius: 4px;
   background: var(--surface2); color: var(--text-2);
   margin-right: 2px;
@@ -2664,7 +2667,7 @@ h3.ce-header { font-size: 15px; }
   background: rgba(232,104,104,.14);
   border: 1px solid rgba(232,104,104,.5);
   color: var(--text);
-  font-family: 'DM Mono', ui-monospace, monospace;
+  font-family: var(--mono);
   font-size: 12px;
   padding: 7px 12px; border-radius: 999px;
   backdrop-filter: blur(10px);
@@ -2721,6 +2724,249 @@ h3.ce-header { font-size: 15px; }
 }
 .toast-undo:hover { text-decoration: underline; }
 [data-theme="dark"] .toast-undo { color: #7BB3FF; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   Native macOS chrome — desktop only (Drive Catalog / NavigationSplitView)
+
+   Everything below is scoped to >=769px on purpose: the phone keeps the
+   touch layout above (drawer sidebar, floating pill, bottom nav). The
+   look here is stock AppKit — vibrancy materials, hairline separators,
+   13px rows, a flush toolbar and a status bar — not a styled web header.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Two-line sidebar rows: the caption is desktop-only, the count pill is
+   its mobile counterpart, so each breakpoint shows exactly one. */
+.proj-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.proj-sub { display: none; }
+
+/* Off unless the desktop breakpoint turns it on. */
+#header-search { display: none; }
+#status-bar { display: none; }
+
+@media (min-width: 769px) {
+  :root { --sidebar: 260px; --header-h: 46px; }
+
+  /* Vibrancy materials + separator, per theme */
+  [data-theme="light"] {
+    --chrome: rgba(246,246,246,.72);
+    --hairline: rgba(0,0,0,.13);
+    --seg-sel: #FFFFFF;
+    --seg-shadow: 0 1px 2px rgba(0,0,0,.16), 0 0 0 .5px rgba(0,0,0,.06);
+  }
+  [data-theme="dark"] {
+    --chrome: rgba(30,30,32,.72);
+    --hairline: rgba(255,255,255,.12);
+    --seg-sel: #55555A;
+    --seg-shadow: 0 1px 2px rgba(0,0,0,.4);
+  }
+
+  /* ── Sidebar (NavigationSplitView column) ── */
+  #sidebar {
+    width: var(--sidebar);
+    background: var(--chrome);
+    backdrop-filter: blur(30px) saturate(1.8);
+    -webkit-backdrop-filter: blur(30px) saturate(1.8);
+    border-right: 1px solid var(--hairline);
+  }
+  [data-theme="light"] #sidebar { box-shadow: none; }
+
+  #sidebar-logo { padding: 14px 14px 10px; }
+  #sidebar-logo span { font-size: 13px; font-weight: 600; letter-spacing: 0; }
+
+  #sidebar-views { padding: 4px 0 10px; }
+
+  /* AppKit section headers: small semibold secondary, not tracked-out caps */
+  .sidebar-section-label {
+    font-size: 11px; font-weight: 600;
+    letter-spacing: 0; text-transform: none;
+    color: var(--text-2);
+    padding: 0 15px 3px;
+  }
+
+  .sidebar-item, .proj-item {
+    margin: 0 7px 1px;
+    padding: 4px 8px;
+    font-size: 13px;
+    border-radius: 6px;
+    gap: 7px;
+    transition: background .08s;
+  }
+  .sidebar-item:hover, .proj-item:hover {
+    background: color-mix(in srgb, var(--text) 7%, transparent);
+    color: var(--text);
+  }
+  /* Full-row accent selection, the way a macOS List draws it */
+  .sidebar-item.active,
+  .proj-item.active {
+    background: var(--accent);
+    color: #FFFFFF;
+    font-weight: 500;
+  }
+  .sidebar-item.active svg { color: #FFFFFF; }
+  .proj-item.active .proj-sub,
+  .proj-item.active .proj-count { color: rgba(255,255,255,.75); }
+  .proj-item.active .proj-chevron,
+  .proj-item.active .proj-edit-btn { color: rgba(255,255,255,.8); }
+  .proj-item.active .proj-edit-btn:hover { background: rgba(255,255,255,.18); }
+
+  /* Two-line row: name over a caption, trailing dot — like DriveRow */
+  .proj-item { align-items: center; }
+  .proj-sub {
+    display: block;
+    font-size: 11px; color: var(--text-3);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    margin-top: 1px;
+  }
+  .proj-count { display: none; }
+  .proj-child-item { padding-left: 20px; }
+
+  #sidebar-projects { padding: 8px 0; }
+
+  #sidebar-footer { padding: 8px 7px; border-top: 1px solid var(--hairline); }
+  #add-project-btn, #settings-btn {
+    display: flex; align-items: center; gap: 7px;
+    width: 100%; padding: 4px 8px;
+    font-size: 13px; border-radius: 6px;
+    color: var(--text-2);
+  }
+  #add-project-btn:hover, #settings-btn:hover {
+    background: color-mix(in srgb, var(--text) 7%, transparent);
+    color: var(--text);
+  }
+
+  /* ── Toolbar (flush, vibrant, hairline under) ── */
+  #header,
+  #header.scrolled {
+    height: var(--header-h);
+    background: var(--chrome);
+    backdrop-filter: blur(30px) saturate(1.8);
+    -webkit-backdrop-filter: blur(30px) saturate(1.8);
+    border: none;
+    border-bottom: 1px solid var(--hairline);
+    border-radius: 0;
+    margin: 0;
+    width: 100%;
+    max-width: none;
+    padding: 0 12px;
+    top: 0;
+    gap: 10px;
+    box-shadow: none;
+    transition: none;
+  }
+  /* The pill's scroll-shrink trick has no place in a fixed toolbar */
+  #header.scrolled #header-title,
+  #header #header-title {
+    opacity: 1; max-width: 260px;
+    padding: 0; margin: 0; overflow: hidden;
+    pointer-events: auto; transition: none;
+    font-size: 13px; font-weight: 600;
+  }
+
+  #header-left   { flex: 0 0 auto; order: 0; gap: 6px; }
+  #header-search { order: 1; flex: 1 1 auto; max-width: 380px; }
+  #header-center { order: 2; flex: 0 0 auto; padding: 0; }
+  #header-right  { order: 3; flex: 0 0 auto; gap: 6px; }
+
+  #menu-btn { width: 26px; height: 26px; }
+  #header-project-dot { width: 8px; height: 8px; }
+  /* The inline field replaces the magnifier button on desktop */
+  #search-btn { display: none; }
+
+  /* ── Inline search field ── */
+  #header-search {
+    display: flex; align-items: center; gap: 5px;
+    position: relative;
+    height: 24px; padding: 0 7px;
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    border-radius: 6px;
+    color: var(--text-3);
+  }
+  [data-theme="dark"] #header-search { background: rgba(0,0,0,.25); }
+  #header-search:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
+  }
+  #hdr-search-input {
+    flex: 1; min-width: 0;
+    border: none; background: transparent; outline: none;
+    font-family: inherit; font-size: 13px; color: var(--text);
+  }
+  #hdr-search-input::placeholder { color: var(--text-3); }
+  #hdr-search-clear {
+    display: flex; align-items: center; justify-content: center;
+    border: none; background: none; cursor: pointer;
+    padding: 0; color: var(--text-3); flex-shrink: 0;
+  }
+  #hdr-search-clear:hover { color: var(--text-2); }
+
+  /* Results anchored under the field, AppKit popover style */
+  #hdr-search-panel {
+    display: none;
+    position: absolute; top: calc(100% + 6px); left: -1px;
+    width: max(360px, calc(100% + 2px));
+    max-height: min(60vh, 460px); overflow-y: auto;
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    border-radius: 8px;
+    box-shadow: var(--shadow-pop);
+    z-index: 300;
+    padding: 4px 0;
+  }
+  #hdr-search-panel.open { display: block; }
+  #hdr-search-panel .sr-item { padding: 7px 12px; font-size: 13px; }
+  #hdr-search-panel .sr-group-label { padding: 8px 12px 4px; }
+  #hdr-search-panel .sr-empty { padding: 20px 16px; font-size: 12px; }
+
+  /* ── Segmented control ── */
+  .view-toggle {
+    background: transparent;
+    border: 1px solid var(--hairline);
+    border-radius: 6px;
+    padding: 1px;
+    gap: 0;
+  }
+  .view-btn {
+    padding: 2px 10px;
+    font-size: 12px;
+    border-radius: 5px;
+    color: var(--text-2);
+    position: relative;
+    transition: background .08s, color .08s;
+  }
+  /* Hairline between adjacent unselected segments, as AppKit draws it */
+  .view-btn + .view-btn::before {
+    content: ''; position: absolute; left: -1px; top: 4px; bottom: 4px;
+    width: 1px; background: var(--hairline);
+  }
+  .view-btn.active::before,
+  .view-btn.active + .view-btn::before { display: none; }
+  .view-btn.active {
+    background: var(--seg-sel);
+    box-shadow: var(--seg-shadow);
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  /* ── Status bar ── */
+  #status-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px;
+    height: 24px; flex: 0 0 auto;
+    padding: 0 14px;
+    font-size: 11px; color: var(--text-2);
+    border-top: 1px solid var(--hairline);
+    background: var(--chrome);
+    backdrop-filter: blur(30px) saturate(1.8);
+    -webkit-backdrop-filter: blur(30px) saturate(1.8);
+    position: sticky; bottom: 0; z-index: 40;
+    white-space: nowrap; overflow: hidden;
+  }
+  #status-left, #status-right {
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  #status-right { color: var(--text-3); }
+}
 </style>
 <!-- EditorJS core + block tools (rich-text notes editor) -->
 <script src="https://cdn.jsdelivr.net/npm/@editorjs/editorjs@2.30.6"></script>
@@ -2810,6 +3056,16 @@ h3.ce-header { font-size: 15px; }
           <span id="header-title-text">All projects</span>
         </div>
       </div>
+      <!-- Inline search field — desktop only; mobile keeps the #search-btn
+           overlay because there is no room for a permanent field. -->
+      <div id="header-search">
+        <svg class="hs-icon" width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M11 11l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <input id="hdr-search-input" type="text" placeholder="Search tasks, notes and captures…" autocomplete="off" autocorrect="off" spellcheck="false" aria-label="Search">
+        <button id="hdr-search-clear" onclick="clearHeaderSearch()" aria-label="Clear search" style="display:none">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="6" fill="currentColor"/><path d="M4 4l4 4M8 4l-4 4" stroke="var(--surface)" stroke-width="1.4" stroke-linecap="round"/></svg>
+        </button>
+        <div id="hdr-search-panel"></div>
+      </div>
       <div id="header-center">
         <div class="view-toggle">
           <button class="view-btn" id="vbtn-today" onclick="setView('today')">Today</button>
@@ -2872,6 +3128,12 @@ h3.ce-header { font-size: 15px; }
     <div id="time-view" style="display:none"></div>
     <div id="today-view" style="display:none"></div>
     <div id="inbox-view" style="display:none"></div>
+
+    <!-- Status bar — desktop only. Left: what's on screen. Right: active scope. -->
+    <div id="status-bar">
+      <span id="status-left"></span>
+      <span id="status-right"></span>
+    </div>
   </div>
 
   <!-- Bottom nav (mobile) -->
@@ -3163,7 +3425,7 @@ h3.ce-header { font-size: 15px; }
         </summary>
         <div style="margin-top:10px;font-size:12px;color:var(--text-2);line-height:1.6">
           <p style="margin-bottom:8px">Paste this into <strong>Firebase Console → Realtime Database → Rules</strong> and click <strong>Publish</strong>. This locks the database to your account only.</p>
-          <pre id="sync-rules-json" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px 12px;font-size:11px;font-family:'DM Mono',monospace;overflow-x:auto;white-space:pre;cursor:pointer;user-select:all" title="Click to select all"></pre>
+          <pre id="sync-rules-json" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px 12px;font-size:11px;font-family:var(--mono);overflow-x:auto;white-space:pre;cursor:pointer;user-select:all" title="Click to select all"></pre>
           <p style="margin-top:6px;font-size:11px;color:var(--text-3)">Click the box above to select all, then copy.</p>
         </div>
       </details>
@@ -3618,6 +3880,8 @@ function renderColFilterBar() {
 }
 
 // ── Render sidebar ──
+function plural(n, word) { return n + ' ' + word + (n === 1 ? '' : 's'); }
+
 function renderSidebar() {
   const ul = document.getElementById('project-list');
   ul.innerHTML = '';
@@ -3625,7 +3889,13 @@ function renderSidebar() {
   const allLi = document.createElement('li');
   const allActive = !filterSection && !filterProject;
   allLi.className = 'proj-item' + (allActive?' active':'');
-  allLi.innerHTML = `<div class="proj-dot" style="background:#888780"></div><span class="proj-name">All</span><span class="proj-count">${state.tasks.length}</span>`;
+  const allProjCount = state.projects.filter(p => p.id !== '_todos').length;
+  allLi.innerHTML = `<div class="proj-dot" style="background:#888780"></div>
+    <div class="proj-text">
+      <span class="proj-name">All</span>
+      <span class="proj-sub">${plural(state.tasks.length,'task')} · ${plural(allProjCount,'project')}</span>
+    </div>
+    <span class="proj-count">${state.tasks.length}</span>`;
   allLi.onclick = () => { filterSection=null; filterProject=null; state.filterSection=null; state.filterProject=null; save(); renderAll(); closeDrawer(); };
   ul.appendChild(allLi);
 
@@ -3640,7 +3910,10 @@ function renderSidebar() {
     secLi.innerHTML = `
       <span class="proj-chevron"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 3.5l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
       <div class="proj-dot" style="background:${sec.color};cursor:pointer;width:10px;height:10px" onclick="event.stopPropagation();openSectionModal('${sec.id}')"></div>
-      <span class="proj-name" style="font-weight:500">${sec.name}</span>
+      <div class="proj-text">
+        <span class="proj-name" style="font-weight:500">${sec.name}</span>
+        <span class="proj-sub">${plural(secProjs.length,'project')} · ${plural(secTasks.length,'task')}</span>
+      </div>
       <span class="proj-count">${secTasks.length}</span>
       <button class="proj-edit-btn" title="Edit section" onclick="event.stopPropagation();openSectionModal('${sec.id}')">
         <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M8.5 1.5l2 2-7 7H1.5v-2l7-7z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
@@ -3660,12 +3933,17 @@ function renderSidebar() {
 
     if (!isCollapsed) {
       secProjs.forEach(p => {
-        const count = state.tasks.filter(t=>t.pid===p.id).length;
+        const projTasks = state.tasks.filter(t=>t.pid===p.id);
+        const count = projTasks.length;
+        const openCount = projTasks.filter(t=>t.status!=='done' && t.status!=='archive').length;
         const li = document.createElement('li');
         li.className = 'proj-item proj-child-item' + (filterProject===p.id?' active':'');
         li.innerHTML = `
           <div class="proj-dot" style="background:${p.color};cursor:pointer" onclick="event.stopPropagation();openProjectModal('${p.id}')"></div>
-          <span class="proj-name">${p.name}</span>
+          <div class="proj-text">
+            <span class="proj-name">${p.name}</span>
+            <span class="proj-sub">${plural(count,'task')}${openCount ? ' · ' + openCount + ' open' : ''}</span>
+          </div>
           <span class="proj-count">${count}</span>
           <button class="proj-edit-btn" title="Edit project" onclick="event.stopPropagation();openProjectModal('${p.id}')">
             <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M8.5 1.5l2 2-7 7H1.5v-2l7-7z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
@@ -4920,8 +5198,8 @@ function _searchHighlight(text, query) {
        + '<mark>' + escapeHTML(text.slice(idx, idx + q.length)) + '</mark>'
        + escapeHTML(text.slice(idx + q.length));
 }
-function runSearch(query) {
-  const box = document.getElementById('search-results');
+function runSearch(query, targetId) {
+  const box = document.getElementById(targetId || 'search-results');
   if (!box) return;
   const q = (query || '').trim().toLowerCase();
   if (!q) {
@@ -4978,6 +5256,7 @@ function runSearch(query) {
     btn.addEventListener('click', () => {
       const kind = btn.dataset.kind, id = btn.dataset.id;
       closeSearch();
+      closeHeaderSearch();
       if (kind === 'task') {
         if (typeof openCard === 'function') openCard(id);
       } else if (kind === 'capture') {
@@ -4996,6 +5275,59 @@ document.addEventListener('DOMContentLoaded', () => {
       const first = document.querySelector('#search-results .sr-item');
       if (first) first.click();
     }
+  });
+});
+
+// ── Inline header search (desktop) ──
+// The field is the real search on desktop; results drop into a popover
+// anchored under it rather than the full-screen overlay.
+function closeHeaderSearch() {
+  document.getElementById('hdr-search-panel')?.classList.remove('open');
+}
+function clearHeaderSearch() {
+  const inp = document.getElementById('hdr-search-input');
+  if (inp) { inp.value = ''; inp.focus(); }
+  document.getElementById('hdr-search-clear').style.display = 'none';
+  closeHeaderSearch();
+}
+/** True when the inline field is the visible search affordance. */
+function headerSearchActive() {
+  const el = document.getElementById('header-search');
+  return !!el && getComputedStyle(el).display !== 'none';
+}
+/** Route the search shortcuts to whichever affordance this breakpoint shows. */
+function focusSearch() {
+  if (headerSearchActive()) {
+    const inp = document.getElementById('hdr-search-input');
+    if (inp) { inp.focus(); inp.select(); return; }
+  }
+  openSearch();
+}
+document.addEventListener('DOMContentLoaded', () => {
+  const inp   = document.getElementById('hdr-search-input');
+  const panel = document.getElementById('hdr-search-panel');
+  const clear = document.getElementById('hdr-search-clear');
+  if (!inp || !panel) return;
+
+  const refresh = () => {
+    const q = inp.value.trim();
+    clear.style.display = inp.value ? 'flex' : 'none';
+    if (!q) { closeHeaderSearch(); return; }
+    runSearch(inp.value, 'hdr-search-panel');
+    panel.classList.add('open');
+  };
+  inp.addEventListener('input', refresh);
+  inp.addEventListener('focus', () => { if (inp.value.trim()) refresh(); });
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { e.preventDefault(); clearHeaderSearch(); inp.blur(); return; }
+    if (e.key === 'Enter') {
+      const first = panel.querySelector('.sr-item');
+      if (first) first.click();
+    }
+  });
+  // Click-away closes the popover but keeps the query, like Finder's field.
+  document.addEventListener('mousedown', e => {
+    if (!document.getElementById('header-search')?.contains(e.target)) closeHeaderSearch();
   });
 });
 
@@ -5045,11 +5377,12 @@ document.addEventListener('keydown', e => {
     return;
   }
 
-  // Cmd/Ctrl+/ (or plain '/') -> open global search.
+  // Cmd/Ctrl+/ (or plain '/') -> search. On desktop that means the inline
+  // toolbar field; on mobile it falls back to the full-screen overlay.
   if ((e.metaKey || e.ctrlKey) && e.key === '/') {
     if (modalOpen) return;
     e.preventDefault();
-    openSearch();
+    focusSearch();
     return;
   }
 
@@ -5069,7 +5402,7 @@ document.addEventListener('keydown', e => {
   }
   if (e.key === '/') {
     e.preventDefault();
-    openSearch();
+    focusSearch();
     return;
   }
 
@@ -5385,10 +5718,46 @@ function setView(v) {
   else if (v==='time')  renderTime();
   else if (v==='today') renderToday();
   else if (v==='inbox') renderInbox();
+  renderStatusBar();
+}
+
+/* Status bar — left says what's on screen, right says what's in scope,
+   the same split Drive Catalog uses. Desktop-only in CSS, but harmless
+   to keep updated on mobile. */
+function renderStatusBar() {
+  const left  = document.getElementById('status-left');
+  const right = document.getElementById('status-right');
+  if (!left || !right) return;
+
+  let scoped, scope;
+  if (filterProject) {
+    const p = getProject(filterProject);
+    scoped = state.tasks.filter(t => t.pid === filterProject);
+    scope  = (p ? p.name : 'Project') + ' · ' + plural(scoped.length, 'task');
+  } else if (filterSection) {
+    const s = getSection(filterSection);
+    scoped = state.tasks.filter(t => { const p = getProject(t.pid); return p && p.section === filterSection; });
+    scope  = (s ? s.name : 'Section') + ' · ' + plural(scoped.length, 'task');
+  } else {
+    scoped = state.tasks;
+    const projCount = state.projects.filter(p => p.id !== '_todos').length;
+    scope  = 'All ' + plural(projCount, 'project') + ' · ' + plural(scoped.length, 'task');
+  }
+  right.textContent = scope;
+
+  if (currentView === 'inbox') {
+    left.textContent = plural((state.inbox || []).length, 'capture') + ' in the inbox';
+    return;
+  }
+  if (!scoped.length) { left.textContent = 'Nothing here yet'; return; }
+  const open = scoped.filter(t => t.status !== 'done' && t.status !== 'archive').length;
+  const done = scoped.filter(t => t.status === 'done').length;
+  left.textContent = open + ' open · ' + done + ' done';
 }
 
 function renderAll() {
   renderSidebar();
+  renderStatusBar();
   updateInboxBadge();
   if (currentView==='kanban') { renderColFilterBar(); renderKanban(); }
   else if (currentView==='list')  renderList();
