@@ -94,8 +94,8 @@ if ('serviceWorker' in navigator) {
   --text: #1A1916;
   --text-2: #6B6860;
   --text-3: #A09E98;
-  --accent: #3B7CE8;
-  --accent-bg: #EDF4FF;
+  --accent: #007AFF;          /* macOS/iOS system blue */
+  --accent-bg: #EBF3FF;
   --theme-icon: '☀';
   --shadow-card: 0 1px 2px rgba(26,25,22,.05), 0 2px 6px rgba(26,25,22,.04);
   --shadow-card-hover: 0 2px 4px rgba(26,25,22,.05), 0 10px 24px rgba(26,25,22,.10);
@@ -126,8 +126,8 @@ if ('serviceWorker' in navigator) {
   --text: #F0F0F0;
   --text-2: #9A9A9A;
   --text-3: #5C5C5C;
-  --accent: #5B9CF6;
-  --accent-bg: #0A1626;
+  --accent: #0A84FF;          /* macOS/iOS system blue, dark variant */
+  --accent-bg: #0A1A2E;
   --theme-icon: '☾';
   /* Pure-black bg makes drop shadows invisible — use a tone shift instead.
      Cards lift via slightly lighter surface + a hairline top highlight;
@@ -2754,21 +2754,30 @@ h3.ce-header { font-size: 15px; }
      --sidebar-mat is deliberately a step darker than the content pane:
      macOS sidebars recede behind the window body, and Mission Control had
      it inverted (white sidebar, grey content) next to Drive Catalog. */
+  /* Apple Mail / Finder relationship: grey sidebar, white content pane.
+     Mission Control had it the other way round. */
   [data-theme="light"] {
-    --chrome: rgba(246,246,246,.72);
-    --sidebar-mat: rgba(232,232,234,.82);
-    --hairline: rgba(0,0,0,.13);
-    --ground: #DCDCDE;
-    --pane-shadow: 0 0 0 .5px rgba(0,0,0,.10), 0 6px 20px rgba(0,0,0,.10);
+    --pane-bg: #FFFFFF;
+    --chrome: rgba(255,255,255,.72);
+    --sidebar-mat: rgba(240,240,242,.85);
+    --hairline: rgba(0,0,0,.11);
+    --ground: #E3E3E5;
+    --pane-shadow: 0 0 0 .5px rgba(0,0,0,.08), 0 2px 8px rgba(0,0,0,.06), 0 10px 30px rgba(0,0,0,.13);
+    --sidebar-shadow: 0 0 0 .5px rgba(0,0,0,.07), 2px 2px 10px rgba(0,0,0,.09), 6px 10px 34px rgba(0,0,0,.15);
     --seg-sel: #FFFFFF;
     --seg-shadow: 0 1px 2px rgba(0,0,0,.16), 0 0 0 .5px rgba(0,0,0,.06);
   }
+  /* Dark inverts the relationship, as macOS does: the content pane is the
+     darker surface so the #1A1A1C cards still read against it, and the
+     sidebar material sits lighter. */
   [data-theme="dark"] {
+    --pane-bg: #0F0F10;
     --chrome: rgba(30,30,32,.72);
-    --sidebar-mat: rgba(38,38,41,.82);
+    --sidebar-mat: rgba(32,32,34,.85);
     --hairline: rgba(255,255,255,.12);
     --ground: #000000;
-    --pane-shadow: 0 0 0 .5px rgba(255,255,255,.10), 0 6px 20px rgba(0,0,0,.5);
+    --pane-shadow: 0 0 0 .5px rgba(255,255,255,.09), 0 2px 8px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.55);
+    --sidebar-shadow: 0 0 0 .5px rgba(255,255,255,.10), 2px 2px 10px rgba(0,0,0,.45), 6px 10px 34px rgba(0,0,0,.6);
     --seg-sel: #55555A;
     --seg-shadow: 0 1px 2px rgba(0,0,0,.4);
   }
@@ -2796,15 +2805,18 @@ h3.ce-header { font-size: 15px; }
     padding: 8px 15px 4px;
   }
 
+  /* Row pitch measured off the reference: ~30px single-line, ~40px with a
+     caption underneath. */
   .sidebar-item, .proj-item {
     margin: 0 7px 1px;
     padding: 5px 8px;
-    min-height: 32px;
+    min-height: 28px;
     font-size: 13px;
     border-radius: 6px;
     gap: 9px;
     transition: background .08s;
   }
+  .proj-item { min-height: 38px; }
 
   /* Leading glyphs carry the accent, the way Drive Catalog tints its
      drive symbols — 8px dots read as noise next to a 15px SF Symbol. */
@@ -2847,14 +2859,15 @@ h3.ce-header { font-size: 15px; }
   /* Flat list under the header — no extra indent */
   .proj-child-item { padding-left: 8px; }
 
-  /* Stock SwiftUI metrics on macOS: .body 13pt for row titles,
-     .caption 10pt for the sub-line, ~11pt semibold for Section headers. */
+  /* Measured off the 2x reference against a known value — Drive Catalog's
+     search field is .system(size: 15) — giving 13px row titles and 11px
+     captions, not the 10px I'd assumed from .caption. */
   .proj-total {
-    font-size: 10px; color: var(--text-3);
+    font-size: 11px; color: var(--text-3);
     font-variant-numeric: tabular-nums;
     flex-shrink: 0;
   }
-  .proj-sub { font-size: 10px; }
+  .proj-sub { font-size: 11px; }
 
   /* "All projects" marks scope with its checkmark, not a selection fill —
      otherwise two blue rows compete for the eye at once. */
@@ -3072,7 +3085,9 @@ h3.ce-header { font-size: 15px; }
     border-right: none;
     border-radius: var(--pane-r);
     overflow: hidden;
-    box-shadow: var(--pane-shadow);
+    /* The sidebar sits above the content pane, so it casts further than the
+       pane does — soft and wide, with a touch of rightward offset. */
+    box-shadow: var(--sidebar-shadow);
   }
 
   #main {
@@ -3088,7 +3103,7 @@ h3.ce-header { font-size: 15px; }
     flex-direction: column;
     overflow: hidden;
     border-radius: var(--pane-r);
-    background: var(--bg);
+    background: var(--pane-bg);
     box-shadow: var(--pane-shadow);
   }
   #app.sidebar-collapsed #main { left: var(--pane-gap); }
