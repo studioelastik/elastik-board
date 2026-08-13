@@ -2748,7 +2748,11 @@ h3.ce-header { font-size: 15px; }
 #status-bar { display: none; }
 
 @media (min-width: 769px) {
-  :root { --sidebar: 260px; --header-h: 46px; --pane-gap: 10px; --pane-r: 10px; }
+  /* The sidebar is a rounded panel floating ON the content pane — that is
+     what gives it corners and a shadow. The ground behind its inset margin
+     is the content pane itself (white), not a separate grey window ground,
+     which is what was showing up as a grey frame. */
+  :root { --sidebar: 260px; --header-h: 46px; --pane-gap: 9px; --pane-r: 10px; }
 
   /* Vibrancy materials + separator, per theme.
      --sidebar-mat is deliberately a step darker than the content pane:
@@ -2788,9 +2792,7 @@ h3.ce-header { font-size: 15px; }
     background: var(--sidebar-mat);
     backdrop-filter: blur(30px) saturate(1.8);
     -webkit-backdrop-filter: blur(30px) saturate(1.8);
-    border-right: 1px solid var(--hairline);
   }
-  [data-theme="light"] #sidebar { box-shadow: none; }
 
   #sidebar-logo { padding: 14px 14px 10px; }
   #sidebar-logo span { font-size: 13px; font-weight: 600; letter-spacing: 0; }
@@ -2806,12 +2808,14 @@ h3.ce-header { font-size: 15px; }
   }
 
   /* Row pitch measured off the reference: ~30px single-line, ~40px with a
-     caption underneath. */
+     caption underneath. Row titles sit a step above the 11px section
+     headers, so the size jump between header and row reads like the
+     reference rather than everything sitting at one weight. */
   .sidebar-item, .proj-item {
     margin: 0 7px 1px;
     padding: 5px 8px;
     min-height: 28px;
-    font-size: 13px;
+    font-size: 14px;
     border-radius: 6px;
     gap: 9px;
     transition: background .08s;
@@ -2923,7 +2927,7 @@ h3.ce-header { font-size: 15px; }
   #add-project-btn, #settings-btn {
     display: flex; align-items: center; gap: 9px;
     width: 100%; padding: 6px 8px;
-    font-size: 13px; border-radius: 6px;
+    font-size: 14px; border-radius: 6px;
     color: var(--text-2);
   }
   /* Matches the weight of Drive Catalog's "Scan a Drive…" action row */
@@ -3076,7 +3080,8 @@ h3.ce-header { font-size: 15px; }
      only the active view scrolls between them — the same structure as
      the reference's VStack. */
   html, body { height: 100%; overflow: hidden; }
-  body { background: var(--ground); }
+  /* White, so the sidebar's inset margin reads as content pane, not a frame */
+  body { background: var(--pane-bg); }
 
   #sidebar {
     top: var(--pane-gap);
@@ -3085,16 +3090,21 @@ h3.ce-header { font-size: 15px; }
     border-right: none;
     border-radius: var(--pane-r);
     overflow: hidden;
-    /* The sidebar sits above the content pane, so it casts further than the
-       pane does — soft and wide, with a touch of rightward offset. */
+  }
+  /* Matches the specificity of the base `[data-theme="light"] #sidebar` rule
+     further up, which sets a 1px edge and would otherwise win here. */
+  [data-theme] #sidebar {
+    /* Floats above the content pane, so it casts a soft, wide shadow with a
+       touch of rightward offset. */
     box-shadow: var(--sidebar-shadow);
   }
 
+  /* The content pane is flush to the window — only the sidebar floats. */
   #main {
     position: fixed;
-    top: var(--pane-gap);
-    right: var(--pane-gap);
-    bottom: var(--pane-gap);
+    top: 0;
+    right: 0;
+    bottom: 0;
     left: calc(var(--sidebar) + var(--pane-gap) * 2);
     margin: 0;
     max-width: none;
@@ -3102,11 +3112,9 @@ h3.ce-header { font-size: 15px; }
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    border-radius: var(--pane-r);
     background: var(--pane-bg);
-    box-shadow: var(--pane-shadow);
   }
-  #app.sidebar-collapsed #main { left: var(--pane-gap); }
+  #app.sidebar-collapsed #main { left: 0; }
 
   /* Frame, not content — the panel clips them, so neither needs sticky */
   #header, #status-bar { position: static; flex: 0 0 auto; }
