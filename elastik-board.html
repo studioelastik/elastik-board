@@ -3773,6 +3773,22 @@ body.chrome-off #col-filter-bar { display: none !important; }
 #detail-pane                    { border-left-color: var(--mc-line); }
 #rail-sep                       { background: var(--mc-line); }
 
+/* The wordmark goes; the element stays so setSyncStatus() keeps its target. */
+@media (min-width: 769px) {
+  #sidebar-logo { display: none; }
+  #smart-lists { padding-top: 11px; }
+}
+@media (max-width: 768px) {
+  /* The drawer still needs its close button, just not the logo beside it. */
+  #sidebar-logo span, #sidebar-logo .dot { display: none; }
+  #sidebar-logo { justify-content: flex-end; padding: 10px 12px 2px; }
+}
+
+/* Sync state now reads off the rail button, since the logo dot is hidden. */
+#rail-sync.syncing { color: #E8A84B; }
+#rail-sync.synced  { color: #5DBB5D; }
+#rail-sync.error   { color: #E86868; }
+
 /* ── Folders read as list rows, one level up ─────────────────────────── */
 .sb-folder { font-weight: 500; }
 .sb-folder .sb-name { font-weight: 500; }
@@ -11006,7 +11022,14 @@ function wireShell() {
   if (logo && window.MutationObserver) {
     new MutationObserver(() => {
       const railSync = document.getElementById('rail-sync');
-      if (railSync) railSync.classList.toggle('has-alert', logo.classList.contains('error'));
+      if (!railSync) return;
+      ['syncing', 'synced', 'error'].forEach(k =>
+        railSync.classList.toggle(k, logo.classList.contains(k)));
+      railSync.classList.toggle('has-alert', logo.classList.contains('error'));
+      railSync.title = logo.classList.contains('error')   ? 'Sync failed'
+                     : logo.classList.contains('syncing') ? 'Syncing…'
+                     : logo.classList.contains('synced')  ? 'Synced'
+                     : 'Cloud sync';
     }).observe(logo, {attributes: true, attributeFilter: ['class']});
   }
 }
