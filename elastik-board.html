@@ -2442,17 +2442,21 @@ h3.ce-header { font-size: 15px; }
 }
 #attach-lb-dl:hover { background: rgba(255,255,255,.2); color: #fff; }
 
-.section-focus-row {
+/* Beats `.form-group label`, which would otherwise make this a block of
+   tracked-out uppercase caption text. */
+label.focus-row {
   display: flex; align-items: flex-start; gap: 10px;
   cursor: pointer; user-select: none;
+  margin-bottom: 0; font-size: 13px; font-weight: 400;
+  letter-spacing: 0; text-transform: none; color: var(--text);
 }
-.section-focus-row input[type="checkbox"] {
+.focus-row input[type="checkbox"] {
   width: 16px; height: 16px; margin-top: 2px; flex-shrink: 0;
   accent-color: var(--accent); cursor: pointer;
 }
-.section-focus-text { display: flex; flex-direction: column; gap: 2px; }
-.section-focus-text strong { font-size: 13px; font-weight: 600; color: var(--text); }
-.section-focus-text small { font-size: 11px; color: var(--text-2); line-height: 1.4; }
+.focus-text { display: flex; flex-direction: column; gap: 2px; }
+.focus-text strong { font-size: 13px; font-weight: 600; color: var(--text); }
+.focus-text small { font-size: 11px; color: var(--text-2); line-height: 1.4; }
 
 /* ── Coach: top bar (colleague check-in) ────────────────────────────
    Sits in document flow at the top of the main column, below the
@@ -3789,21 +3793,7 @@ body.chrome-off #col-filter-bar { display: none !important; }
 #rail-sync.synced  { color: #5DBB5D; }
 #rail-sync.error   { color: #E86868; }
 
-/* ── Folders read as list rows, one level up ─────────────────────────── */
-.sb-folder { font-weight: 500; }
-.sb-folder .sb-name { font-weight: 500; }
-.sb-twisty {
-  width: 12px; flex-shrink: 0; margin-left: -4px;
-  display: flex; align-items: center; justify-content: center;
-  color: var(--text-3); cursor: pointer;
-  transition: transform .18s var(--ease-out), color .12s;
-}
-.sb-twisty:hover { color: var(--text); }
-.sb-folder.collapsed .sb-twisty { transform: rotate(-90deg); }
-/* Lists sit under the folder that holds them. */
-.sb-nested { padding-left: 22px !important; }
-
-/* The icon field in the list / folder / filter dialogs. */
+/* The icon field in the list / filter dialogs. */
 .emoji-pick-btn {
   width: 42px; height: 42px; border-radius: 9px;
   border: 1px solid var(--mc-line); background: var(--mc-fill);
@@ -4019,8 +4009,6 @@ body.chrome-off #col-filter-bar { display: none !important; }
 .tl-sub { color: var(--text-3); }
 
 #emoji-pop { width: 322px; padding: 8px; z-index: 2000; }
-.sb-empty-folder { color: var(--text-3); }
-.sb-empty-folder .sb-emoji { font-size: 13px; }
 #emoji-search {
   width: 100%; height: 30px; margin-bottom: 6px;
   border: 1px solid var(--mc-line); border-radius: 7px;
@@ -4239,7 +4227,7 @@ body.chrome-off #col-filter-bar { display: none !important; }
           </span>
           <span class="sb-used" id="lists-used" title="Lists used — click to change the cap" onclick="event.stopPropagation();editListLimit()"></span>
           <span class="sb-head-spacer"></span>
-          <button class="sb-add" title="New list or folder" onclick="event.stopPropagation();openNewMenu(this)">
+          <button class="sb-add" title="New list" onclick="event.stopPropagation();openProjectModal()">
             <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M6 1.5v9M1.5 6h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
           </button>
         </div>
@@ -4621,8 +4609,13 @@ body.chrome-off #col-filter-bar { display: none !important; }
               onclick="pickEmoji(this, draftListEmoji, e => { draftListEmoji = e; renderProjEmojiGrid(); })">📄</button>
     </div>
     <div class="form-group">
-      <label>Section</label>
-      <select id="proj-section-select"></select>
+      <label class="focus-row">
+        <input type="checkbox" id="proj-focused-input">
+        <span class="focus-text">
+          <strong>Coach focus</strong>
+          <small>On: full check-ins (today pins, stale WIP, pile-ups). Off: only flags overdue and blocked items.</small>
+        </span>
+      </label>
     </div>
     <div class="form-group">
       <label>Color</label>
@@ -4639,48 +4632,6 @@ body.chrome-off #col-filter-bar { display: none !important; }
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeProjectModal()">Cancel</button>
       <button class="btn-save" onclick="saveProject()">Save project</button>
-    </div>
-  </div>
-</div>
-
-<!-- Section Modal -->
-<div class="modal-overlay" id="section-modal">
-  <div class="modal">
-    <h3 id="section-modal-title">Edit folder</h3>
-    <div class="form-group">
-      <label>Folder name</label>
-      <input type="text" id="section-name-input" placeholder="e.g. Day Job">
-    </div>
-    <div class="form-group">
-      <label>Icon</label>
-      <button type="button" class="emoji-pick-btn" id="sec-emoji-btn"
-              onclick="pickEmoji(this, draftFolderEmoji, e => { draftFolderEmoji = e; renderSecEmojiBtn(); })">🗂️</button>
-    </div>
-    <div class="form-group">
-      <label>Color</label>
-      <div class="cpicker-top">
-        <label class="cpicker-swatch" id="sec-swatch">
-          <input type="color" id="sec-color-native" oninput="setSectionColor(this.value)">
-        </label>
-        <input class="cpicker-hex" id="sec-color-hex"
-               type="text" maxlength="7" placeholder="#C8501A"
-               oninput="if(/^#[0-9a-fA-F]{6}$/.test(this.value))setSectionColor(this.value)">
-      </div>
-      <div class="color-options" id="section-color-options"></div>
-    </div>
-    <div class="form-group">
-      <label class="section-focus-row">
-        <input type="checkbox" id="section-focused-input">
-        <span class="section-focus-text">
-          <strong>Coach focus</strong>
-          <small>On: full check-ins (today pins, stale WIP, pile-ups). Off: only flags overdue and blocked items.</small>
-        </span>
-      </label>
-    </div>
-    <div class="modal-actions">
-      <button class="btn-cancel" id="sec-delete-btn" style="margin-right:auto;color:#E24B4A" onclick="closeSectionModal();deleteFolder(editingSectionId)">Delete</button>
-      <button class="btn-cancel" onclick="closeSectionModal()">Cancel</button>
-      <button class="btn-save" onclick="saveSection()">Save</button>
     </div>
   </div>
 </div>
@@ -5017,12 +4968,20 @@ function setTaskCol(task, colId) {
     task.dueDate = '';
   }
 }
-function defaultSections() {
-  return [
-    {id:'dayjob',  name:'Day Job',       color:'#C8501A', focused:false},
-    {id:'studio',  name:'Studio Work',   color:'#534AB7', focused:true},
-    {id:'general', name:'General ToDos', color:'#888780', focused:false},
-  ];
+/* Folders are gone — lists sit at the top level. Old blobs carried a
+   `sections` array plus a `section` id on every list; Coach focus was the
+   only behaviour that lived up there, so it moves onto the list itself. */
+function migrateFoldersAway(raw) {
+  if (Array.isArray(raw.sections)) {
+    const focused = new Set(raw.sections.filter(s => s.focused === true).map(s => s.id));
+    (raw.projects || []).forEach(p => {
+      if (typeof p.focused !== 'boolean') p.focused = focused.has(p.section);
+      delete p.section;
+    });
+    delete raw.sections;
+  }
+  (raw.projects || []).forEach(p => { if (typeof p.focused !== 'boolean') p.focused = true; });
+  delete raw.filterSection;
 }
 
 // Applies all shape migrations to a raw state blob. Used both when
@@ -5031,27 +4990,18 @@ function defaultSections() {
 function applyMigrations(raw) {
   if (!raw.projects) raw.projects = defaultData().projects;
   if (!raw.tasks)    raw.tasks    = [];
-  if (!raw.sections) raw.sections = defaultSections();
   if (!raw.colLabels) raw.colLabels = {...STATUS_LABELS_DEFAULT};
   if (!raw.timeEntries) raw.timeEntries = [];
   if (!('activeTimer' in raw)) raw.activeTimer = null;
   if (!raw.inbox) raw.inbox = [];
-  raw.projects.forEach(p => { if (!p.section) p.section = 'studio'; });
+  migrateFoldersAway(raw);
   // Backfill updatedAt for tasks that pre-date the Coach feature so
   // stale-WIP detection doesn't fire on launch for everyone.
   const _now = Date.now();
   raw.tasks.forEach(t => { if (!t.updatedAt) t.updatedAt = _now; });
-  // Backfill Coach focus: existing users keep Studio as focused-only
-  // by default; everything else starts background (overdue/blocked only).
-  raw.sections.forEach(s => {
-    if (typeof s.focused !== 'boolean') s.focused = (s.id === 'studio');
-  });
-  // Ensure general section always exists.
-  if (!raw.sections.find(s => s.id === 'general'))
-    raw.sections.push({id:'general', name:'General ToDos', color:'#888780'});
   // Ensure _todos project always exists.
   if (!raw.projects.find(p => p.id === '_todos'))
-    raw.projects.push({id:'_todos', name:'General', color:'#888780', section:'general'});
+    raw.projects.push({id:'_todos', name:'General', color:'#888780', focused:false});
   shellMigrate(raw);
   return raw;
 }
@@ -5067,13 +5017,12 @@ function save() {
 }
 function defaultData() {
   return {
-    sections: defaultSections(),
     projects: [
-      {id:'petco', name:"CAT'S LOVE — PetCo",        color:'#C8501A', section:'dayjob'},
-      {id:'noga',  name:'NOGA — film titles',          color:'#534AB7', section:'studio'},
-      {id:'babka', name:'BABKA — opening animation',   color:'#0F6E56', section:'studio'},
-      {id:'ryx',   name:'RY X — DAWN reissue',         color:'#C03F6E', section:'studio'},
-      {id:'_todos',name:'General',                      color:'#888780', section:'general'},
+      {id:'petco', name:"CAT'S LOVE — PetCo",        color:'#C8501A', focused:false},
+      {id:'noga',  name:'NOGA — film titles',          color:'#534AB7', focused:true},
+      {id:'babka', name:'BABKA — opening animation',   color:'#0F6E56', focused:true},
+      {id:'ryx',   name:'RY X — DAWN reissue',         color:'#C03F6E', focused:true},
+      {id:'_todos',name:'General',                      color:'#888780', focused:false},
     ],
     tasks: [
       {id:'p1',pid:'petco',name:'Pouches 85g',status:'done',notes:''},
@@ -5094,7 +5043,6 @@ function defaultData() {
       {id:'r2',pid:'ryx',name:'Double gatefold layout',status:'next',notes:''},
       {id:'r3',pid:'ryx',name:'DSP deliverables',status:'next',notes:''},
     ],
-    filterSection: null,
     filterProject: null,
     view: 'kanban',
     colLabels: {...STATUS_LABELS_DEFAULT},
@@ -5114,7 +5062,6 @@ let currentView = (function(){
 // whose last session ended on one lands on the task list instead.
 if (currentView === 'kanban' || currentView === 'list' || currentView === 'today' || currentView === 'inbox')
   currentView = 'tasks';
-let filterSection = state.filterSection || null;
 let filterProject = state.filterProject || null;
 let editingTaskId = null;
 let editingProjectId = null;
@@ -5130,7 +5077,6 @@ let touchDragCloneEl = null;
 let touchDragTimer = null;
 let touchIsDragging = false;
 let touchStartX = 0, touchStartY = 0;
-const collapsedSections = new Set();
 
 // ── Helpers ──
 function uid() { return Math.random().toString(36).slice(2,9); }
@@ -5151,24 +5097,16 @@ function setTaskStatus(task, status) {
   task.status = status;
   task.updatedAt = Date.now();
 }
-function getSection(id) { return state.sections.find(s=>s.id===id); }
-function sectionTasks(sectionId) {
-  let tasks = state.tasks.filter(t => {
-    const p = getProject(t.pid);
-    // orphaned tasks (project missing) fall back to general section
-    if (!p) return sectionId === 'general';
-    return p.section === sectionId;
-  });
-  if (filterProject) tasks = tasks.filter(t=>t.pid===filterProject);
-  return tasks;
+function listTasks(pid) {
+  // orphaned tasks (project missing) fall back to the General list
+  return state.tasks.filter(t => t.pid === pid || (pid === '_todos' && !getProject(t.pid)));
 }
-function sectionsToRender() {
+function listsToRender() {
   if (filterProject) {
     const p = getProject(filterProject);
-    return p ? state.sections.filter(s=>s.id===p.section) : state.sections;
+    return p ? [p] : state.projects;
   }
-  if (filterSection) return state.sections.filter(s=>s.id===filterSection);
-  return state.sections;
+  return state.projects;
 }
 
 // ── Drawer ──
@@ -5273,104 +5211,6 @@ function renderColFilterBar() {
 
 // ── Render sidebar ──
 function plural(n, word) { return n + ' ' + word + (n === 1 ? '' : 's'); }
-
-function renderSidebar() {
-  const ul = document.getElementById('project-list');
-  ul.innerHTML = '';
-
-  const allLi = document.createElement('li');
-  const allActive = !filterSection && !filterProject;
-  allLi.className = 'proj-item' + (allActive?' active':'');
-  allLi.className += ' proj-all-item';
-  // Mirrors Drive Catalog's "All drives" row: a checkmark marks the reset
-  // scope rather than a selection fill, with the total trailing on the right.
-  const allMark = allActive
-    ? `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6.25" fill="currentColor"/><path d="M4.2 7.1l1.9 1.9 3.7-3.9" stroke="var(--surface)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`
-    : `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6.25" stroke="currentColor" stroke-width="1.2"/></svg>`;
-  allLi.innerHTML = `<span class="proj-check">${allMark}</span>
-    <div class="proj-text"><span class="proj-name">All projects</span></div>
-    <span class="proj-total">${state.tasks.length.toLocaleString()}</span>`;
-  allLi.onclick = () => { filterSection=null; filterProject=null; state.filterSection=null; state.filterProject=null; save(); renderAll(); closeDrawer(); };
-  ul.appendChild(allLi);
-
-  state.sections.forEach(sec => {
-    const secProjs = state.projects.filter(p=>p.section===sec.id && p.id!=='_todos');
-    const secTasks = state.tasks.filter(t=>{ const p=getProject(t.pid); return p&&p.section===sec.id; });
-    const secActive = filterSection===sec.id && !filterProject;
-    const isCollapsed = collapsedSections.has(sec.id);
-
-    const secLi = document.createElement('li');
-    secLi.className = 'proj-item proj-section-item' + (secActive?' active':'') + (isCollapsed?' collapsed':'');
-    secLi.innerHTML = `
-      <span class="proj-chevron"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 3.5l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-      <div class="proj-dot" style="background:${sec.color};cursor:pointer" onclick="event.stopPropagation();openSectionModal('${sec.id}')"></div>
-      <div class="proj-text">
-        <span class="proj-name" style="font-weight:500">${sec.name}</span>
-        <span class="proj-sub">${plural(secProjs.length,'project')} · ${plural(secTasks.length,'task')}</span>
-      </div>
-      <span class="proj-count">${secTasks.length}</span>
-      <button class="proj-edit-btn" title="Edit section" onclick="event.stopPropagation();openSectionModal('${sec.id}')">
-        <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M8.5 1.5l2 2-7 7H1.5v-2l7-7z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
-      </button>`;
-    secLi.onclick = () => {
-      if (collapsedSections.has(sec.id)) {
-        collapsedSections.delete(sec.id);
-      } else if (filterSection === sec.id) {
-        collapsedSections.add(sec.id);
-      } else {
-        filterSection=sec.id; filterProject=null;
-        state.filterSection=sec.id; state.filterProject=null; save();
-      }
-      renderAll();
-    };
-    ul.appendChild(secLi);
-
-    if (!isCollapsed) {
-      secProjs.forEach(p => {
-        const projTasks = state.tasks.filter(t=>t.pid===p.id);
-        const count = projTasks.length;
-        const openCount = projTasks.filter(t=>t.status!=='done' && t.status!=='archive').length;
-        const li = document.createElement('li');
-        li.className = 'proj-item proj-child-item' + (filterProject===p.id?' active':'');
-        // A filled glyph in the project colour, not a bullet — Drive Catalog
-        // leads every row with a symbol at this weight.
-        li.innerHTML = `
-          <span class="proj-glyph" style="color:${p.color}" title="Edit project" onclick="event.stopPropagation();openProjectModal('${p.id}')">
-            <svg viewBox="0 0 16 16" fill="none"><path d="M1.4 4.3c0-.72.58-1.3 1.3-1.3h3.1l1.35 1.55h6.15c.72 0 1.3.58 1.3 1.3v6.15c0 .72-.58 1.3-1.3 1.3H2.7c-.72 0-1.3-.58-1.3-1.3V4.3z" fill="currentColor"/></svg>
-          </span>
-          <div class="proj-text">
-            <span class="proj-name">${p.name}</span>
-            <span class="proj-sub">${plural(count,'task')}${openCount ? ' · ' + openCount + ' open' : ''}</span>
-          </div>
-          <span class="proj-count">${count}</span>
-          <button class="proj-edit-btn" title="Edit project" onclick="event.stopPropagation();openProjectModal('${p.id}')">
-            <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M8.5 1.5l2 2-7 7H1.5v-2l7-7z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
-          </button>`;
-        li.onclick = e => { filterProject=p.id; filterSection=null; state.filterProject=p.id; state.filterSection=null; save(); renderAll(); closeDrawer(); };
-        ul.appendChild(li);
-      });
-    }
-  });
-
-  const dot = document.getElementById('header-project-dot');
-  const titleEl = document.getElementById('header-title-text');
-  if (filterProject) {
-    const p = getProject(filterProject);
-    dot.style.display='block'; dot.style.background=p.color;
-    titleEl.textContent = p.name;
-  } else if (filterSection) {
-    const s = getSection(filterSection);
-    dot.style.display='block'; dot.style.background=s.color;
-    titleEl.textContent = s.name;
-  } else {
-    dot.style.display='none';
-    titleEl.textContent = 'All projects';
-  }
-
-  document.getElementById('nav-kanban').className = 'sidebar-item'+(currentView==='kanban'?' active':'');
-  document.getElementById('nav-list').className   = 'sidebar-item'+(currentView==='list'  ?' active':'');
-  document.getElementById('nav-today').className  = 'sidebar-item'+(currentView==='today' ?' active':'');
-}
 
 function toggleLane(id) {
   const cols = document.getElementById('lane-cols-' + id);
@@ -5687,27 +5527,28 @@ function renderKanban() {
 
   const visibleStatuses = STATUSES.filter(s => !hiddenStatuses.has(s));
 
-  sectionsToRender().forEach(sec => {
-    const tasks = sectionTasks(sec.id);
+  // One swimlane per list — folders are gone, so a list is the top level.
+  listsToRender().forEach(p => {
+    const tasks = listTasks(p.id);
     const lane = document.createElement('div');
     lane.className = 'swimlane';
 
-    lane.id = 'lane-' + sec.id;
+    lane.id = 'lane-' + p.id;
 
     const header = document.createElement('div');
     header.className = 'swimlane-header';
     header.innerHTML = `
-      <span class="swimlane-chevron" id="lane-chevron-${sec.id}">▾</span>
-      <div class="swimlane-accent" style="background:${sec.color}"></div>
-      <span class="swimlane-title">${sec.name}</span>
+      <span class="swimlane-chevron" id="lane-chevron-${p.id}">▾</span>
+      <div class="swimlane-accent" style="background:${p.color}"></div>
+      <span class="swimlane-title">${esc(listName(p.id))}</span>
       <span class="swimlane-count">${tasks.length}</span>
       <div class="swimlane-spacer"></div>`;
-    header.onclick = () => toggleLane(sec.id);
+    header.onclick = () => toggleLane(p.id);
     lane.appendChild(header);
 
     const cols = document.createElement('div');
     cols.className = 'swimlane-cols';
-    cols.id = 'lane-cols-' + sec.id;
+    cols.id = 'lane-cols-' + p.id;
 
     TIME_COLS.filter(c => !hiddenStatuses.has(c.id)).forEach(colDef => {
       const colId = colDef.id;
@@ -5717,7 +5558,7 @@ function renderKanban() {
       if (colId === 'archive') {
         colTasks = colTasks.slice().sort((a, b) => (b.archivedAt || 0) - (a.archivedAt || 0));
       }
-      const collapsed = isColCollapsed(sec.id, colId);
+      const collapsed = isColCollapsed(p.id, colId);
       const col = document.createElement('div');
       col.className = 'kanban-col'
         + (colId === 'archive' ? ' kanban-col-archive' : '')
@@ -5728,7 +5569,7 @@ function renderKanban() {
           <span class="col-title">${colDef.label}</span>
           <span class="col-count">${colTasks.length}</span>
           <span class="col-head-spacer"></span>
-          <button class="col-collapse-btn" onclick="toggleColCollapse('${sec.id}','${colId}')" data-tip="${collapsed ? 'Expand' : 'Collapse'}" aria-label="${collapsed ? 'Expand' : 'Collapse'} column">
+          <button class="col-collapse-btn" onclick="toggleColCollapse('${p.id}','${colId}')" data-tip="${collapsed ? 'Expand' : 'Collapse'}" aria-label="${collapsed ? 'Expand' : 'Collapse'} column">
             <svg width="12" height="12" viewBox="0 0 10 10" fill="none" class="col-chev${collapsed ? ' col-chev-collapsed' : ''}"><path d="M2.5 3.5L5 6l2.5-2.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
         </div>`;
@@ -5736,12 +5577,12 @@ function renderKanban() {
       const list = document.createElement('div');
       list.className = 'task-list';
       list.dataset.status = colId;
-      list.dataset.section = sec.id;
+      list.dataset.pid = p.id;
 
       if (colTasks.length === 0) {
         list.innerHTML = colId === 'archive'
           ? `<div class="empty-col empty-col-static">Drop tasks here</div>`
-          : `<div class="empty-col" onclick="addTaskInCol('${sec.id}','${colId}')" role="button" aria-label="Add a task">
+          : `<div class="empty-col" onclick="addTaskInCol('${p.id}','${colId}')" role="button" aria-label="Add a task">
                <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M5.5 1v9M1 5.5h9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
                Add or drop a task
              </div>`;
@@ -5764,7 +5605,7 @@ function renderKanban() {
         const addBtn = document.createElement('div');
         addBtn.className = 'col-add-btn';
         addBtn.innerHTML = `<svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M5.5 1v9M1 5.5h9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg> Add task`;
-        addBtn.onclick = () => addTaskInCol(sec.id, colId);
+        addBtn.onclick = () => addTaskInCol(p.id, colId);
         col.appendChild(addBtn);
       }
 
@@ -5784,10 +5625,10 @@ function renderKanban() {
   });
 }
 
-// Open the task modal pre-filled for a section + column. Used by the
+// Open the task modal pre-filled for a list + column. Used by the
 // column "Add task" button and the empty-column drop zone.
-function addTaskInCol(secId, colId) {
-  openTaskModal(null, 'wip', secId);
+function addTaskInCol(pid, colId) {
+  openTaskModal(null, 'wip', pid);
   // Pre-fill due date based on column
   setTimeout(() => {
     const dueInput = document.getElementById('task-due-input');
@@ -6141,6 +5982,7 @@ function setupDropZone(list) {
     if (!draggedId) return;
     const task = getTask(draggedId);
     if (!task) return;
+    if (list.dataset.pid && task.pid !== list.dataset.pid) task.pid = list.dataset.pid;
     setTaskCol(task, list.dataset.status);
     applyDropOrder(list, draggedId);
     if (dragPlaceholder) { dragPlaceholder.remove(); dragPlaceholder = null; }
@@ -6192,54 +6034,40 @@ function renderList() {
   const el = document.getElementById('list-view');
   el.innerHTML = '';
 
-  sectionsToRender().forEach(sec => {
-    const secProjs = filterProject
-      ? state.projects.filter(p=>p.id===filterProject)
-      : state.projects.filter(p=>p.section===sec.id);
-    if (!secProjs.length) return;
-    const secTasks = secProjs.flatMap(p=>state.tasks.filter(t=>t.pid===p.id));
-    if (!secTasks.length) return;
+  listsToRender().forEach(p => {
+    const tasks = state.tasks.filter(t=>t.pid===p.id);
+    if (!tasks.length) return;
+    const doneCount = tasks.filter(t=>t.status==='done').length;
+    const pct = tasks.length ? Math.round(doneCount/tasks.length*100) : 0;
+    const label = p.id === '_todos' ? 'General' : p.name;
 
-    const secHead = document.createElement('div');
-    secHead.className = 'list-section-head';
-    secHead.innerHTML = `<div class="swimlane-accent" style="background:${sec.color};display:inline-block;vertical-align:middle;margin-right:8px"></div><span>${sec.name}</span>`;
-    el.appendChild(secHead);
-
-    secProjs.forEach(p => {
-      const tasks = state.tasks.filter(t=>t.pid===p.id);
-      if (!tasks.length) return;
-      const doneCount = tasks.filter(t=>t.status==='done').length;
-      const pct = tasks.length ? Math.round(doneCount/tasks.length*100) : 0;
-      const label = p.id === '_todos' ? 'General' : p.name;
-
-      const block = document.createElement('div');
-      block.className = 'list-project';
-      block.dataset.pid = p.id;
-      block.innerHTML = `
-        <div class="list-proj-header" onclick="toggleListSection('${p.id}')">
-          <div class="proj-dot" style="background:${p.color}"></div>
-          <span class="list-proj-title">${label}</span>
-          <div class="list-proj-progress">
-            <div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:${pct}%;background:${p.color}"></div></div>
-            <span class="progress-label">${doneCount}/${tasks.length}</span>
-          </div>
-          <span class="list-collapse-btn" id="collapse-${p.id}">▾</span>
+    const block = document.createElement('div');
+    block.className = 'list-project';
+    block.dataset.pid = p.id;
+    block.innerHTML = `
+      <div class="list-proj-header" onclick="toggleListSection('${p.id}')">
+        <div class="proj-dot" style="background:${p.color}"></div>
+        <span class="list-proj-title">${label}</span>
+        <div class="list-proj-progress">
+          <div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:${pct}%;background:${p.color}"></div></div>
+          <span class="progress-label">${doneCount}/${tasks.length}</span>
         </div>
-        <div class="list-tasks"><table>
-          <tr><th style="width:55%">Task</th><th>Status</th></tr>
-          ${tasks.map(t => {
-            const isDone = t.status==='done';
-            return `<tr class="list-row ${isDone?'task-done':''}" onclick="openTaskModal('${t.id}')">
-              <td><div class="list-task-name">
-                <div class="list-task-check ${isDone?'done':''}" onclick="quickToggle(event,'${t.id}')">${isDone?'<svg width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M1.5 4.5l2 2 4-4" stroke="#3B6D11" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>':''}</div>
-                <span>${t.name}</span>
-              </div></td>
-              <td><span class="status-pill s-${t.status}">${statusLabel(t.status)}</span></td>
-            </tr>`;
-          }).join('')}
-        </table></div>`;
-      el.appendChild(block);
-    });
+        <span class="list-collapse-btn" id="collapse-${p.id}">▾</span>
+      </div>
+      <div class="list-tasks"><table>
+        <tr><th style="width:55%">Task</th><th>Status</th></tr>
+        ${tasks.map(t => {
+          const isDone = t.status==='done';
+          return `<tr class="list-row ${isDone?'task-done':''}" onclick="openTaskModal('${t.id}')">
+            <td><div class="list-task-name">
+              <div class="list-task-check ${isDone?'done':''}" onclick="quickToggle(event,'${t.id}')">${isDone?'<svg width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M1.5 4.5l2 2 4-4" stroke="#3B6D11" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>':''}</div>
+              <span>${t.name}</span>
+            </div></td>
+            <td><span class="status-pill s-${t.status}">${statusLabel(t.status)}</span></td>
+          </tr>`;
+        }).join('')}
+      </table></div>`;
+    el.appendChild(block);
   });
 }
 
@@ -6861,15 +6689,14 @@ function _coachEscape(s) {
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-// Is the task in a Coach-focused section? Focused sections get the full
+// Is the task in a Coach-focused list? Focused lists get the full
 // check-in treatment (today pins, stale WIP, pile-ups, empty-Today
-// suggestions). Non-focused sections only surface in the queue when the
+// suggestions). Non-focused lists only surface in the queue when the
 // item is overdue or blocked — i.e. genuinely critical.
 function _coachIsFocused(task) {
   const proj = getProject(task.pid);
   if (!proj) return true;  // orphan task: treat as focused
-  const sec  = getSection(proj.section);
-  return !sec || sec.focused === true;
+  return proj.focused !== false;
 }
 
 // Build the ordered queue of prompts. Higher priority first; cooldowns
@@ -7132,14 +6959,10 @@ function renderStatusBar() {
     const p = getProject(filterProject);
     scoped = state.tasks.filter(t => t.pid === filterProject);
     scope  = (p ? p.name : 'Project') + ' · ' + plural(scoped.length, 'task');
-  } else if (filterSection) {
-    const s = getSection(filterSection);
-    scoped = state.tasks.filter(t => { const p = getProject(t.pid); return p && p.section === filterSection; });
-    scope  = (s ? s.name : 'Section') + ' · ' + plural(scoped.length, 'task');
   } else {
     scoped = state.tasks;
-    const projCount = state.projects.filter(p => p.id !== '_todos').length;
-    scope  = 'All ' + plural(projCount, 'project') + ' · ' + plural(scoped.length, 'task');
+    const listCount = state.projects.filter(p => p.id !== '_todos').length;
+    scope  = 'All ' + plural(listCount, 'list') + ' · ' + plural(scoped.length, 'task');
   }
   right.textContent = scope;
 
@@ -7190,22 +7013,15 @@ function renderAll() {
 // ── Task modal ──
 function buildProjectSelect(sel) {
   sel.innerHTML = '';
-  state.sections.forEach(sec => {
-    const projs = state.projects.filter(p=>p.section===sec.id);
-    if (!projs.length) return;
-    const grp = document.createElement('optgroup');
-    grp.label = sec.name;
-    projs.forEach(p => {
-      const opt = document.createElement('option');
-      opt.value = p.id;
-      opt.textContent = p.id === '_todos' ? 'General' : p.name;
-      grp.appendChild(opt);
-    });
-    sel.appendChild(grp);
+  state.projects.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.id;
+    opt.textContent = p.id === '_todos' ? 'General' : p.name;
+    sel.appendChild(opt);
   });
 }
 
-function openTaskModal(id=null, defaultStatus='next', defaultSectionId=null) {
+function openTaskModal(id=null, defaultStatus='next', defaultListId=null) {
   editingTaskId = id;
   const modal = document.getElementById('task-modal');
   const sel = document.getElementById('task-project-select');
@@ -7225,12 +7041,8 @@ function openTaskModal(id=null, defaultStatus='next', defaultSectionId=null) {
     document.getElementById('task-notes-input').value = '';
     document.getElementById('task-due-input').value = '';
     document.getElementById('task-status-select').value = defaultStatus;
-    if (filterProject) sel.value = filterProject;
-    else if (defaultSectionId === 'general') sel.value = '_todos';
-    else if (defaultSectionId) {
-      const projs = state.projects.filter(p=>p.section===defaultSectionId && p.id!=='_todos');
-      if (projs.length === 1) sel.value = projs[0].id;
-    }
+    if (defaultListId && getProject(defaultListId)) sel.value = defaultListId;
+    else if (filterProject) sel.value = filterProject;
   }
   modal.classList.add('open');
   setTimeout(()=>document.getElementById('task-name-input').focus(), 100);
@@ -7284,127 +7096,9 @@ function setProjectColor(c) {
     .forEach(el => el.classList.toggle('selected', el.dataset.color === c));
 }
 
-function openProjectModal(id=null) {
-  editingProjectId = id;
-  const secSel = document.getElementById('proj-section-select');
-  secSel.innerHTML = state.sections.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
-  if (id) {
-    const p = getProject(id);
-    if (!p) return;
-    document.getElementById('proj-name-input').value = id === '_todos' ? '' : p.name;
-    document.getElementById('proj-modal-title').textContent = 'Edit project';
-    secSel.value = p.section || 'studio';
-    document.getElementById('proj-name-input').disabled = id === '_todos';
-    secSel.disabled = id === '_todos';
-    setProjectColor(p.color);
-  } else {
-    document.getElementById('proj-name-input').value = '';
-    document.getElementById('proj-modal-title').textContent = 'New project';
-    secSel.value = filterSection || 'studio';
-    document.getElementById('proj-name-input').disabled = false;
-    secSel.disabled = false;
-    setProjectColor(COLORS[0]);
-  }
-  const opts = document.getElementById('color-options');
-  opts.innerHTML = COLORS.map(c=>`<div class="color-opt${c===selectedColor?' selected':''}" style="background:${c}" data-color="${c}" onclick="setProjectColor('${c}')"></div>`).join('');
-  document.getElementById('project-modal').classList.add('open');
-  if (!editingProjectId) setTimeout(()=>document.getElementById('proj-name-input').focus(),100);
-}
 function closeProjectModal() {
   document.getElementById('project-modal').classList.remove('open');
   document.getElementById('proj-name-input').disabled = false;
-  document.getElementById('proj-section-select').disabled = false;
-}
-function saveProject() {
-  const section = document.getElementById('proj-section-select').value;
-  if (editingProjectId) {
-    const p = getProject(editingProjectId);
-    if (!p) return;
-    p.color = selectedColor;
-    if (editingProjectId !== '_todos') {
-      const name = document.getElementById('proj-name-input').value.trim();
-      if (!name) return;
-      p.name = name; p.section = section;
-    }
-  } else {
-    const name = document.getElementById('proj-name-input').value.trim();
-    if (!name) return;
-    state.projects.push({id:uid(),name,color:selectedColor,section});
-  }
-  save(); closeProjectModal(); renderAll();
-}
-
-// ── Section modal ──
-let editingSectionId = null;
-let selectedSectionColor = COLORS[0];
-
-function setSectionColor(c) {
-  selectedSectionColor = c;
-  const swatch = document.getElementById('sec-swatch');
-  const hex    = document.getElementById('sec-color-hex');
-  const native = document.getElementById('sec-color-native');
-  if (swatch) swatch.style.background = c;
-  if (hex && document.activeElement !== hex) hex.value = c.toUpperCase();
-  if (native) native.value = c;
-  document.querySelectorAll('#section-color-options .color-opt')
-    .forEach(el => el.classList.toggle('selected', el.dataset.color === c));
-}
-
-let draftFolderEmoji = '🗂️';
-function renderSecEmojiBtn() {
-  const b = document.getElementById('sec-emoji-btn');
-  if (b) b.textContent = draftFolderEmoji;
-}
-function openSectionModal(id) {
-  editingSectionId = id;
-  const sec = id ? getSection(id) : null;
-  if (id && !sec) return;
-  const nCreated = state.sections.length;
-  const color = sec ? sec.color : COLORS[nCreated % COLORS.length];
-
-  document.getElementById('section-modal-title').textContent = sec ? 'Edit folder' : 'New folder';
-  document.getElementById('section-name-input').value = sec ? sec.name : '';
-  draftFolderEmoji = sec ? (sec.emoji || '🗂️') : folderEmojiPool()[nCreated % folderEmojiPool().length];
-  renderSecEmojiBtn();
-
-  const opts = document.getElementById('section-color-options');
-  opts.innerHTML = COLORS.map(c=>`<div class="color-opt${c===color?' selected':''}" style="background:${c}" data-color="${c}" onclick="setSectionColor('${c}')"></div>`).join('');
-  setSectionColor(color);
-
-  const focusInput = document.getElementById('section-focused-input');
-  if (focusInput) focusInput.checked = sec ? sec.focused === true : false;
-
-  // General ToDos is the fallback every other folder empties into, so it
-  // cannot be removed.
-  const del = document.getElementById('sec-delete-btn');
-  if (del) del.style.display = (sec && id !== 'general') ? '' : 'none';
-
-  document.getElementById('section-modal').classList.add('open');
-  setTimeout(()=>document.getElementById('section-name-input').focus(), 100);
-}
-function closeSectionModal() { document.getElementById('section-modal').classList.remove('open'); }
-function saveSection() {
-  const name = document.getElementById('section-name-input').value.trim();
-  if (!name) { document.getElementById('section-name-input').focus(); return; }
-  const focusInput = document.getElementById('section-focused-input');
-  const focused = focusInput ? focusInput.checked : false;
-
-  if (editingSectionId) {
-    const sec = getSection(editingSectionId);
-    if (!sec) return;
-    sec.name = name;
-    sec.color = selectedSectionColor;
-    sec.emoji = draftFolderEmoji;
-    sec.focused = focused;
-    save(); closeSectionModal(); renderAll();
-    return;
-  }
-  const sec = {id: uid(), name, color: selectedSectionColor, emoji: draftFolderEmoji, focused};
-  state.sections.push(sec);
-  save(); closeSectionModal();
-  // Drop straight into the new folder so the next step — adding a list — is
-  // one click away.
-  openScope({type:'section', id: sec.id});
 }
 
 // ── Context menu ──
@@ -7423,14 +7117,12 @@ document.getElementById('ctx-delete').onclick = () => { hideCtx(); deleteTask(ct
 function hideCtx() { document.getElementById('ctx-menu').style.display = 'none'; }
 document.addEventListener('click', hideCtx);
 document.addEventListener('keydown', e => {
-  if (e.key==='Escape') { closeTaskModal(); closeProjectModal(); closeSectionModal(); closeSyncModal(); hideCtx(); closeDrawer(); }
+  if (e.key==='Escape') { closeTaskModal(); closeProjectModal(); closeSyncModal(); hideCtx(); closeDrawer(); }
   if (e.key==='Enter' && document.getElementById('task-modal').classList.contains('open') && document.activeElement.tagName!=='TEXTAREA') saveTask();
-  if (e.key==='Enter' && document.getElementById('section-modal').classList.contains('open')) saveSection();
 });
 
 document.getElementById('task-modal').addEventListener('click', e => { if(e.target===e.currentTarget) closeTaskModal(); });
 document.getElementById('project-modal').addEventListener('click', e => { if(e.target===e.currentTarget) closeProjectModal(); });
-document.getElementById('section-modal').addEventListener('click', e => { if(e.target===e.currentTarget) closeSectionModal(); });
 document.getElementById('sync-modal').addEventListener('click', e => { if(e.target===e.currentTarget) closeSyncModal(); });
 
 // ── Firebase Sync ──
@@ -7577,7 +7269,7 @@ async function pushToFirebase() {
   if (!firebaseURL || !firebaseAPIKey) return;
   isSendingToFirebase = true;
   try {
-    const toSync = {...state, filterSection: null, filterProject: null};
+    const toSync = {...state, filterProject: null};
     const res = await firebaseFetch(`${firebaseURL}/elastik.json`, {
       method: 'PUT',
       headers: {'Content-Type': 'application/json'},
@@ -7597,7 +7289,6 @@ function migrateRemote(data) {
   applyMigrations(data);
   // Keep device-local filter state — these live on the device, not in
   // the shared cloud snapshot.
-  data.filterSection = filterSection;
   data.filterProject = filterProject;
   return data;
 }
@@ -7635,8 +7326,8 @@ function startFirebaseStream() {
     try {
       const remote = JSON.parse(e.data).data;
       if (!remote || !remote.tasks) return;
-      if (JSON.stringify({...remote, filterSection:null, filterProject:null}) ===
-          JSON.stringify({...state,  filterSection:null, filterProject:null})) return;
+      if (JSON.stringify({...remote, filterProject:null}) ===
+          JSON.stringify({...state,  filterProject:null})) return;
       state = migrateRemote(remote);
       // Keep the device-local view; don't clobber it with what another device wrote.
       localStorage.setItem('elastik_v3', JSON.stringify(state));
@@ -7898,7 +7589,7 @@ function flushPendingSync() {
   try { pending = !!localStorage.getItem('elastik_pending_sync'); } catch(_) {}
   if (!syncTimer && !pending) return;
   if (syncTimer) { clearTimeout(syncTimer); syncTimer = null; }
-  const toSync = {...state, filterSection: null, filterProject: null};
+  const toSync = {...state, filterProject: null};
   try {
     fetch(`${firebaseURL}/elastik.json?auth=${firebaseToken}`, {
       method: 'PUT',
@@ -8143,10 +7834,8 @@ function quickAddClient(clientSelectId, taskSelectId) {
   const used = new Set(state.projects.map(p => p.color));
   const free = COLORS.filter(c => !used.has(c));
   const color = free.length ? free[0] : COLORS[Math.floor(Math.random() * COLORS.length)];
-  // Default new clients into the 'studio' section (or first available section)
-  const defaultSection = state.sections.find(s => s.id === 'studio') || state.sections[0];
   const id = uid();
-  state.projects.push({ id, name, color, section: defaultSection.id });
+  state.projects.push({ id, name, color, focused: true });
   save();
   renderSidebar();
   populateClientSelect(clientSelectId, id);
@@ -8866,7 +8555,7 @@ function pushRecentEmoji(e) {
   try { localStorage.setItem('mc_recent_emoji', JSON.stringify(list)); } catch (_) {}
 }
 
-/* One picker for lists, folders and filters. `onPick` receives the emoji. */
+/* One picker for lists and filters. `onPick` receives the emoji. */
 function pickEmoji(anchor, current, onPick) {
   closePops();
   const pop = document.createElement('div');
@@ -8951,10 +8640,7 @@ function uiSave() {
 
 /* Shape additions this shell relies on. Called from applyMigrations, so it
    runs for the local blob and for every remote snapshot alike. */
-function folderEmojiPool() { return ['🗂️','💼','🎬','🏡','🧭','📦','🎓','🌱']; }
 function shellMigrate(raw) {
-  const fpool = folderEmojiPool();
-  (raw.sections || []).forEach((sec, i) => { if (!sec.emoji) sec.emoji = fpool[i % fpool.length]; });
   if (!Array.isArray(raw.savedFilters)) raw.savedFilters = [];
   if (!Array.isArray(raw.trash)) raw.trash = [];
   if (typeof raw.listLimit !== 'number') raw.listLimit = 9;
@@ -9035,16 +8721,20 @@ function allTags() {
 
 // ── Scope: what the task pane is showing ───────────────────────────────
 let taskScope = (function () {
-  try { return JSON.parse(localStorage.getItem('mc_scope')) || {type:'today'}; }
+  try {
+    const s = JSON.parse(localStorage.getItem('mc_scope')) || {type:'today'};
+    // Folder scopes no longer exist — anyone whose last session ended on one
+    // lands on Today instead.
+    return s.type === 'section' ? {type:'today'} : s;
+  }
   catch (_) { return {type:'today'}; }
 })();
 function saveScope() { try { localStorage.setItem('mc_scope', JSON.stringify(taskScope)); } catch (_) {} }
-/* The board, list and time views read filterProject/filterSection, and the
-   restored scope is the authority on startup — otherwise the toolbar title
-   still names whatever list was open two sessions ago. */
-if (taskScope.type === 'list')         { filterProject = taskScope.id; filterSection = null; }
-else if (taskScope.type === 'section') { filterSection = taskScope.id; filterProject = null; }
-else if (taskScope.type === 'all')     { filterProject = null; filterSection = null; }
+/* The board, list and time views read filterProject, and the restored scope
+   is the authority on startup — otherwise the toolbar title still names
+   whatever list was open two sessions ago. */
+if (taskScope.type === 'list')     { filterProject = taskScope.id; }
+else if (taskScope.type === 'all') { filterProject = null; }
 
 function scopeTitle() {
   switch (taskScope.type) {
@@ -9060,7 +8750,6 @@ function scopeTitle() {
       return f ? f.name : 'Filter';
     }
     case 'list':      return listName(taskScope.id);
-    case 'section': { const s = getSection(taskScope.id); return s ? s.name : 'Section'; }
   }
   return 'Tasks';
 }
@@ -9078,7 +8767,6 @@ function scopeEmoji() {
       return (f && f.emoji) || '🔍';
     }
     case 'list': return listEmoji(taskScope.id);
-    case 'section': { const sec = getSection(taskScope.id); return (sec && sec.emoji) || '🗂️'; }
   }
   return '📄';
 }
@@ -9123,9 +8811,6 @@ function scopeTasks() {
       break;
     case 'list':
       out = out.filter(t => t.pid === taskScope.id);
-      break;
-    case 'section':
-      out = out.filter(t => { const p = getProject(t.pid); return p && p.section === taskScope.id; });
       break;
     case 'tag':
       out = out.filter(t => (t.tags || []).includes(taskScope.id));
@@ -9183,10 +8868,9 @@ function openScope(sc) {
   detailTaskId = null;
   // Keep the board/list/time views' own filters in step, so switching to the
   // board from a list lands on that list rather than on everything.
-  if (sc.type === 'list')         { filterProject = sc.id;  filterSection = null; }
-  else if (sc.type === 'section') { filterSection = sc.id;  filterProject = null; }
-  else if (sc.type === 'all')     { filterProject = null;   filterSection = null; }
-  state.filterProject = filterProject; state.filterSection = filterSection;
+  if (sc.type === 'list')     { filterProject = sc.id; }
+  else if (sc.type === 'all') { filterProject = null; }
+  state.filterProject = filterProject;
   setView('tasks');
   closeDrawer();
 }
@@ -9257,63 +8941,22 @@ function renderListsGroup() {
   const grp = document.getElementById('grp-lists');
   if (grp) grp.classList.toggle('collapsed', UI.sbCollapsed.has('lists'));
 
-  state.sections.forEach(sec => {
-    const projs = state.projects.filter(p => p.section === sec.id);
-    const secKey = 'sec:' + sec.id;
-    const secCollapsed = UI.sbCollapsed.has(secKey);
-
-    const secOpen = state.tasks.filter(t => {
-      const p = getProject(t.pid);
-      return p && p.section === sec.id && isOpen(t);
-    }).length;
-    const secActive = currentView === 'tasks' && taskScope.type === 'section' && taskScope.id === sec.id;
-
-    const head = document.createElement('li');
-    head.className = 'sb-row sb-folder' + (secCollapsed ? ' collapsed' : '') + (secActive ? ' active' : '');
-    head.innerHTML = `
-      <span class="sb-twisty" title="Expand or collapse"><svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M2 3.5l3 3 3-3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-      <span class="sb-emoji" title="Change icon">${sec.emoji || '🗂️'}</span>
-      <span class="sb-name">${esc(sec.name)}</span>
-      <span class="sb-count">${secOpen || ''}</span>
-      <button class="sb-more" aria-label="Folder actions"><svg width="12" height="12" viewBox="0 0 18 18" fill="none"><circle cx="4" cy="9" r="1.5" fill="currentColor"/><circle cx="9" cy="9" r="1.5" fill="currentColor"/><circle cx="14" cy="9" r="1.5" fill="currentColor"/></svg></button>`;
-    head.onclick = () => openScope({type:'section', id: sec.id});
-    head.oncontextmenu = e => { e.preventDefault(); openSectionMenu(e, sec.id); };
-    head.querySelector('.sb-twisty').onclick = e => {
-      e.stopPropagation();
-      if (secCollapsed) UI.sbCollapsed.delete(secKey); else UI.sbCollapsed.add(secKey);
-      uiSave(); renderSidebar();
-    };
-    head.querySelector('.sb-emoji').onclick = e => { e.stopPropagation(); openFolderEmojiPicker(e.currentTarget, sec.id); };
-    head.querySelector('.sb-more').onclick  = e => { e.stopPropagation(); openSectionMenu(e, sec.id); };
-    attachFolderDrop(head, sec.id);
-    ul.appendChild(head);
-    if (secCollapsed) return;
-
-    projs.forEach(p => {
-      const count = state.tasks.filter(t => t.pid === p.id && isOpen(t)).length;
-      const active = currentView === 'tasks' && taskScope.type === 'list' && taskScope.id === p.id;
-      const li = document.createElement('li');
-      li.className = 'sb-row sb-nested' + (active ? ' active' : '');
-      li.innerHTML = `
-        <span class="sb-emoji" title="Change icon">${p.emoji || '📄'}</span>
-        <span class="sb-name">${esc(p.id === '_todos' ? 'General' : p.name)}</span>
-        <span class="sb-count">${count || ''}</span>
-        <button class="sb-more" aria-label="List actions"><svg width="12" height="12" viewBox="0 0 18 18" fill="none"><circle cx="4" cy="9" r="1.5" fill="currentColor"/><circle cx="9" cy="9" r="1.5" fill="currentColor"/><circle cx="14" cy="9" r="1.5" fill="currentColor"/></svg></button>`;
-      li.onclick = () => openScope({type:'list', id:p.id});
-      li.oncontextmenu = e => { e.preventDefault(); openListRowMenu(e, p.id); };
-      li.querySelector('.sb-emoji').onclick = e => { e.stopPropagation(); openEmojiPicker(e.currentTarget, p.id); };
-      li.querySelector('.sb-more').onclick  = e => { e.stopPropagation(); openListRowMenu(e, p.id); };
-      attachListDrop(li, p.id);
-      ul.appendChild(li);
-    });
-
-    if (!projs.length) {
-      const empty = document.createElement('li');
-      empty.className = 'sb-row sb-nested sb-empty-folder';
-      empty.innerHTML = `<span class="sb-emoji">＋</span><span class="sb-name">New list</span>`;
-      empty.onclick = () => { filterSection = sec.id; openProjectModal(); };
-      ul.appendChild(empty);
-    }
+  state.projects.forEach(p => {
+    const count = state.tasks.filter(t => t.pid === p.id && isOpen(t)).length;
+    const active = currentView === 'tasks' && taskScope.type === 'list' && taskScope.id === p.id;
+    const li = document.createElement('li');
+    li.className = 'sb-row' + (active ? ' active' : '');
+    li.innerHTML = `
+      <span class="sb-emoji" title="Change icon">${p.emoji || '📄'}</span>
+      <span class="sb-name">${esc(p.id === '_todos' ? 'General' : p.name)}</span>
+      <span class="sb-count">${count || ''}</span>
+      <button class="sb-more" aria-label="List actions"><svg width="12" height="12" viewBox="0 0 18 18" fill="none"><circle cx="4" cy="9" r="1.5" fill="currentColor"/><circle cx="9" cy="9" r="1.5" fill="currentColor"/><circle cx="14" cy="9" r="1.5" fill="currentColor"/></svg></button>`;
+    li.onclick = () => openScope({type:'list', id:p.id});
+    li.oncontextmenu = e => { e.preventDefault(); openListRowMenu(e, p.id); };
+    li.querySelector('.sb-emoji').onclick = e => { e.stopPropagation(); openEmojiPicker(e.currentTarget, p.id); };
+    li.querySelector('.sb-more').onclick  = e => { e.stopPropagation(); openListRowMenu(e, p.id); };
+    attachListDrop(li, p.id);
+    ul.appendChild(li);
   });
 }
 
@@ -9422,13 +9065,9 @@ function renderSidebar() {
       const p = getProject(filterProject);
       dot.style.display = 'block'; dot.style.background = p ? p.color : 'transparent';
       titleEl.textContent = p ? p.name : 'Project';
-    } else if (filterSection) {
-      const s = getSection(filterSection);
-      dot.style.display = 'block'; dot.style.background = s ? s.color : 'transparent';
-      titleEl.textContent = s ? s.name : 'Section';
     } else {
       dot.style.display = 'none';
-      titleEl.textContent = 'All projects';
+      titleEl.textContent = 'All lists';
     }
   }
   const initials = (localStorage.getItem('mc_initials') || 'MC').slice(0, 2).toUpperCase();
@@ -9443,22 +9082,6 @@ function renderRail() {
     document.getElementById(id)?.classList.toggle('active', map[currentView] === id));
   const bell = document.getElementById('rail-bell');
   if (bell) bell.classList.toggle('has-alert', notificationItems().length > 0);
-}
-
-/* Dropping a task on a folder moves it to the first list in that folder. */
-function attachFolderDrop(el, sid) {
-  el.ondragover = e => { if (dragTaskId) { e.preventDefault(); el.classList.add('drop-target'); } };
-  el.ondragleave = () => el.classList.remove('drop-target');
-  el.ondrop = e => {
-    el.classList.remove('drop-target');
-    if (!dragTaskId) return;
-    e.preventDefault(); e.stopPropagation();
-    const t = getTask(dragTaskId);
-    const target = state.projects.find(p => p.section === sid);
-    if (!t || !target) return;
-    t.pid = target.id; t.updatedAt = Date.now();
-    save(); renderAll();
-  };
 }
 
 /* Dropping a task onto a sidebar row re-files it. */
@@ -10179,8 +9802,7 @@ function openPriorityMenu(anchor, id) {
   })), {title:'Priority'});
 }
 /* Move-to-list: a searchable picker, with the general list pinned on top and
-   the current one marked. Folders come along as quiet group labels so two
-   lists with the same name stay tellable apart. */
+   the current one marked. */
 function openMoveMenu(anchor, id) {
   const t = getTask(id);
   if (!t) return;
@@ -10217,11 +9839,7 @@ function openMoveMenu(anchor, id) {
     const general = state.projects.find(p => p.id === '_todos');
     if (general && match(general)) html += row(general);
 
-    state.sections.forEach(sec => {
-      const projs = state.projects.filter(p => p.section === sec.id && p.id !== '_todos' && match(p));
-      if (!projs.length) return;
-      html += `<div class="move-group">${esc(sec.name)}</div>` + projs.map(row).join('');
-    });
+    html += state.projects.filter(p => p.id !== '_todos' && match(p)).map(row).join('');
 
     box.innerHTML = html || '<div class="pop-empty">No list matches that.</div>';
     box.querySelectorAll('.move-item').forEach(el => el.onclick = () => {
@@ -10549,40 +10167,6 @@ function openListRowMenu(evt, pid) {
   if (pid !== '_todos') items.push({sep:true}, {label:'Delete list', danger:true, fn: () => deleteListWithTasks(pid)});
   showPop(evt.currentTarget || evt, items);
 }
-function openSectionMenu(evt, sid) {
-  const items = [
-    {label:'Show all tasks in folder', icon:'→', fn: () => openScope({type:'section', id:sid})},
-    {label:'Change icon…', icon:'😀', fn: () => openFolderEmojiPicker(evt.currentTarget || evt, sid)},
-    {label:'Edit folder…', icon:'✏️', fn: () => openSectionModal(sid)},
-    {label:'New list in folder', icon:'＋', fn: () => { filterSection = sid; openProjectModal(); }},
-  ];
-  if (sid !== 'general') items.push({sep:true}, {label:'Delete folder', danger:true, fn: () => deleteFolder(sid)});
-  showPop(evt.currentTarget || evt, items);
-}
-
-/* Deleting a folder never deletes work — its lists move to General ToDos. */
-function deleteFolder(sid) {
-  const sec = getSection(sid);
-  if (!sec || sid === 'general') return;
-  const lists = state.projects.filter(p => p.section === sid);
-  const msg = lists.length
-    ? `Delete the folder “${sec.name}”? Its ${lists.length} list${lists.length === 1 ? '' : 's'} move to General ToDos — no tasks are deleted.`
-    : `Delete the empty folder “${sec.name}”?`;
-  if (!confirm(msg)) return;
-  lists.forEach(p => { p.section = 'general'; });
-  state.sections = state.sections.filter(x => x.id !== sid);
-  if (filterSection === sid) { filterSection = null; state.filterSection = null; }
-  if (taskScope.type === 'section' && taskScope.id === sid) { taskScope = {type:'today'}; saveScope(); }
-  save(); renderAll();
-}
-
-/* The Lists header's + offers both kinds of container. */
-function openNewMenu(anchor) {
-  showPop(anchor, [
-    {label:'New list', icon:'📄', fn: () => openProjectModal()},
-    {label:'New folder', icon:'🗂️', fn: () => openSectionModal(null)},
-  ]);
-}
 function deleteListWithTasks(pid) {
   const p = getProject(pid);
   if (!p || pid === '_todos') return;
@@ -10600,11 +10184,6 @@ function openEmojiPicker(anchor, pid) {
   const p = getProject(pid);
   if (!p) return;
   pickEmoji(anchor, p.emoji, e => { p.emoji = e; save(); renderAll(); });
-}
-function openFolderEmojiPicker(anchor, sid) {
-  const sec = getSection(sid);
-  if (!sec) return;
-  pickEmoji(anchor, sec.emoji, e => { sec.emoji = e; save(); renderAll(); });
 }
 
 function notificationItems() {
@@ -10793,24 +10372,21 @@ function openProjectModal(id = null) {
     showToast(`List cap reached (${used}/${state.listLimit}). Raise it from the Lists header.`);
     return;
   }
-  const secSel = document.getElementById('proj-section-select');
-  secSel.innerHTML = state.sections.map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join('');
+  const focusInput = document.getElementById('proj-focused-input');
   if (id) {
     const p = getProject(id);
     if (!p) return;
     document.getElementById('proj-name-input').value = id === '_todos' ? '' : p.name;
     document.getElementById('proj-modal-title').textContent = 'Edit list';
-    secSel.value = p.section || 'studio';
+    if (focusInput) focusInput.checked = p.focused !== false;
     document.getElementById('proj-name-input').disabled = id === '_todos';
-    secSel.disabled = id === '_todos';
     setProjectColor(p.color);
     draftListEmoji = p.emoji || '📄';
   } else {
     document.getElementById('proj-name-input').value = '';
     document.getElementById('proj-modal-title').textContent = 'New list';
-    secSel.value = filterSection || 'studio';
+    if (focusInput) focusInput.checked = true;
     document.getElementById('proj-name-input').disabled = false;
-    secSel.disabled = false;
     setProjectColor(COLORS[used % COLORS.length]);
     draftListEmoji = listEmojiPool()[used % listEmojiPool().length];
   }
@@ -10825,21 +10401,23 @@ function renderProjEmojiGrid() {
   if (btn) btn.textContent = draftListEmoji;
 }
 function saveProject() {
-  const section = document.getElementById('proj-section-select').value;
+  const focusInput = document.getElementById('proj-focused-input');
+  const focused = focusInput ? focusInput.checked : true;
   if (editingProjectId) {
     const p = getProject(editingProjectId);
     if (!p) return;
     p.color = selectedColor;
     p.emoji = draftListEmoji;
+    p.focused = focused;
     if (editingProjectId !== '_todos') {
       const name = document.getElementById('proj-name-input').value.trim();
       if (!name) return;
-      p.name = name; p.section = section;
+      p.name = name;
     }
   } else {
     const name = document.getElementById('proj-name-input').value.trim();
     if (!name) return;
-    const p = {id: uid(), name, color: selectedColor, section, emoji: draftListEmoji};
+    const p = {id: uid(), name, color: selectedColor, emoji: draftListEmoji, focused};
     state.projects.push(p);
     save(); closeProjectModal(); openScope({type:'list', id: p.id});
     return;
