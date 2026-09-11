@@ -10830,14 +10830,47 @@ function asanaFindTask(gid) {
 }
 /* Refresh the fields Asana owns; leave everything Mission Control owns
    (status, priority, time entries, attachments, local tags) alone. */
-function asanaApply(t, a, reason, projUrl) {
+/* Asana's plain `text` collapses a mention to a bare name; the HTML keeps the
+   paragraph breaks worth preserving. Decoding is left to the parser — hand-
+   rolled entity replacement mangles every umlaut, and these comments are
+   mostly German. DOMParser builds an inert document: no scripts run and no
+   images are fetched, unlike innerHTML on a live node. */
+function asanaCommentText(s) {
+  const html = s.html_text || '';
+  const plain = (s.text || '').trim();
+  if (!html) return plain;
+  try {
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    doc.body.querySelectorAll('script,style').forEach(el => el.remove());
+    doc.body.querySelectorAll('br').forEach(br => br.replaceWith('\n'));
+    doc.body.querySelectorAll('p,div,li,h1,h2,h3,h4,h5,h6').forEach(el => el.append('\n'));
+    const out = (doc.body.textContent || '')
+      .replace(/[ \t]+\n/g, '\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+    return out || plain;
+  } catch(_) { return plain; }
+}
+function asanaMentionNote(m) {
+  if (!m || !m.text) return '';
+  const when = m.at ? new Date(m.at) : null;
+  const stamp = when && !isNaN(when)
+    ? when.toLocaleDateString(undefined, {day: 'numeric', month: 'short'}) + ', ' +
+      when.toLocaleTimeString(undefined, {hour: '2-digit', minute: '2-digit'})
+    : '';
+  return `${m.author}${stamp ? ' · ' + stamp : ''}\n${m.text}`;
+}
+function asanaApply(t, a, reason, projUrl, mention) {
   const projNames = (a.projects || []).map(p => p.name).filter(Boolean);
   const projTags  = projNames.map(asanaTag).filter(Boolean);
   t.name    = a.name || '(untitled)';
   t.dueDate = a.due_on || (a.due_at ? a.due_at.slice(0, 10) : '');
-  // Only mirror the description while nobody has rewritten it here with the
-  // rich editor — noteEJ means the block editor owns this body now.
-  if (!t.noteEJ) t.notes = a.notes || '';
+  /* The body is the reason this task is on the board: the most recent comment
+     that named you, not the task's own description. Tasks that are here only
+     because they're assigned to you have no such comment, so those keep the
+     description. Skipped once the rich editor owns the body (noteEJ). */
+  const mentionNote = asanaMentionNote(mention);
+  if (!t.noteEJ) t.notes = mentionNote || a.notes || '';
   const keep = (t.tags || []).filter(x => !t._asanaTags || !t._asanaTags.includes(x));
   t.tags = [...new Set([...keep, ...projTags])];
   t._asanaTags = projTags;
@@ -10962,7 +10995,7 @@ async function asanaSync(opts = {}) {
     const needStories = [];
     followed.forEach(a => {
       const c = mentionCache[a.gid];
-      if (!c || c.checked < (a.modified_at || '')) needStories.push(a);
+      if (!c || c.checked < (a.modified_at || '') || (c.hit && !c.mention)) needStories.push(a);
     });
     assigned.forEach(a => { if ((a.modified_at || '') > since) needStories.push(a); });
 
@@ -10975,11 +11008,20 @@ async function asanaSync(opts = {}) {
       try {
         stories = await asanaGet(`/tasks/${a.gid}/stories`, {opt_fields: ASANA_STORY_FIELDS, limit: 100}) || [];
       } catch(_) { continue; }                 // a task we lost access to shouldn't kill the run
-      let hit = false;
+      let hit = false, mention = null;
       stories.forEach(s => {
         if (s.resource_subtype !== 'comment_added') return;
         const mine = asanaMentionsMe(s, myGid, myName);
-        if (mine) hit = true;
+        if (mine) {
+          hit = true;
+          // Stories come back oldest first, but don't rely on it — compare.
+          if (!mention || (s.created_at || '') > (mention.at || ''))
+            mention = {
+              at: s.created_at || '',
+              author: (s.created_by && s.created_by.name) || 'Someone',
+              text: asanaCommentText(s),
+            };
+        }
         const byMe = s.created_by && s.created_by.gid === myGid;
         if (byMe || (s.created_at || '') <= noteSince) return;
         const assignedToMe = !!(a.assignee && a.assignee.gid === myGid);
@@ -10996,7 +11038,7 @@ async function asanaSync(opts = {}) {
           read: false,
         });
       });
-      mentionCache[a.gid] = {hit, checked: a.modified_at || startedAt};
+      mentionCache[a.gid] = {hit, checked: a.modified_at || startedAt, mention};
       // Remember where mentions actually happen, so that project keeps being
       // walked even once the user has no task of their own in it.
       if (hit) (a.projects || []).forEach(p => { mentionProj[p.gid] = startedAt; });
@@ -11032,7 +11074,7 @@ async function asanaSync(opts = {}) {
         state.tasks.unshift(t);
         added++;
       } else updated++;
-      asanaApply(t, a, reason, projUrl);
+      asanaApply(t, a, reason, projUrl, (mentionCache[gid] || {}).mention);
     });
     /* Anything imported that Asana no longer hands back is done, reassigned,
        or out of reach. Close it rather than delete it — time entries and
