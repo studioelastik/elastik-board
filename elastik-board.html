@@ -3493,6 +3493,7 @@ label.focus-row {
   display: flex; flex-direction: column; min-height: 0;
   background: var(--pane-bg, var(--surface));
   overflow: hidden;
+  position: relative;   /* anchors #detail-drop */
 }
 #detail-empty {
   flex: 1; display: flex; align-items: center; justify-content: center;
@@ -3510,6 +3511,44 @@ label.focus-row {
 #detail-head .dh-label { font-size: 11.5px; color: var(--text-3); flex: 1; min-width: 0;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #detail-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 4px 16px 24px; }
+
+/* ── Detail-pane attachments ──────────────────────────────────────────
+   Same blocks as the expanded card's gallery, but the pane is 240–560px
+   wide, so the thumbnails are capped a good deal harder. */
+#detail-attach {
+  display: flex; flex-wrap: wrap; gap: 8px; padding-top: 12px;
+}
+#detail-attach:empty { display: none; }
+#detail-attach .attach-block.is-image img { max-width: 132px; max-height: 96px; }
+#detail-attach .attach-block.is-video { max-width: 132px; }
+#detail-attach .attach-block.is-file {
+  min-width: 0; max-width: 100%; padding: 8px 10px; gap: 8px;
+}
+#detail-attach .attach-file-icon { font-size: 20px; }
+#detail-attach .attach-file-name { font-size: 12px; }
+
+#detail-attach-btn {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  width: 100%; margin-top: 12px; padding: 9px 12px;
+  border: 1.5px dashed var(--border-strong); border-radius: 8px;
+  background: transparent; color: var(--text-3);
+  font-family: inherit; font-size: 12px; cursor: pointer;
+  transition: border-color .15s, color .15s, background .15s;
+}
+#detail-attach-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }
+
+/* The drop affordance covers the pane rather than outlining it, since the
+   body scrolls and an outline would slide out of view. pointer-events:none
+   is load-bearing — the overlay must never swallow the drop itself. */
+#detail-drop {
+  position: absolute; inset: 6px; z-index: 40; pointer-events: none;
+  display: none; align-items: center; justify-content: center;
+  padding: 20px; text-align: center;
+  border: 2.5px dashed var(--accent); border-radius: 10px;
+  background: var(--accent-bg);
+  color: var(--accent); font-size: 13px; font-weight: 500;
+}
+#detail-pane.file-drag-over #detail-drop { display: flex; }
 #detail-title {
   font-size: 16px; font-weight: 600; line-height: 1.35; color: var(--text);
   border: none; outline: none; background: none; width: 100%;
@@ -4474,6 +4513,14 @@ body.chrome-off #col-filter-bar { display: none !important; }
               <textarea id="detail-notes" placeholder="Write something or type / for commands"></textarea>
             </div>
             <div id="detail-subtasks"></div>
+            <div id="detail-attach"></div>
+            <button id="detail-attach-btn" type="button">
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M7 2v10M2 7h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+              <span>Attach files — or drop them here</span>
+            </button>
+          </div>
+          <div id="detail-drop" aria-hidden="true">
+            <span>Drop to attach to this task</span>
           </div>
 
           <div id="detail-foot">
@@ -9570,6 +9617,18 @@ function renderDetail() {
 
   renderSubtasks(t);
 
+  // ── Attachments ──
+  // Rebuilding reads every file back out of IndexedDB and mints fresh blob
+  // URLs, so it only runs when the attachment set actually changed — not on
+  // every keystroke-triggered re-render.
+  const gallery = document.getElementById('detail-attach');
+  const attKey = t.id + ':' + (t.attachments || []).map(a => a.id).join(',');
+  if (gallery && gallery.dataset.key !== attKey) {
+    gallery.dataset.key = attKey;
+    renderAttachGallery(t, gallery);
+  }
+  document.getElementById('detail-attach-btn').onclick = () => uploadDetailAttachment(t.id);
+
   // ── Footer ──
   const listBtn = document.getElementById('detail-list-btn');
   listBtn.innerHTML = `<span class="dfoot-emoji">${listEmoji(t.pid)}</span><span>${esc(listName(t.pid))}</span>`;
@@ -9910,29 +9969,78 @@ function openDetailMenu(anchor, id) {
   showPop(anchor, items, {align:'right'});
 }
 
-/* Attachments already have storage and a lightbox — this just feeds them
+/* Attachments already have storage and a lightbox — these just feed them
    from the detail pane instead of the card sheet. */
+async function attachFilesToTask(taskId, files) {
+  const task = getTask(taskId);
+  if (!task || !files.length) return 0;
+  if (!task.attachments) task.attachments = [];
+  for (const file of files) {
+    const aid = uid();
+    await saveAttachFile(aid, file);
+    task.attachments.push({id: aid, name: file.name, mimeType: file.type,
+                           size: file.size, date: new Date().toISOString().slice(0, 10)});
+  }
+  task.updatedAt = Date.now();
+  save(); renderAll();
+  showToast(plural(files.length, 'file') + ' attached');
+  return files.length;
+}
+
 function uploadDetailAttachment(id) {
-  const task = getTask(id);
-  if (!task) return;
+  if (!getTask(id)) return;
   const input = document.createElement('input');
   input.type = 'file';
   input.multiple = true;
-  input.onchange = async () => {
-    const files = Array.from(input.files || []);
-    if (!files.length) return;
-    if (!task.attachments) task.attachments = [];
-    for (const file of files) {
-      const aid = uid();
-      await saveAttachFile(aid, file);
-      task.attachments.push({id: aid, name: file.name, mimeType: file.type,
-                             size: file.size, date: new Date().toISOString().slice(0, 10)});
-    }
-    save(); renderAll();
-    showToast(plural(files.length, 'file') + ' attached');
-  };
+  input.onchange = () => attachFilesToTask(id, Array.from(input.files || []));
   input.click();
 }
+
+const _dtHasFiles = e => Array.from(e.dataTransfer?.types || []).includes('Files');
+
+/* Files dropped anywhere on the detail pane attach to the open task. Only a
+   real file drag counts: dragging a task card across the pane must not read
+   as one, and the gallery's own reorder drags stay internal to the gallery.
+   dragenter/dragleave are counted because they also fire when the pointer
+   crosses between child elements. */
+(function wireDetailFileDrop() {
+  const pane = document.getElementById('detail-pane');
+  if (!pane) return;
+  let depth = 0;
+  const clear = () => { depth = 0; pane.classList.remove('file-drag-over'); };
+
+  pane.addEventListener('dragenter', e => {
+    if (!_dtHasFiles(e) || !detailTaskId) return;
+    e.preventDefault();
+    depth++;
+    pane.classList.add('file-drag-over');
+  });
+  pane.addEventListener('dragover', e => {
+    if (!_dtHasFiles(e) || !detailTaskId) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+  });
+  pane.addEventListener('dragleave', e => {
+    if (!_dtHasFiles(e)) return;
+    depth = Math.max(0, depth - 1);
+    if (!depth) pane.classList.remove('file-drag-over');
+  });
+  pane.addEventListener('drop', e => {
+    if (!_dtHasFiles(e)) return;
+    e.preventDefault(); e.stopPropagation();
+    clear();
+    if (!detailTaskId) return;
+    attachFilesToTask(detailTaskId, Array.from(e.dataTransfer.files));
+  });
+})();
+
+/* A file dropped anywhere outside a real drop zone would make the browser
+   navigate away and take the unsaved pane with it. Swallow those. */
+['dragover', 'drop'].forEach(type => window.addEventListener(type, e => {
+  if (!_dtHasFiles(e)) return;
+  if (e.target.closest?.('#detail-pane, .task-card.expanded')) return;
+  e.preventDefault();
+}));
 
 function copyTaskLink(id) {
   const url = location.origin + location.pathname + '#task-' + id;
