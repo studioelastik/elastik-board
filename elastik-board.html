@@ -3738,6 +3738,13 @@ label.focus-row {
 .asn-proj:hover { background: color-mix(in srgb, var(--text) 6%, transparent); }
 .asn-proj input { accent-color: var(--accent); }
 .asn-steps { margin: 12px 0 4px; }
+#asana-walked { font-size: 11px; color: var(--text-3); margin-top: 6px; }
+.asn-proj-sep {
+  padding: 8px 6px 3px; font-size: 10px; font-weight: 600;
+  letter-spacing: .05em; text-transform: uppercase; color: var(--text-3);
+}
+.asn-more { padding: 5px 6px; font-size: 11.5px; color: var(--accent); cursor: pointer; }
+.asn-more:hover { text-decoration: underline; }
 .asn-links { display: flex; gap: 14px; margin-top: 7px; }
 .asn-links span { font-size: 11.5px; color: var(--accent); cursor: pointer; }
 .asn-links span:hover { text-decoration: underline; }
@@ -4967,6 +4974,7 @@ body.chrome-off #col-filter-bar { display: none !important; }
         </div>
       </div>
       <div id="asana-projects"></div>
+      <p id="asana-walked"></p>
       <div class="asn-links">
         <span id="asana-reset-scope" hidden>Back to automatic</span>
         <span id="asana-full-scan">Scan every project once</span>
@@ -10724,6 +10732,8 @@ const asanaCfg = {
   set mentionProj(v) { prefSetJSON('mc_asana_mentionproj', v); },
   get lastFullScan()   { return prefGet('mc_asana_fullscan', ''); },
   set lastFullScan(v)  { prefSet('mc_asana_fullscan', v || ''); },
+  get lastScan()   { return prefGetJSON('mc_asana_lastscan', null); },
+  set lastScan(v)  { prefSetJSON('mc_asana_lastscan', v); },
   get every()      { return parseInt(prefGet('mc_asana_every', '15'), 10) || 0; }, // minutes; 0 = off
   set every(v)     { prefSet('mc_asana_every', String(v)); },
 };
@@ -10904,12 +10914,11 @@ async function asanaSync(opts = {}) {
     asanaStatus('Reading projects…');
     const allProjects = await asanaAll('/projects', {
       workspace: asanaCfg.workspace, archived: false,
-      opt_fields: 'name,color,permalink_url,members',
+      opt_fields: 'name,color,permalink_url',
     });
     const mentionProj = asanaCfg.mentionProj;
     const mentionCutoff = new Date(Date.now() - ASANA_MENTION_KEEP_DAYS * 86400000).toISOString();
     const isRelevant = p =>
-      (p.members || []).some(m => m.gid === myGid) ||
       projectsWithMyTasks.has(p.gid) ||
       (mentionProj[p.gid] || '') > mentionCutoff;
     /* Narrowing to relevant projects means a first-ever mention somewhere the
@@ -10936,6 +10945,7 @@ async function asanaSync(opts = {}) {
       rows.forEach(a => { if (!byGid.has(a.gid)) byGid.set(a.gid, a); });
     }
     if (!Array.isArray(pick) && sweepDue) asanaCfg.lastFullScan = startedAt;
+    asanaCfg.lastScan = {walked: projects.length, total: allProjects.length, sweep: !!sweepDue};
 
     // Split into the two things the user asked for.
     const assigned = [], followed = [];
@@ -11121,6 +11131,7 @@ function openAsanaModal() {
 }
 function closeAsanaModal() { document.getElementById('asana-modal').classList.remove('open'); }
 
+let asanaShowAllProjects = false;
 function asanaRenderPanel() {
   const on = asanaConnected();
   const setup = document.getElementById('asana-panel-setup');
@@ -11141,32 +11152,52 @@ function asanaRenderPanel() {
   const known  = asanaCfg.known;
   const custom = Array.isArray(pick);
   const box    = document.getElementById('asana-projects');
-  const sub    = document.getElementById('asana-scope-sub');
-  if (sub) sub.textContent = custom
-    ? 'You picked these by hand. Only they get scanned.'
-    : "Automatic: the projects you're a member of, have tasks assigned in, or were recently mentioned in. Tick more to add them.";
+  const note   = document.getElementById('asana-scope-sub');
+  const isOn    = p => custom ? pick.includes(p.gid) : !!p.auto;
+  const watched = known.filter(isOn);
+  const rest    = known.filter(p => !isOn(p));
+  const scan    = asanaCfg.lastScan;
+
+  if (note) note.textContent = custom
+    ? `You picked these by hand — ${watched.length} of ${known.length} projects.`
+    : `Watching ${watched.length} of ${known.length}: the projects you have a task assigned in, or were mentioned in recently.`;
+
   if (!known.length) {
     box.innerHTML = `<div class="asn-hint">Run a sync once and your projects will be listed here.</div>`;
   } else {
-    box.innerHTML = known.map(p => {
-      const checked = custom ? pick.includes(p.gid) : !!p.auto;
-      return `<label class="asn-proj${checked ? ' auto' : ''}"><input type="checkbox" data-gid="${esc(p.gid)}"${checked ? ' checked' : ''}>` +
-             `<span>${esc(p.name)}</span></label>`;
-    }).join('');
+    const row = p => `<label class="asn-proj${isOn(p) ? ' auto' : ''}">` +
+      `<input type="checkbox" data-gid="${esc(p.gid)}"${isOn(p) ? ' checked' : ''}>` +
+      `<span>${esc(p.name)}</span></label>`;
+    box.innerHTML =
+      (watched.length ? watched.map(row).join('') : `<div class="asn-hint">Nothing yet — no tasks assigned to you and no recent mentions.</div>`) +
+      (rest.length
+        ? (asanaShowAllProjects
+            ? `<div class="asn-proj-sep">Not watched</div>` + rest.map(row).join('')
+            : `<div class="asn-more" id="asana-show-all">Show the other ${rest.length}…</div>`)
+        : '');
+    const more = document.getElementById('asana-show-all');
+    if (more) more.onclick = () => { asanaShowAllProjects = true; asanaRenderPanel(); };
     box.querySelectorAll('input[data-gid]').forEach(cb => {
       // Touching any box switches the whole thing from automatic to an
       // explicit list — otherwise the next sync would silently undo the edit.
       cb.onchange = () => {
-        asanaCfg.projects = [...box.querySelectorAll('input[data-gid]')]
-          .filter(x => x.checked).map(x => x.dataset.gid);
+        const now = new Set(known.filter(isOn).map(p => p.gid));
+        cb.checked ? now.add(cb.dataset.gid) : now.delete(cb.dataset.gid);
+        asanaCfg.projects = [...now];
+        asanaShowAllProjects = true;
         asanaRenderPanel();
       };
     });
   }
+  const walked = document.getElementById('asana-walked');
+  if (walked) walked.textContent = scan
+    ? `Last sync read ${scan.walked} project${scan.walked === 1 ? '' : 's'}` +
+      (scan.sweep && scan.walked === scan.total ? ' — the weekly sweep of all of them.' : '.')
+    : '';
   const reset = document.getElementById('asana-reset-scope');
   if (reset) {
     reset.hidden = !custom;
-    reset.onclick = () => { asanaCfg.projects = null; asanaRenderPanel(); };
+    reset.onclick = () => { asanaCfg.projects = null; asanaShowAllProjects = false; asanaRenderPanel(); };
   }
   const full = document.getElementById('asana-full-scan');
   if (full) full.onclick = () => { closeAsanaModal(); asanaSync({fullScan: true}); };
