@@ -3286,6 +3286,11 @@ label.focus-row {
 .sb-row:hover { background: color-mix(in srgb, var(--text) 7%, transparent); }
 .sb-row.active { background: color-mix(in srgb, var(--text) 11%, transparent); font-weight: 500; }
 .sb-row.drop-target { background: var(--accent-bg); box-shadow: inset 0 0 0 1.5px var(--accent); }
+/* Dragging a list row reorders the sidebar. The line marks where it lands;
+   .drop-target above is the other drag — a task being re-filed onto a row. */
+.sb-row.sb-drag { opacity: .4; }
+.sb-row.sb-over-before { box-shadow: inset 0 2px 0 var(--accent); }
+.sb-row.sb-over-after  { box-shadow: inset 0 -2px 0 var(--accent); }
 .sb-emoji {
   width: 18px; flex-shrink: 0; font-size: 14px; line-height: 1;
   text-align: center;
@@ -9003,6 +9008,7 @@ function renderListsGroup() {
     li.querySelector('.sb-emoji').onclick = e => { e.stopPropagation(); openEmojiPicker(e.currentTarget, p.id); };
     li.querySelector('.sb-more').onclick  = e => { e.stopPropagation(); openListRowMenu(e, p.id); };
     attachListDrop(li, p.id);
+    attachListReorder(li, p.id);
     ul.appendChild(li);
   });
 }
@@ -9151,6 +9157,77 @@ function attachListDrop(el, pid, smart) {
     t.updatedAt = Date.now();
     save(); renderAll();
   };
+}
+
+let dragListId = null;
+
+function clearListOverMarks() {
+  document.querySelectorAll('#project-list .sb-row')
+    .forEach(r => r.classList.remove('sb-over-before', 'sb-over-after'));
+}
+
+/* Dragging a sidebar row reorders state.projects — the order the sidebar,
+   the board's swimlanes and the move-to-list picker all read, and part of
+   the synced blob, so it follows you between devices.
+
+   These go on with addEventListener rather than the on* properties, because
+   attachListDrop already owns those for the other drag that lands on these
+   rows (a task being re-filed). Each handler bails when the drag in flight
+   isn't its own, so the two coexist without either clobbering the other. */
+function attachListReorder(el, pid) {
+  el.draggable = true;
+
+  el.addEventListener('dragstart', e => {
+    dragListId = pid;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', pid);
+    // Deferred a tick so the drag image is grabbed before the row dims.
+    setTimeout(() => el.classList.add('sb-drag'), 0);
+  });
+
+  el.addEventListener('dragend', () => {
+    dragListId = null;
+    el.classList.remove('sb-drag');
+    clearListOverMarks();
+  });
+
+  el.addEventListener('dragover', e => {
+    if (!dragListId || dragListId === pid) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const r = el.getBoundingClientRect();
+    clearListOverMarks();
+    el.classList.add(e.clientY > r.top + r.height / 2 ? 'sb-over-after' : 'sb-over-before');
+  });
+
+  el.addEventListener('dragleave', () => {
+    el.classList.remove('sb-over-before', 'sb-over-after');
+  });
+
+  el.addEventListener('drop', e => {
+    if (!dragListId || dragListId === pid) return;
+    e.preventDefault(); e.stopPropagation();
+    const src = dragListId;
+    // Cleared before the re-render, which destroys this row mid-drag and so
+    // takes its dragend with it.
+    dragListId = null;
+    const r = el.getBoundingClientRect();
+    const after = e.clientY > r.top + r.height / 2;
+    clearListOverMarks();
+    moveList(src, pid, after);
+  });
+}
+
+function moveList(srcId, targetId, after) {
+  const arr = state.projects;
+  const from = arr.findIndex(p => p.id === srcId);
+  if (from < 0) return;
+  const [moved] = arr.splice(from, 1);
+  const to = arr.findIndex(p => p.id === targetId);
+  // Target vanished between dragstart and drop — put it back where it was.
+  if (to < 0) { arr.splice(from, 0, moved); return; }
+  arr.splice(after ? to + 1 : to, 0, moved);
+  save(); renderAll();
 }
 
 // ── Task pane ──────────────────────────────────────────────────────────
