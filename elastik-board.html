@@ -3158,14 +3158,6 @@ label.focus-row {
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
 }
-#rail-avatar .rail-crown {
-  position: absolute; top: -3px; right: -4px;
-  width: 14px; height: 14px; border-radius: 50%;
-  background: var(--surface);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 8px; line-height: 1;
-  box-shadow: 0 0 0 1px var(--hairline, rgba(0,0,0,.1));
-}
 .rail-btn {
   width: 32px; height: 32px; border-radius: 8px;
   border: none; background: none; cursor: pointer;
@@ -3872,7 +3864,9 @@ body.chrome-off #col-filter-bar { display: none !important; }
    Surfaces there are opaque, not vibrant, so the materials become flat
    fills and the backdrop blur comes off. */
 :root {
-  --mc-rail:     #FFFFFF;
+  --mc-rail:     #F6F6F6;   /* = the Mac wrapper's titlebar, so the rail runs up under it */
+  --mc-rail-ic:  #9C9CA0;
+  --mc-rail-ic-hover: #6E6E73;
   --mc-sidebar:  #FFFFFF;
   --mc-pane:     #FFFFFF;
   --mc-line:     rgba(0,0,0,.09);
@@ -3883,7 +3877,9 @@ body.chrome-off #col-filter-bar { display: none !important; }
   --mc-check:    #C6C6C6;
 }
 [data-theme="dark"] {
-  --mc-rail:     #141416;
+  --mc-rail:     #1E1E20;
+  --mc-rail-ic:  #77777C;
+  --mc-rail-ic-hover: #A5A5AA;
   --mc-sidebar:  #141416;
   --mc-pane:     #141416;
   --mc-line:     rgba(255,255,255,.10);
@@ -4363,6 +4359,25 @@ body.chrome-off #col-filter-bar { display: none !important; }
   #tasks-head       { padding: 13px 16px 9px; min-height: 50px; }
   #tasks-list       { padding: 0 16px 40px; }
   .sb-head          { padding: 4px 12px 4px 13px; }
+
+  /* ── Rail, off the reference ────────────────────────────────────────
+     60 wide, a 32px avatar, then filled 22px glyphs on a 48px pitch.
+     Selection is the glyph itself turning accent, not a pill behind it;
+     the glyphs' cut-outs take the rail colour, or white when selected. */
+  :root { --rail: 60px; }
+  #rail { padding: 14px 0 12px; gap: 0; }
+  #rail-sep { display: none; }
+  #rail-avatar { width: 32px; height: 32px; font-size: 11.5px; }
+  #rail-nav  { margin-top: 20px; gap: 8px; }
+  #rail-foot { gap: 8px; }
+  .rail-btn { width: 40px; height: 40px; border-radius: 9px; background: none; color: var(--mc-rail-ic); }
+  .rail-btn:hover { background: none; color: var(--mc-rail-ic-hover); }
+  .rail-btn.active, .rail-btn.active:hover { background: none; color: var(--accent); }
+  .rail-btn .cut      { stroke: var(--mc-rail); }
+  .rail-btn .cut-fill { fill: var(--mc-rail); }
+  .rail-btn.active .cut      { stroke: #fff; }
+  .rail-btn.active .cut-fill { fill: #fff; }
+  .rail-btn .rail-dot { top: 7px; right: 7px; box-shadow: 0 0 0 1.5px var(--mc-rail); }
 }
 
 @media (max-width: 768px) {
@@ -4429,19 +4444,18 @@ body.chrome-off #col-filter-bar { display: none !important; }
   <nav id="rail" aria-label="Workspace">
     <button id="rail-avatar" onclick="openAvatarMenu(this)" data-tip="Account" aria-label="Account">
       <span id="rail-initials">MC</span>
-      <span class="rail-crown">👑</span>
     </button>
     <div id="rail-sep"></div>
     <div id="rail-nav">
       <button class="rail-btn" id="rail-tasks" onclick="setView('tasks')" data-tip="Tasks  ·  1" aria-label="Tasks">
-        <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2.2" y="2.2" width="13.6" height="13.6" rx="3.4" stroke="currentColor" stroke-width="1.5"/><path d="M5.8 9.2l2.3 2.3 4.3-4.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <svg width="22" height="22" viewBox="0 0 22 22"><rect x="1" y="1" width="20" height="20" rx="5" fill="currentColor"/><path class="cut" d="M6.4 11.3l3.1 3.1 6.1-6.5" fill="none" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
         <span class="rail-dot"></span>
       </button>
       <button class="rail-btn" id="rail-calendar" onclick="setView('time')" data-tip="Calendar &amp; time  ·  2" aria-label="Calendar">
-        <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2.2" y="3.4" width="13.6" height="12.2" rx="2.6" stroke="currentColor" stroke-width="1.5"/><path d="M2.4 7.2h13.2M6 2.2v2.4M12 2.2v2.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <svg width="22" height="22" viewBox="0 0 22 22"><rect x="1" y="2" width="20" height="18.5" rx="4.6" fill="currentColor"/><path class="cut" d="M1.5 7.4h19" fill="none" stroke-width="1.2" opacity=".6"/><g class="cut-fill"><circle cx="6.8" cy="11.4" r="1.25"/><circle cx="11" cy="11.4" r="1.25"/><circle cx="15.2" cy="11.4" r="1.25"/><circle cx="6.8" cy="15.4" r="1.25"/><circle cx="11" cy="15.4" r="1.25"/></g></svg>
       </button>
       <button class="rail-btn" id="rail-search" onclick="openSearch()" data-tip="Search  ·  /" aria-label="Search">
-        <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="8" cy="8" r="5.4" stroke="currentColor" stroke-width="1.5"/><path d="M12.2 12.2l3.2 3.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="9.6" cy="9.6" r="6.6" stroke="currentColor" stroke-width="2.4"/><path d="M14.6 14.6l5 5" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>
       </button>
     </div>
     <div id="rail-foot">
