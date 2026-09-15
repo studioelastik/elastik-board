@@ -4378,6 +4378,49 @@ body.chrome-off #col-filter-bar { display: none !important; }
   .rail-btn.active .cut      { stroke: #fff; }
   .rail-btn.active .cut-fill { fill: #fff; }
   .rail-btn .rail-dot { top: 7px; right: 7px; box-shadow: 0 0 0 1.5px var(--mc-rail); }
+
+  /* ── Sidebar spacing, off the reference ─────────────────────────────
+     Rows 36 tall on a 38 pitch, inset 9 with an 8 radius; glyph centred
+     30 in, label at 48. The divider under Inbox is inset like the rows.
+     Heads sit 36 below the divider and 20.5 above their first row's
+     centre; the empty-state box is inset 10 and 46 tall. Every value is
+     from the 2x screenshot, halved. */
+  .sm-item, .sb-row {
+    min-height: 36px; height: 36px; margin: 0 9px 2px; padding: 0 11px 0 13px;
+    gap: 9px; border-radius: 8px; font-size: 14px;
+  }
+  .sm-item.active, .sb-row.active { font-weight: 400; }
+  .sm-glyph, .sb-emoji { width: 17px; }
+  .sb-emoji { font-size: 16px; }
+  .sm-count, .sb-count { font-size: 12.5px; }
+
+  #smart-lists { padding-bottom: 0; margin-bottom: 0; border-bottom: none; }
+  #smart-lists::after {
+    content: ''; display: block; height: 1px; margin: 15px 9px 0;
+    background: var(--mc-line);
+  }
+  #sidebar-scroll { padding-top: 18px; }
+  .sb-group { padding: 5.5px 0 0; }
+  .sb-head {
+    height: 24px; padding: 0 16px 0 7px; gap: 6.5px;
+    font-size: 12px; font-weight: 500;
+  }
+  .sb-body { padding-top: 8.5px; }
+  .sb-used { height: 16px; display: flex; align-items: center; padding: 0 5px; border-radius: 4px; font-size: 10px; font-weight: 600; }
+  .sb-empty {
+    margin: 2.5px 10px 6px; padding: 8px 11px;
+    font-size: 12.5px; line-height: 15px; border-radius: 10px;
+  }
+
+  /* Today / Next 7 Days: a 16pt rounded square carrying the date or the
+     weekday, the numerals centred rather than sat on the baseline. */
+  .sm-datebox {
+    width: 16px; height: 16px; box-sizing: border-box; border-radius: 4px;
+    border-width: 1.45px; align-items: center; padding: 0 0 .5px;
+    font-size: 8.5px; font-weight: 700; letter-spacing: -.03em;
+  }
+  .sm-datebox.sm-week { font-size: 8.5px; letter-spacing: -.02em; }
+  .sm-glyph svg.sm-inbox { width: 17px; height: 17px; }
 }
 
 @media (max-width: 768px) {
@@ -9340,7 +9383,7 @@ function renderSmartLists() {
       <span class="sm-count">${c.next7 || ''}</span>
     </div>
     <div class="sm-item${on('inbox')}" data-scope="inbox">
-      <span class="sm-glyph"><svg viewBox="0 0 16 16" fill="none"><path d="M1.8 9.2 3.5 3.1h9L14.2 9.2M1.8 9.2v3.7h12.4V9.2M1.8 9.2h3.4l1.1 1.7h3.4l1.1-1.7h3.4" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round"/></svg></span>
+      <span class="sm-glyph"><svg class="sm-inbox" viewBox="0 0 18 18" fill="none"><path d="M1.7 9.5 4 3.5Q4.45 2.4 5.65 2.4h6.7q1.2 0 1.65 1.1l2.3 6V13q0 2.7-2.7 2.7H4.4Q1.7 15.7 1.7 13z" stroke="currentColor" stroke-width="1.45" stroke-linejoin="round"/><path d="M1.9 9.5h3.6q.75 0 1.05.7l.3.75q.3.75 1.1.75h2.1q.8 0 1.1-.75l.3-.75q.3-.7 1.05-.7h3.6" stroke="currentColor" stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
       <span class="sm-label">Inbox</span>
       <span class="sm-count">${c.inbox || ''}</span>
     </div>
