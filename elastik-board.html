@@ -183,29 +183,25 @@ button:focus-visible, a:focus-visible, [tabindex]:focus-visible,
   }
 }
 
-/* ── Instant tooltips (data-tip) — replace the sluggish native title ── */
+/* ── Instant tooltips (data-tip) — replace the sluggish native title ──
+   Drawn by wireTooltips() into a single #mc-tip on <body>. They used to be
+   [data-tip]::after, but a pseudo-element can't be measured, so it couldn't
+   be kept inside the window, and any overflow:hidden ancestor clipped it. */
 [data-tip] { position: relative; }
-[data-tip]::after {
-  content: attr(data-tip);
-  position: absolute;
-  top: calc(100% + 8px); left: 50%;
-  transform: translateX(-50%) translateY(-3px);
+#mc-tip {
+  position: fixed; top: 0; left: 0; z-index: 5000;
   background: var(--text); color: var(--surface);
   font-size: 11px; font-weight: 500; letter-spacing: .01em;
   padding: 4px 9px; border-radius: 6px;
-  white-space: nowrap;
+  white-space: nowrap; max-width: calc(100vw - 16px);
+  overflow: hidden; text-overflow: ellipsis;
   opacity: 0; pointer-events: none;
+  transform: translateY(-3px);
   transition: opacity .15s ease, transform .15s ease;
-  z-index: 400;
 }
-[data-tip]:hover::after {
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
-  transition-delay: .4s;
-}
-@media (pointer: coarse) {
-  [data-tip]::after { display: none; }
-}
+#mc-tip[data-side="above"] { transform: translateY(3px); }
+#mc-tip[data-side="right"] { transform: translateX(-3px); }
+#mc-tip.on { opacity: 1; transform: none; }
 
 /* ── Layout ── */
 #app { display: flex; min-height: 100vh; }
@@ -7343,9 +7339,9 @@ function showCtxMenu(x, y, taskId) {
   document.getElementById('ctx-pin-label').textContent = isPinned(taskId) ? 'Unpin from Today' : 'Pin to Today';
   const m = document.getElementById('ctx-menu');
   m.style.display = 'block';
-  const mw = 170, mh = 110;
-  m.style.left = Math.min(x, window.innerWidth - mw - 8) + 'px';
-  m.style.top  = Math.min(y, window.innerHeight - mh - 8) + 'px';
+  const mw = m.offsetWidth, mh = m.offsetHeight;
+  m.style.left = Math.max(8, Math.min(x, window.innerWidth - mw - 8)) + 'px';
+  m.style.top  = Math.max(8, Math.min(y, window.innerHeight - mh - 8)) + 'px';
 }
 document.getElementById('ctx-pin').onclick    = () => { hideCtx(); togglePin(ctxTaskId); };
 document.getElementById('ctx-edit').onclick   = () => { hideCtx(); openTaskModal(ctxTaskId); };
@@ -10457,21 +10453,105 @@ function showPop(anchor, items, opts = {}) {
   popEl = pop;
   return pop;
 }
+/* Pops with their own scrolling body (the move-to-list picker, the emoji
+   picker) clip at .pop's 70vh cap instead of scrolling, which in a short
+   window hides the bottom rows. Shrink that body until the whole pop fits. */
+function fitPopHeight(pop) {
+  const body = pop.querySelector('.move-list, #emoji-scroll');
+  if (!body) return;            // plain menus already scroll inside .pop
+  body.style.maxHeight = '';
+  const cap = Math.min(innerHeight * 0.7, innerHeight - 16);
+  const over = pop.scrollHeight - cap;
+  if (over > 0) body.style.maxHeight = Math.max(80, body.clientHeight - over) + 'px';
+}
+
 function positionPop(pop, anchor, opts = {}) {
+  const M = 8;
   const r = anchor && anchor.getBoundingClientRect
     ? anchor.getBoundingClientRect()
     : {left: anchor.clientX, right: anchor.clientX, top: anchor.clientY, bottom: anchor.clientY, width: 0, height: 0};
+  fitPopHeight(pop);
   const w = pop.offsetWidth, h = pop.offsetHeight;
   let left = opts.align === 'right' ? r.right - w : r.left;
   if (opts.side === 'right') left = r.right + 6;
   let top = r.bottom + 6;
   if (opts.side === 'right') top = r.top;
-  if (left + w > innerWidth - 8) left = innerWidth - w - 8;
-  if (left < 8) left = 8;
-  if (top + h > innerHeight - 8) top = Math.max(8, r.top - h - 6);
+  if (left + w > innerWidth - M) left = innerWidth - w - M;
+  if (left < M) left = M;
+  if (top + h > innerHeight - M) {
+    // Flip: a side pop bottom-aligns with its anchor, a drop-down opens
+    // upward. If that doesn't fit either, pin it to the bottom edge.
+    const flipped = opts.side === 'right' ? r.bottom - h : r.top - 6 - h;
+    top = flipped >= M ? flipped : innerHeight - h - M;
+  }
+  top = Math.max(M, Math.min(top, innerHeight - h - M));
   pop.style.left = left + 'px';
   pop.style.top = top + 'px';
 }
+
+/* ── Tooltips ────────────────────────────────────────────────────────────
+   One element on <body>, placed from the hovered button's rect and clamped
+   inside the window. Rail buttons get theirs to the right — the way a
+   vertical icon column reads on the Mac, and the left edge is right there.
+   Everything else sits below, flipping above when there's no room. */
+(function wireTooltips() {
+  if (matchMedia('(pointer: coarse)').matches) return;
+  const tip = document.createElement('div');
+  tip.id = 'mc-tip';
+  tip.setAttribute('role', 'tooltip');
+  document.body.appendChild(tip);
+  const M = 8, GAP = 8;
+  let owner = null, timer = null;
+
+  function hide() {
+    clearTimeout(timer); timer = null; owner = null;
+    tip.classList.remove('on');
+  }
+  function place(el) {
+    const r = el.getBoundingClientRect();
+    const w = tip.offsetWidth, h = tip.offsetHeight;
+    let left, top, side;
+    if (el.closest('#rail')) {
+      side = 'right';
+      left = r.right + GAP;
+      top  = r.top + r.height / 2 - h / 2;
+    } else {
+      side = 'below';
+      left = r.left + r.width / 2 - w / 2;
+      top  = r.bottom + GAP;
+      if (top + h > innerHeight - M) { side = 'above'; top = r.top - GAP - h; }
+    }
+    tip.style.left = Math.max(M, Math.min(left, innerWidth - w - M)) + 'px';
+    tip.style.top  = Math.max(M, Math.min(top, innerHeight - h - M)) + 'px';
+    tip.dataset.side = side;
+  }
+  function show(el) {
+    // The button may have been re-rendered away during the delay.
+    if (owner !== el || !el.isConnected) return;
+    const text = el.getAttribute('data-tip');
+    if (!text) return;
+    tip.classList.remove('on');
+    tip.textContent = text;
+    // place() reads the tip's size, which flushes styles with .on removed —
+    // so adding it straight after still runs the fade-in transition.
+    place(el);
+    tip.classList.add('on');
+  }
+
+  document.addEventListener('mouseover', e => {
+    const el = e.target.closest?.('[data-tip]');
+    if (el === owner) return;
+    hide();
+    if (!el) return;
+    owner = el;
+    timer = setTimeout(() => show(el), 400);
+  });
+  document.addEventListener('mouseout', e => {
+    if (owner && !(e.relatedTarget && owner.contains(e.relatedTarget))) hide();
+  });
+  ['mousedown', 'keydown', 'blur', 'resize'].forEach(t => window.addEventListener(t, hide));
+  window.addEventListener('scroll', hide, true);
+})();
 
 function openSortMenu(anchor) {
   const sorts = [['manual','Manual'],['due','Due date'],['priority','Priority'],['title','Title'],['list','List'],['status','Status']];
