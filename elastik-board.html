@@ -8916,6 +8916,18 @@ function shellMigrate(raw) {
   if (!Array.isArray(raw.savedFilters)) raw.savedFilters = [];
   delete raw.asanaNotes;            // the Asana notification feed, from the removed import
   if (!Array.isArray(raw.trash)) raw.trash = [];
+  // Tasks the removed Asana import brought in go to Trash — restorable, and
+  // restoring lands them in General since their list goes too. Runs on every
+  // load and every incoming snapshot, and finds nothing the second time, so
+  // all devices converge without a forced push.
+  const imported = new Set((raw.tasks || []).filter(t => t.pid === '_asana' || t.asana));
+  if (imported.size) {
+    const now = Date.now();
+    imported.forEach(t => { t.deletedAt = now; raw.trash.unshift(t); });
+    raw.tasks = raw.tasks.filter(t => !imported.has(t));
+  }
+  raw.trash.forEach(t => { delete t.asana; });
+  if (raw.projects) raw.projects = raw.projects.filter(p => p.id !== '_asana');
   if (typeof raw.listLimit !== 'number') raw.listLimit = 9;
   (raw.projects || []).forEach((p, i) => {
     const pool = listEmojiPool();
@@ -8996,9 +9008,12 @@ function allTags() {
 let taskScope = (function () {
   try {
     const s = JSON.parse(localStorage.getItem('mc_scope')) || {type:'today'};
-    // Folder scopes no longer exist — anyone whose last session ended on one
-    // lands on Today instead.
-    return s.type === 'section' ? {type:'today'} : s;
+    // Folder scopes no longer exist, and a list can be gone by the next launch
+    // (deleted on another device, or the old Asana list) — either way the
+    // session opens on Today rather than on an empty "No list".
+    if (s.type === 'section') return {type:'today'};
+    if (s.type === 'list' && !getProject(s.id)) return {type:'today'};
+    return s;
   }
   catch (_) { return {type:'today'}; }
 })();
