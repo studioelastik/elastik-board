@@ -46,19 +46,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if #available(macOS 13.3, *) { web.isInspectable = true }
 
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1280, height: 820),
-                          styleMask: [.titled, .closable, .miniaturizable, .resizable],
+                          styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
                           backing: .buffered, defer: false)
         window.title = "Mission Control"
-        // Unified titlebar: traffic lights float on a bar that blends into the
-        // web toolbar underneath. Deliberately NOT fullSizeContentView — the
-        // page's own toolbar would slide under the traffic lights.
+        // No titlebar strip: the page is drawn under a transparent titlebar,
+        // so each pane paints its own colour up behind the traffic lights.
+        // Clicks in that band still go to the titlebar — it's what drags the
+        // window — so the page keeps its controls below it, using the height
+        // handed over in --titlebar-h.
         window.titlebarAppearsTransparent = true
         window.titleVisibility = .hidden
+        window.titlebarSeparatorStyle = .none
         window.minSize = NSSize(width: 900, height: 560)
         window.contentView = web
+        window.delegate = self
         window.center()
         window.setFrameAutosaveName("MissionControlWindow")
         window.makeKeyAndOrderFront(nil)
+
+        // At document start, so the first paint already clears the titlebar.
+        cfg.userContentController.addUserScript(
+            WKUserScript(source: titlebarJS(titlebarHeight), injectionTime: .atDocumentStart, forMainFrameOnly: true))
 
         buildMenu()
         web.load(URLRequest(url: appURL))
@@ -142,6 +150,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.windowsMenu = windowMenu
     }
 
+    // MARK: Titlebar band
+
+    /// The titlebar's height, measured rather than assumed — it differs
+    /// between macOS releases.
+    var titlebarHeight: CGFloat { window.frame.height - window.contentLayoutRect.height }
+
+    func titlebarJS(_ h: CGFloat) -> String {
+        "document.documentElement.style.setProperty('--titlebar-h', '\(Int(h.rounded()))px');"
+    }
+
+    /// Full screen has no titlebar until the menu bar drops in, so the band
+    /// closes there and reopens on the way out.
+    func applyTitlebarInset() {
+        let h = window.styleMask.contains(.fullScreen) ? 0 : titlebarHeight
+        web.evaluateJavaScript(titlebarJS(h), completionHandler: nil)
+    }
+
     @objc private func reload()               { web.reload() }
     @objc private func reloadIgnoringCache()  { web.reloadFromOrigin() }
     @objc private func zoomIn()               { web.pageZoom = min(web.pageZoom + 0.1, 3.0) }
@@ -162,9 +187,22 @@ extension AppDelegate: WKScriptMessageHandler {
     }
 }
 
+// MARK: - Window
+
+extension AppDelegate: NSWindowDelegate {
+    func windowWillEnterFullScreen(_ notification: Notification) {
+        web.evaluateJavaScript(titlebarJS(0), completionHandler: nil)
+    }
+    func windowDidExitFullScreen(_ notification: Notification) { applyTitlebarInset() }
+}
+
 // MARK: - Navigation
 
 extension AppDelegate: WKNavigationDelegate {
+    // The document-start script only knows the windowed height; a reload in
+    // full screen needs putting right once the page is up.
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) { applyTitlebarInset() }
+
     func webView(_ webView: WKWebView,
                  decidePolicyFor action: WKNavigationAction,
                  decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {

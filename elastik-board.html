@@ -3139,6 +3139,9 @@ label.focus-row {
   --rail: 52px;
   --detail: 300px;
   --row-h: 34px;
+  /* Height of a native titlebar the page is drawn under. The Mac wrapper
+     sets it; everywhere else there isn't one, so it stays 0. */
+  --titlebar-h: 0px;
 }
 
 /* The old Views block is replaced by the rail (Board/List/Time) and the
@@ -4421,6 +4424,20 @@ body.chrome-off #col-filter-bar { display: none !important; }
   }
   .sm-datebox.sm-week { font-size: 8.5px; letter-spacing: -.02em; }
   .sm-glyph svg.sm-inbox { width: 17px; height: 17px; }
+
+  /* ── Mac wrapper: no titlebar strip ─────────────────────────────────
+     The wrapper draws the page under a transparent titlebar. Each pane
+     paints its own colour up into that band — the rail's grey behind the
+     traffic lights, white over the lists — and starts its content below
+     it, since clicks in the band go to the titlebar (it's what drags the
+     window). In tasks mode the list and detail panes take the offset
+     themselves, so the hairline between them runs to the top edge. */
+  #rail    { padding-top: calc(14px + var(--titlebar-h)); }
+  #sidebar { padding-top: var(--titlebar-h); }
+  #main    { padding-top: var(--titlebar-h); }
+  body.tasks-mode #main { padding-top: 0; }
+  body.tasks-mode #tasks-pane,
+  body.tasks-mode #detail-pane { padding-top: var(--titlebar-h); }
 }
 
 @media (max-width: 768px) {
@@ -7545,7 +7562,7 @@ function showCtxMenu(x, y, taskId) {
   m.style.display = 'block';
   const mw = m.offsetWidth, mh = m.offsetHeight;
   m.style.left = Math.max(8, Math.min(x, window.innerWidth - mw - 8)) + 'px';
-  m.style.top  = Math.max(8, Math.min(y, window.innerHeight - mh - 8)) + 'px';
+  m.style.top  = Math.max(overlayTop(), Math.min(y, window.innerHeight - mh - 8)) + 'px';
 }
 document.getElementById('ctx-pin').onclick    = () => { hideCtx(); togglePin(ctxTaskId); };
 document.getElementById('ctx-edit').onclick   = () => { hideCtx(); openTaskModal(ctxTaskId); };
@@ -11141,13 +11158,18 @@ function fitPopHeight(pop) {
   const body = pop.querySelector('.move-list, #emoji-scroll');
   if (!body) return;            // plain menus already scroll inside .pop
   body.style.maxHeight = '';
-  const cap = Math.min(innerHeight * 0.7, innerHeight - 16);
+  const cap = Math.min(innerHeight * 0.7, innerHeight - 8 - overlayTop());
   const over = pop.scrollHeight - cap;
   if (over > 0) body.style.maxHeight = Math.max(80, body.clientHeight - over) + 'px';
 }
 
+/* Topmost y an overlay may use: below any native titlebar the page sits under. */
+function overlayTop() {
+  return 8 + (parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--titlebar-h')) || 0);
+}
+
 function positionPop(pop, anchor, opts = {}) {
-  const M = 8;
+  const M = 8, T = overlayTop();
   const r = anchor && anchor.getBoundingClientRect
     ? anchor.getBoundingClientRect()
     : {left: anchor.clientX, right: anchor.clientX, top: anchor.clientY, bottom: anchor.clientY, width: 0, height: 0};
@@ -11163,9 +11185,9 @@ function positionPop(pop, anchor, opts = {}) {
     // Flip: a side pop bottom-aligns with its anchor, a drop-down opens
     // upward. If that doesn't fit either, pin it to the bottom edge.
     const flipped = opts.side === 'right' ? r.bottom - h : r.top - 6 - h;
-    top = flipped >= M ? flipped : innerHeight - h - M;
+    top = flipped >= T ? flipped : innerHeight - h - M;
   }
-  top = Math.max(M, Math.min(top, innerHeight - h - M));
+  top = Math.max(T, Math.min(top, innerHeight - h - M));
   pop.style.left = left + 'px';
   pop.style.top = top + 'px';
 }
@@ -11203,7 +11225,7 @@ function positionPop(pop, anchor, opts = {}) {
       if (top + h > innerHeight - M) { side = 'above'; top = r.top - GAP - h; }
     }
     tip.style.left = Math.max(M, Math.min(left, innerWidth - w - M)) + 'px';
-    tip.style.top  = Math.max(M, Math.min(top, innerHeight - h - M)) + 'px';
+    tip.style.top  = Math.max(overlayTop(), Math.min(top, innerHeight - h - M)) + 'px';
     tip.dataset.side = side;
   }
   function show(el) {
