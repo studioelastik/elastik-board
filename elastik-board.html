@@ -4367,7 +4367,9 @@ body.chrome-off #col-filter-bar { display: none !important; }
      60 wide, a 32px avatar, then filled 22px glyphs on a 48px pitch.
      Selection is the glyph itself turning accent, not a pill behind it;
      the glyphs' cut-outs take the rail colour, or white when selected. */
-  :root { --rail: 60px; }
+  /* 60, or wider in the Mac wrapper when its traffic lights need it — they
+     sit in the rail, and from macOS 26 they span 78 (--traffic-w). */
+  :root { --rail: max(60px, var(--traffic-w, 0px)); }
   #rail { padding: 14px 0 12px; gap: 0; }
   #rail-sep { display: none; }
   #rail-avatar { width: 32px; height: 32px; font-size: 11.5px; }

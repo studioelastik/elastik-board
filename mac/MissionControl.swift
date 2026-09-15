@@ -184,11 +184,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// between macOS releases.
     var titlebarHeight: CGFloat { window.frame.height - window.contentLayoutRect.height }
 
-    /// In CSS pixels: page zoom scales them, so the band is divided back down
-    /// to keep matching the drag strip, which is in points.
+    /// The width the traffic lights need, with the same margin past the zoom
+    /// button as the close button has from the window edge. The page's rail
+    /// widens to hold them — 78pt from macOS 26, where the buttons grew.
+    var trafficWidth: CGFloat {
+        guard let close = window.standardWindowButton(.closeButton),
+              let zoom  = window.standardWindowButton(.zoomButton) else { return 0 }
+        return zoom.convert(zoom.bounds, to: nil).maxX + close.convert(close.bounds, to: nil).minX
+    }
+
+    /// In CSS pixels: page zoom scales them, so both are divided back down
+    /// to keep matching the window, which is in points. A band of 0 (full
+    /// screen) has no traffic lights either.
     func titlebarJS(_ h: CGFloat) -> String {
-        let css = h / max(web?.pageZoom ?? 1, 0.1)
-        return "document.documentElement.style.setProperty('--titlebar-h', '\(String(format: "%.1f", css))px');"
+        let zoom = max(web?.pageZoom ?? 1, 0.1)
+        let css = { (v: CGFloat) in String(format: "%.1f", v / zoom) }
+        let traffic = h > 0 ? trafficWidth : 0
+        return "var s = document.documentElement.style;"
+             + " s.setProperty('--titlebar-h', '\(css(h))px');"
+             + " s.setProperty('--traffic-w', '\(css(traffic))px');"
     }
 
     /// Sizes the band on both sides of the boundary: the page's padding and
