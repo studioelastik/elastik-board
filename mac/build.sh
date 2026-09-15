@@ -44,9 +44,13 @@ cat > "$BUILD/Contents/Info.plist" << 'PLIST'
 </dict></plist>
 PLIST
 
-# ── Icon — the same board mark the web app draws for its favicon ─
+# ── Icon — the board mark: three coloured dots, three rows ───────
+# Drawn from distance fields rather than filled pixel by pixel: every pixel
+# takes the fraction of it a shape covers, so the plate's corners and the
+# dots come out smooth at 16px and at 1024px alike. Each size is rendered
+# natively rather than scaled from the big one.
 python3 - "$BUILD/Contents/Resources" << 'PYEOF'
-import struct, zlib, os, subprocess, sys
+import struct, zlib, math, os, subprocess, sys
 
 OUT = sys.argv[1]
 
@@ -54,72 +58,71 @@ def chunk(tag, data):
     c = tag + data
     return struct.pack('>I', len(data)) + c + struct.pack('>I', zlib.crc32(c) & 0xffffffff)
 
-def make_png(w, h, px):
-    raw = b''.join(b'\x00' + bytes(v for p in row for v in p) for row in px)
+def make_png(w, h, rows):
+    raw = b''.join(b'\x00' + bytes(row) for row in rows)
     return (b'\x89PNG\r\n\x1a\n'
             + chunk(b'IHDR', struct.pack('>IIBBBBB', w, h, 8, 6, 0, 0, 0))
             + chunk(b'IDAT', zlib.compress(raw, 9))
             + chunk(b'IEND', b''))
 
-def render(size):
-    s   = size
-    img = [[(0, 0, 0, 0) for _ in range(s)] for _ in range(s)]
+# Layout in plate units (0–1 across the white plate). The mark sits well in
+# from every edge: 22% to the left of the dots, 21.5% past the longest line,
+# 28.5% above and below the rows.
+DOT_L  = 0.220    # left edge of the dots
+DOT_R  = 0.050    # dot radius
+GAP    = 0.035    # dot edge → start of its line
+LINE_R = 0.785    # right end of the longest line
+LINE_H = 0.038    # line thickness
+INK    = (17, 17, 17)
+ROWS   = [(0.335, (255, 59, 48),  1.00),    # (centre y, dot colour, line length)
+          (0.500, (0, 122, 255),  0.78),
+          (0.665, (52, 199, 89),  0.91)]
 
-    # macOS icon grid: the art plate sits inset with a squircle-ish radius.
-    inset = round(s * 0.094)
-    plate = s - 2 * inset
-    radius = plate * 0.225
+def render(s):
+    P    = s * 824 / 1024          # macOS icon grid: an 824 plate in a 1024 canvas
+    o    = (s - P) / 2
+    rad  = P * 0.2237              # plate corner radius
+    mid  = s / 2
+    flat = P / 2 - rad
+    at   = lambda t: o + t * P     # plate units → pixels
 
-    def in_plate(x, y):
-        px, py = x - inset, y - inset
-        if px < 0 or py < 0 or px >= plate or py >= plate:
-            return False
-        cx = min(max(px, radius), plate - radius)
-        cy = min(max(py, radius), plate - radius)
-        dx, dy = px - cx, py - cy
-        return dx * dx + dy * dy <= radius * radius
+    dot_cx, dot_r = at(DOT_L + DOT_R), DOT_R * P
+    line_x0, cap  = at(DOT_L + 2 * DOT_R + GAP), LINE_H * P / 2
+    line_x1       = at(LINE_R)
+    shapes = []                    # (kind, geometry, colour, bounding box)
+    for fy, col, frac in ROWS:
+        cy = at(fy)
+        shapes.append(('dot', (dot_cx, cy, dot_r), col,
+                       (dot_cx - dot_r - 1, cy - dot_r - 1, dot_cx + dot_r + 1, cy + dot_r + 1)))
+        a = line_x0 + cap                                   # capsule cap centres
+        b = a + (line_x1 - line_x0 - 2 * cap) * frac
+        shapes.append(('line', (a, b, cy, cap), INK, (a - cap - 1, cy - cap - 1, b + cap + 1, cy + cap + 1)))
 
+    cover = lambda d: min(1.0, max(0.0, 0.5 - d))           # signed distance → pixel coverage
+    rows = []
     for y in range(s):
+        py = y + 0.5
+        row = bytearray()
         for x in range(s):
-            if in_plate(x, y):
-                img[y][x] = (255, 255, 255, 255)
-
-    def blend(x, y, col):
-        if 0 <= x < s and 0 <= y < s and img[y][x][3]:
-            img[y][x] = col
-
-    def dot(cx, cy, r, col):
-        for dy in range(-r, r + 1):
-            for dx in range(-r, r + 1):
-                if dx * dx + dy * dy <= r * r:
-                    blend(cx + dx, cy + dy, col)
-
-    def bar(x0, x1, y, h, col):
-        r = h // 2
-        for x in range(x0 + r, x1 - r):
-            for dy in range(-r, r + 1):
-                blend(x, y + dy, col)
-        dot(x0 + r, y, r, col)
-        dot(x1 - r, y, r, col)
-
-    f     = s / 256.0
-    pad   = 0.13 * s
-    dotR  = max(1, round(0.055 * s))
-    lineH = max(2, round(0.038 * s))
-    gap   = 0.030 * s
-    dotX  = round(pad + dotR)
-    lineX = round(dotX + dotR + gap)
-    lmax  = (s - pad) - lineX
-
-    rows = [(0.32, (255, 59, 48, 255),  0.92),
-            (0.50, (0, 122, 255, 255),  0.72),
-            (0.68, (52, 199, 89, 255),  0.84)]
-    for fy, col, frac in rows:
-        y = round(s * fy)
-        dot(dotX, y, dotR, col)
-        bar(lineX, round(lineX + lmax * frac), y, lineH, (17, 17, 17, 255))
-
-    return make_png(s, s, img)
+            px = x + 0.5
+            qx, qy = abs(px - mid) - flat, abs(py - mid) - flat
+            alpha = cover(math.hypot(max(qx, 0), max(qy, 0)) + min(max(qx, qy), 0) - rad)
+            r = g = b = 255.0
+            if alpha:
+                for kind, geo, col, (bx0, by0, bx1, by1) in shapes:
+                    if px < bx0 or px > bx1 or py < by0 or py > by1:
+                        continue
+                    if kind == 'dot':
+                        cx, cy, rr = geo
+                        k = cover(math.hypot(px - cx, py - cy) - rr)
+                    else:
+                        ca, cb, cy, rr = geo
+                        k = cover(math.hypot(px - min(max(px, ca), cb), py - cy) - rr)
+                    if k:
+                        r += (col[0] - r) * k; g += (col[1] - g) * k; b += (col[2] - b) * k
+            row += bytes((round(r), round(g), round(b), round(alpha * 255)))
+        rows.append(row)
+    return make_png(s, s, rows)
 
 iconset = '/tmp/MissionControlAppIcon.iconset'
 os.makedirs(iconset, exist_ok=True)
