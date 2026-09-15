@@ -12,9 +12,31 @@ import WebKit
 
 let appURL = URL(string: "https://studioelastik.github.io/elastik-board/elastik-board.html")!
 
+/// Sits over the strip the page is drawn under at the top of the window.
+/// The web view fills the whole window, so without this it takes those clicks
+/// and the window can't be moved: this hands them back — drag moves the
+/// window, double-click does what the system setting says (zoom by default).
+final class TitlebarDragView: NSView {
+    override var mouseDownCanMoveWindow: Bool { true }
+
+    override func mouseDown(with event: NSEvent) {
+        guard let window = window else { return }
+        if event.clickCount == 2 {
+            switch UserDefaults.standard.string(forKey: "AppleActionOnDoubleClick") {
+            case "Minimize": window.performMiniaturize(nil)
+            case "None":     break
+            default:         window.performZoom(nil)
+            }
+            return
+        }
+        window.performDrag(with: event)
+    }
+}
+
 final class AppDelegate: NSObject, NSApplicationDelegate {
     var window: NSWindow!
     var web: WKWebView!
+    let dragStrip = TitlebarDragView()
 
     func applicationDidFinishLaunching(_ note: Notification) {
         let cfg = WKWebViewConfiguration()
@@ -51,14 +73,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         window.title = "Mission Control"
         // No titlebar strip: the page is drawn under a transparent titlebar,
         // so each pane paints its own colour up behind the traffic lights.
-        // Clicks in that band still go to the titlebar — it's what drags the
-        // window — so the page keeps its controls below it, using the height
-        // handed over in --titlebar-h.
+        // The page keeps its controls below that band (--titlebar-h), and a
+        // native drag strip covers it so the window still moves by its top.
         window.titlebarAppearsTransparent = true
         window.titleVisibility = .hidden
         window.titlebarSeparatorStyle = .none
         window.minSize = NSSize(width: 900, height: 560)
-        window.contentView = web
+        let root = NSView()
+        window.contentView = root
+        web.frame = root.bounds
+        web.autoresizingMask = [.width, .height]
+        root.addSubview(web)
+        dragStrip.autoresizingMask = [.width, .minYMargin]   // pinned to the top edge
+        root.addSubview(dragStrip)                           // above the web view
         window.delegate = self
         window.center()
         window.setFrameAutosaveName("MissionControlWindow")
@@ -67,6 +94,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // At document start, so the first paint already clears the titlebar.
         cfg.userContentController.addUserScript(
             WKUserScript(source: titlebarJS(titlebarHeight), injectionTime: .atDocumentStart, forMainFrameOnly: true))
+        setBand(titlebarHeight)
 
         buildMenu()
         web.load(URLRequest(url: appURL))
@@ -156,22 +184,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// between macOS releases.
     var titlebarHeight: CGFloat { window.frame.height - window.contentLayoutRect.height }
 
+    /// In CSS pixels: page zoom scales them, so the band is divided back down
+    /// to keep matching the drag strip, which is in points.
     func titlebarJS(_ h: CGFloat) -> String {
-        "document.documentElement.style.setProperty('--titlebar-h', '\(Int(h.rounded()))px');"
+        let css = h / max(web?.pageZoom ?? 1, 0.1)
+        return "document.documentElement.style.setProperty('--titlebar-h', '\(String(format: "%.1f", css))px');"
+    }
+
+    /// Sizes the band on both sides of the boundary: the page's padding and
+    /// the native strip that drags the window.
+    func setBand(_ h: CGFloat) {
+        web.evaluateJavaScript(titlebarJS(h), completionHandler: nil)
+        let b = window.contentView?.bounds ?? .zero
+        dragStrip.frame = NSRect(x: 0, y: b.height - h, width: b.width, height: h)
+        dragStrip.isHidden = h == 0
     }
 
     /// Full screen has no titlebar until the menu bar drops in, so the band
     /// closes there and reopens on the way out.
     func applyTitlebarInset() {
-        let h = window.styleMask.contains(.fullScreen) ? 0 : titlebarHeight
-        web.evaluateJavaScript(titlebarJS(h), completionHandler: nil)
+        setBand(window.styleMask.contains(.fullScreen) ? 0 : titlebarHeight)
     }
 
     @objc private func reload()               { web.reload() }
     @objc private func reloadIgnoringCache()  { web.reloadFromOrigin() }
-    @objc private func zoomIn()               { web.pageZoom = min(web.pageZoom + 0.1, 3.0) }
-    @objc private func zoomOut()              { web.pageZoom = max(web.pageZoom - 0.1, 0.5) }
-    @objc private func zoomReset()            { web.pageZoom = 1.0 }
+    @objc private func zoomIn()               { web.pageZoom = min(web.pageZoom + 0.1, 3.0); applyTitlebarInset() }
+    @objc private func zoomOut()              { web.pageZoom = max(web.pageZoom - 0.1, 0.5); applyTitlebarInset() }
+    @objc private func zoomReset()            { web.pageZoom = 1.0; applyTitlebarInset() }
 }
 
 // MARK: - Theme bridge
@@ -190,9 +229,7 @@ extension AppDelegate: WKScriptMessageHandler {
 // MARK: - Window
 
 extension AppDelegate: NSWindowDelegate {
-    func windowWillEnterFullScreen(_ notification: Notification) {
-        web.evaluateJavaScript(titlebarJS(0), completionHandler: nil)
-    }
+    func windowWillEnterFullScreen(_ notification: Notification) { setBand(0) }
     func windowDidExitFullScreen(_ notification: Notification) { applyTitlebarInset() }
 }
 
