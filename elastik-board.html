@@ -3408,16 +3408,23 @@ label.focus-row {
 
 /* Task list */
 #tasks-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 0 16px 40px; }
+/* Section heads read like the reference's "Overdue" / "Completed": a 15px
+   semibold label with a quiet count, not a small caption. */
 .tl-group-head {
-  display: flex; align-items: center; gap: 6px;
-  padding: 14px 4px 5px;
-  font-size: 11.5px; font-weight: 600; color: var(--text-2);
+  display: flex; align-items: center; gap: 7px;
+  padding: 16px 4px 6px;
+  font-size: 15px; font-weight: 600; color: var(--text);
   cursor: pointer; user-select: none;
 }
-.tl-group-head .tlg-chevron { display: flex; transition: transform .18s var(--ease-out); }
+.tl-group-head .tlg-chevron { display: flex; color: var(--text-3); transition: transform .18s var(--ease-out); }
 .tl-group.collapsed .tlg-chevron { transform: rotate(-90deg); }
 .tl-group.collapsed .tl-group-body { display: none; }
-.tl-group-count { color: var(--text-3); font-weight: 400; }
+.tl-group-count { color: var(--text-3); font-weight: 400; font-size: 13px; }
+.tl-more {
+  display: block; margin: 6px 0 0 30px; padding: 4px 0;
+  border: none; background: none; font: inherit; font-size: 12.5px;
+  color: var(--accent); cursor: pointer;
+}
 
 .tl-row {
   display: flex; align-items: center; gap: 10px;
@@ -3454,7 +3461,14 @@ label.focus-row {
   font-size: 14px; color: var(--text); line-height: 1.35;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.tl-row.is-done .tl-name { color: var(--text-3); text-decoration: line-through; }
+/* Closed rows, as in the reference's Completed section: a grey filled box,
+   grey title with no strike, and a date that no longer shouts. */
+.tl-row.is-done .tl-name { color: var(--text-3); }
+.tl-row.is-done .tl-check,
+.tl-row.is-done .tl-check.done { background: var(--mc-check); border-color: var(--mc-check); }
+.tl-row.is-done .tl-check svg { opacity: 1; color: #fff; }
+.tl-row.is-done .tl-due { color: var(--text-3); font-weight: 400; }
+.tl-row.is-done .tl-flag { opacity: .45; }
 .tl-meta {
   flex: 0 4 auto; min-width: 0; max-width: 62%;
   display: flex; align-items: center; gap: 8px;
@@ -3465,6 +3479,7 @@ label.focus-row {
 .tl-glyph { border: none; color: var(--text-2); }
 .tl-glyph:hover { color: var(--accent); }
 .tl-glyph svg { opacity: 1; }
+.tl-due { display: inline-flex; align-items: center; gap: 3px; }
 .tl-due.overdue { color: #E24B4A; font-weight: 500; }
 .tl-due.today { color: var(--accent); font-weight: 500; }
 .tl-tag {
@@ -3556,7 +3571,7 @@ label.focus-row {
   font-family: inherit; resize: none; overflow: hidden;
   padding: 2px 0 8px;
 }
-#detail-title.done { color: var(--text-3); text-decoration: line-through; }
+#detail-title.done { color: var(--text); text-decoration: none; }
 .dt-field {
   display: flex; align-items: center; gap: 9px;
   padding: 7px 0; border-top: 1px solid var(--hairline, var(--border));
@@ -3900,6 +3915,7 @@ body.chrome-off #col-filter-bar { display: none !important; }
 #tasks-add                      { background: var(--mc-fill); }
 .tl-row                         { border-bottom-color: var(--mc-rowline); }
 .tl-row:hover                   { background: var(--mc-hover); }
+.tl-row.sel                     { background: var(--mc-sel); }
 .tl-check                       { border-color: var(--mc-check); }
 .sb-more:hover                  { background: var(--mc-sel); }
 .pop-sep, .dt-field, #detail-foot,
@@ -3949,7 +3965,7 @@ body.chrome-off #col-filter-bar { display: none !important; }
 }
 .dtop-check:hover { border-color: var(--accent); }
 .dtop-check svg { opacity: 0; }
-.dtop-check.done { background: var(--accent); border-color: var(--accent); }
+.dtop-check.done { background: var(--mc-check); border-color: var(--mc-check); }
 .dtop-check.done svg { opacity: 1; color: #fff; }
 .dtop-list {
   width: 22px; height: 22px; flex-shrink: 0; padding: 0;
@@ -3974,6 +3990,136 @@ body.chrome-off #col-filter-bar { display: none !important; }
   display: flex; align-items: center; justify-content: center;
 }
 .dtop-icon:hover { background: var(--mc-hover); color: var(--text); }
+.dtop-chip.menu-open, .dtop-icon.menu-open { background: var(--mc-sel); }
+#detail-date-extra { display: flex; align-items: center; gap: 4px; }
+#detail-date-extra:empty { display: none; }
+
+/* ── Priority menu ──────────────────────────────────────────────────────
+   Off the reference at 2x: 140 wide, 34px rows, a 14px flag 16px in,
+   the label 10px after it. No checkmark — the flag button shows the pick. */
+.pop.prio-pop { min-width: 0; width: 140px; padding: 4px 0; border-radius: 12px; }
+.prio-item { gap: 10px; height: 34px; padding: 0 15px; border-radius: 0; font-size: 14px; }
+.prio-item svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+/* ── Date picker ────────────────────────────────────────────────────────
+   Off the reference at 2x: 260 wide, 16px side inset, a 30px segmented
+   control, four quick picks, 30px day rows with 28px circles, 36px option
+   rows, and a 30px Clear · OK pair. */
+.pop.dp-pop {
+  width: 260px; min-width: 0; padding: 11px 0 12px;   /* 11 + the 1px border = the reference's 12 */
+  border-radius: 12px; max-height: calc(100vh - 16px);
+}
+.pop.dp-pop.sub.open { display: flex; flex-direction: column; }
+.dp-seg {
+  display: flex; height: 30px; margin: 0 16px; padding: 2px;
+  box-sizing: border-box; border-radius: 8px; background: var(--mc-fill);
+}
+.dp-seg button {
+  flex: 1; border: none; background: none; border-radius: 6px; cursor: pointer;
+  font: inherit; font-size: 13.5px; color: var(--text-2);
+}
+.dp-seg button.on {
+  background: var(--surface); color: var(--text);
+  box-shadow: 0 1px 2px rgba(0,0,0,.10), 0 0 0 .5px rgba(0,0,0,.04);
+}
+[data-theme="dark"] .dp-seg button.on { background: rgba(255,255,255,.16); }
+.dp-quick {
+  display: flex; align-items: center; justify-content: space-between;
+  height: 36px; margin: 18px 15px 0;
+}
+.dp-quick button {
+  width: 30px; height: 30px; padding: 0; border: none; background: none;
+  border-radius: 7px; color: var(--text-2); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.dp-quick button:hover { background: var(--mc-hover); color: var(--text); }
+.dp-quick svg { width: 21px; height: 21px; }
+.dp-range {
+  display: flex; align-items: center; gap: 6px;
+  height: 36px; margin: 18px 16px 0;
+}
+.dp-field {
+  flex: 1; min-width: 0; height: 36px; padding: 0 9px;
+  display: flex; flex-direction: column; justify-content: center; align-items: flex-start;
+  border: 1px solid var(--mc-line); border-radius: 7px; background: none;
+  font: inherit; font-size: 13px; color: var(--text); cursor: pointer; text-align: left;
+}
+.dp-field.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.dp-field-k { font-size: 10px; color: var(--text-3); line-height: 1.2; }
+.dp-range-sep { color: var(--text-3); }
+.dp-month { display: flex; align-items: center; height: 24px; margin: 12px 12px 0 16px; }
+.dp-title { flex: 1; font-size: 15px; font-weight: 500; color: var(--text); }
+.dp-nav { display: flex; }
+.dp-nav button {
+  width: 24px; height: 24px; padding: 0; border: none; background: none;
+  border-radius: 6px; color: var(--text-2); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.dp-nav button:hover { background: var(--mc-hover); color: var(--text); }
+.dp-wk, .dp-grid { display: grid; grid-template-columns: repeat(7, 1fr); margin: 0 11px 0 9px; }
+.dp-wk {
+  height: 20px; margin-top: 3px; align-items: center; text-align: center;
+  font-size: 11px; color: var(--text-3);
+}
+.dp-grid { grid-auto-rows: 30px; margin-top: 4px; }
+.dp-day {
+  position: relative; padding: 0; border: none; background: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font: inherit; font-size: 14px; color: var(--text);
+}
+.dp-day span {
+  position: relative; z-index: 1; width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+}
+.dp-day:hover span { background: var(--mc-hover); }
+.dp-day.out { color: var(--text-3); }
+.dp-day.today span { background: var(--accent-bg); color: var(--accent); }
+.dp-day.sel span { background: var(--accent); color: #fff; }
+.dp-day.in-range::before,
+.dp-day.r-start::before,
+.dp-day.r-end::before {
+  content: ''; position: absolute; top: 1px; bottom: 1px; left: 0; right: 0;
+  background: var(--accent-bg);
+}
+.dp-day.r-start::before { left: 50%; }
+.dp-day.r-end::before { right: 50%; }
+.dp-day.r-start.r-end::before { display: none; }
+.dp-rows { margin-top: 7px; }
+.dp-row {
+  display: flex; align-items: center; width: 100%; height: 36px;
+  padding: 0 14px 0 15px; border: none; background: none; cursor: pointer;
+  font: inherit; font-size: 14px; color: var(--text); text-align: left;
+}
+.dp-row:hover { background: var(--mc-hover); }
+.dp-row .dp-ic { width: 19px; height: 19px; flex-shrink: 0; color: var(--text-2); }
+.dp-row-l { flex: 1; margin-left: 7.5px; }
+.dp-row-v { margin-right: 8px; font-size: 13px; color: var(--text-3); white-space: nowrap; }
+.dp-row .dp-chev { color: var(--text-3); flex-shrink: 0; }
+.dp-foot { display: flex; gap: 8px; margin: 12px 16px 0; }
+.dp-foot button {
+  flex: 1; height: 30px; border-radius: 7px; cursor: pointer;
+  font: inherit; font-size: 14px;
+}
+.dp-clear { background: none; border: 1px solid var(--mc-line); color: var(--text); }
+.dp-clear:hover { background: var(--mc-hover); }
+.dp-ok { background: var(--accent); border: 1px solid var(--accent); color: #fff; font-weight: 500; }
+.dp-ok:hover { filter: brightness(1.07); }
+.dp-sub-head {
+  display: flex; align-items: center; gap: 4px; height: 30px;
+  margin: 0 16px 6px 10px; font-size: 14px; font-weight: 600; color: var(--text);
+}
+.dp-back {
+  width: 26px; height: 26px; padding: 0; border: none; background: none;
+  border-radius: 6px; color: var(--text-2); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.dp-back:hover { background: var(--mc-hover); color: var(--text); }
+.dp-sub-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 0 6px; }
+.dp-time-input {
+  display: block; width: calc(100% - 20px); margin: 0 10px 6px; height: 30px;
+  padding: 0 8px; border: 1px solid var(--mc-line); border-radius: 7px;
+  background: var(--mc-fill); color: var(--text); font: inherit; font-size: 14px;
+}
 #detail-close { display: none; }
 
 #detail-title-row { display: flex; align-items: flex-start; gap: 6px; }
@@ -3984,7 +4130,7 @@ body.chrome-off #col-filter-bar { display: none !important; }
   font-family: inherit; resize: none; overflow: hidden;
   padding: 4px 0 6px;
 }
-#detail-title.done { color: var(--text-3); text-decoration: line-through; }
+#detail-title.done { color: var(--text); text-decoration: none; }
 #detail-mode {
   width: 28px; height: 28px; border-radius: 6px; flex-shrink: 0; margin-top: 6px;
   border: none; background: none; cursor: pointer; color: var(--text-3);
@@ -4581,6 +4727,7 @@ body.chrome-off #col-filter-bar { display: none !important; }
             <button id="detail-date" class="dtop-chip">
               <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="1.9" y="3" width="12.2" height="11.1" rx="2.4" stroke="currentColor" stroke-width="1.5"/><path d="M2.1 6.5h11.8M5.4 1.9v2.2M10.6 1.9v2.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="5.6" cy="9.4" r=".85" fill="currentColor"/><circle cx="8" cy="9.4" r=".85" fill="currentColor"/><circle cx="10.4" cy="9.4" r=".85" fill="currentColor"/></svg>
               <span id="detail-date-label">Set date</span>
+              <span id="detail-date-extra"></span>
             </button>
             <span class="th-spacer"></span>
             <button id="detail-flag" class="dtop-icon" aria-label="Priority"></button>
@@ -8856,7 +9003,8 @@ function pickEmoji(anchor, current, onPick) {
 const UI = {
   sort:  localStorage.getItem('mc_sort')  || 'manual',
   group: localStorage.getItem('mc_group') || 'none',
-  showCompleted: localStorage.getItem('mc_show_done') === '1',
+  // Completed tasks sit in their own section under each scope; this hides it.
+  hideCompleted: localStorage.getItem('mc_hide_done') === '1',
   collapsedGroups: new Set(JSON.parse(localStorage.getItem('mc_collapsed_groups') || '[]')),
   sbCollapsed: new Set(JSON.parse(localStorage.getItem('mc_sb_collapsed') || '[]')),
 };
@@ -8864,7 +9012,7 @@ function uiSave() {
   try {
     localStorage.setItem('mc_sort', UI.sort);
     localStorage.setItem('mc_group', UI.group);
-    localStorage.setItem('mc_show_done', UI.showCompleted ? '1' : '0');
+    localStorage.setItem('mc_hide_done', UI.hideCompleted ? '1' : '0');
     localStorage.setItem('mc_collapsed_groups', JSON.stringify([...UI.collapsedGroups]));
     localStorage.setItem('mc_sb_collapsed', JSON.stringify([...UI.sbCollapsed]));
   } catch (_) {}
@@ -9034,10 +9182,10 @@ function scopeTasks() {
   let out = state.tasks.slice();
   switch (taskScope.type) {
     case 'today':
-      out = out.filter(t => isOpen(t) && (daysFromToday(t.dueDate) !== null && daysFromToday(t.dueDate) <= 0));
+      out = out.filter(t => isOpen(t) && dueOrStartedWithin(t, 0));
       break;
     case 'next7':
-      out = out.filter(t => { const n = daysFromToday(t.dueDate); return isOpen(t) && n !== null && n <= 7; });
+      out = out.filter(t => isOpen(t) && dueOrStartedWithin(t, 7));
       break;
     case 'inbox':
       out = out.filter(t => isOpen(t) && t.pid === '_todos');
@@ -9052,10 +9200,45 @@ function scopeTasks() {
       out = out.filter(t => filterMatches((state.savedFilters || []).find(f => f.id === taskScope.id), t));
       break;
   }
-  // Smart lists are about what is still open; a list shows its own history
-  // behind the "Show completed" toggle.
-  if (!UI.showCompleted && taskScope.type !== 'completed') out = out.filter(isOpen);
+  // Closed tasks don't mix in with open ones — they get the Completed section
+  // under the list (scopeCompleted), the way the reference lays it out.
+  if (taskScope.type !== 'completed') out = out.filter(isOpen);
   return out;
+}
+
+/* Due by `days` from today — or, for a Duration task, already under way by
+   then, so a range that started last week still shows up in Today. */
+function dueOrStartedWithin(t, days) {
+  const n = daysFromToday(t.dueDate), s = daysFromToday(t.startDate);
+  return (n !== null && n <= days) || (s !== null && s <= days);
+}
+
+function closedAt(t) { return t.completedAt || t.archivedAt || t.updatedAt || 0; }
+
+/* What goes in a scope's Completed section, newest first. The date scopes
+   only count what was finished today — otherwise every task ever completed
+   with a past due date would pile up under Today. */
+function scopeCompleted() {
+  const type = taskScope.type;
+  const closed = state.tasks.filter(t => !isOpen(t));
+  const today = todayISO();
+  const doneToday = t => isoDay(new Date(closedAt(t))) === today;
+  let out;
+  switch (type) {
+    case 'today':  out = closed.filter(t => doneToday(t) && dueOrStartedWithin(t, 0)); break;
+    case 'next7':  out = closed.filter(t => doneToday(t) && dueOrStartedWithin(t, 7)); break;
+    case 'inbox':  out = closed.filter(t => t.pid === '_todos'); break;
+    case 'list':   out = closed.filter(t => t.pid === taskScope.id); break;
+    case 'tag':    out = closed.filter(t => (t.tags || []).includes(taskScope.id)); break;
+    case 'filter': {
+      const f = (state.savedFilters || []).find(f => f.id === taskScope.id);
+      out = closed.filter(t => filterMatches(f, t));
+      break;
+    }
+    case 'all':    out = closed; break;
+    default:       out = [];   // Completed and Trash are already the closed views
+  }
+  return out.sort((a, b) => closedAt(b) - closedAt(a));
 }
 
 function sortTasks(arr) {
@@ -9099,6 +9282,7 @@ function openScope(sc) {
   taskScope = sc;
   saveScope();
   detailTaskId = null;
+  completedShown = COMPLETED_PAGE;
   // Keep the board/list/time views' own filters in step, so switching to the
   // board from a list lands on that list rather than on everything.
   if (sc.type === 'list')     { filterProject = sc.id; }
@@ -9449,13 +9633,50 @@ function renderTasksView() {
   renderDetail();
 }
 
+function groupHead(label, count, key, collapsed) {
+  const head = document.createElement('div');
+  head.className = 'tl-group-head';
+  head.innerHTML = `<span class="tlg-chevron"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 3.5l3 3 3-3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    <span>${esc(label)}</span><span class="tl-group-count">${count}</span>`;
+  head.onclick = () => {
+    if (collapsed) UI.collapsedGroups.delete(key); else UI.collapsedGroups.add(key);
+    uiSave(); renderTaskList();
+  };
+  return head;
+}
+
+/* A list with years of history shouldn't build thousands of rows the moment
+   its Completed section opens, so it pages. */
+const COMPLETED_PAGE = 50;
+let completedShown = COMPLETED_PAGE;
+
+function completedGroup(items) {
+  const key = 'zz-completed';
+  const collapsed = UI.collapsedGroups.has(key);
+  const wrap = document.createElement('div');
+  wrap.className = 'tl-group tl-completed' + (collapsed ? ' collapsed' : '');
+  const body = document.createElement('div');
+  body.className = 'tl-group-body';
+  items.slice(0, completedShown).forEach(t => body.appendChild(taskRow(t)));
+  if (items.length > completedShown) {
+    const more = document.createElement('button');
+    more.className = 'tl-more';
+    more.textContent = `Show ${Math.min(COMPLETED_PAGE, items.length - completedShown)} more`;
+    more.onclick = () => { completedShown += COMPLETED_PAGE; renderTaskList(); };
+    body.appendChild(more);
+  }
+  wrap.append(groupHead('Completed', items.length, key, collapsed), body);
+  return wrap;
+}
+
 function renderTaskList() {
   const box = document.getElementById('tasks-list');
   if (!box) return;
   const rows = sortTasks(scopeTasks());
+  const closed = UI.hideCompleted ? [] : scopeCompleted();
   box.innerHTML = '';
 
-  if (!rows.length) {
+  if (!rows.length && !closed.length) {
     const msg = {
       today: ['🌤️', 'Nothing due today.'],
       next7: ['🗓️', 'The week ahead is clear.'],
@@ -9480,24 +9701,20 @@ function renderTaskList() {
       const collapsed = UI.collapsedGroups.has(k);
       const wrap = document.createElement('div');
       wrap.className = 'tl-group' + (collapsed ? ' collapsed' : '');
-      const head = document.createElement('div');
-      head.className = 'tl-group-head';
-      head.innerHTML = `<span class="tlg-chevron"><svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M2 3.5l3 3 3-3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-        <span>${esc(g.label)}</span><span class="tl-group-count">${g.items.length}</span>`;
-      head.onclick = () => { if (collapsed) UI.collapsedGroups.delete(k); else UI.collapsedGroups.add(k); uiSave(); renderTaskList(); };
       const body = document.createElement('div');
       body.className = 'tl-group-body';
       g.items.forEach(t => body.appendChild(taskRow(t)));
-      wrap.append(head, body);
+      wrap.append(groupHead(g.label, g.items.length, k, collapsed), body);
       box.appendChild(wrap);
     });
   }
+  if (closed.length) box.appendChild(completedGroup(closed));
 }
 
 function taskRow(t) {
   const inTrash = taskScope.type === 'trash';
   const row = document.createElement('div');
-  row.className = 'tl-row' + (isDone(t) ? ' is-done' : '') + (detailTaskId === t.id ? ' sel' : '');
+  row.className = 'tl-row' + (!isOpen(t) ? ' is-done' : '') + (detailTaskId === t.id ? ' sel' : '');
   row.dataset.id = t.id;
 
   // Meta sits inline and right-aligned, the way the reference lays a row out.
@@ -9509,16 +9726,16 @@ function taskRow(t) {
   if (prog) meta.push(`<span class="tl-sub">☑ ${prog}</span>`);
   if ((t.notes || '').trim())
     meta.push(`<span class="tl-note" title="Has a description"><svg width="12" height="12" viewBox="0 0 14 14" fill="none"><rect x="1.4" y="1.4" width="11.2" height="11.2" rx="2.6" stroke="currentColor" stroke-width="1.2"/><path d="M4 5h6M4 7.4h6M4 9.8h3.6" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg></span>`);
-  if (t.dueDate) meta.push(`<span class="tl-due ${dueClass(t.dueDate)}">${esc(fmtDue(t.dueDate))}</span>`);
+  if (t.dueDate) meta.push(`<span class="tl-due ${dueClass(t.dueDate)}">${t.repeat ? DP_ICON.repeatSm : ''}${esc(rowWhenLabel(t))}</span>`);
   if (inTrash && t.deletedAt) meta.push(`<span>deleted ${esc(fmtDue(isoDay(new Date(t.deletedAt))))}</span>`);
 
   // A checklist leads with its list glyph rather than a checkbox.
   const nSubs = (t.subtasks || []).length;
-  const lead = t.checklist && !inTrash
+  const lead = t.checklist && !inTrash && isOpen(t)
     ? `<button class="tl-check tl-glyph" aria-label="Toggle done" title="Checklist — ${nSubs ? plural(nSubs, 'item') : 'empty'}">
          ${checklistGlyph(t, 15)}
        </button>`
-    : `<button class="tl-check${isDone(t) ? ' done' : ''}${t.priority ? ' p' + t.priority : ''}" aria-label="Toggle done">
+    : `<button class="tl-check${!isOpen(t) ? ' done' : ''}${t.priority ? ' p' + t.priority : ''}" aria-label="Toggle done">
          <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1.6 5.1l2.2 2.2 4.6-4.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
        </button>`;
 
@@ -9544,7 +9761,13 @@ function taskRow(t) {
     return row;
   }
 
-  row.querySelector('.tl-check').onclick = e => { e.stopPropagation(); toggleDone(t.id); };
+  row.querySelector('.tl-check').onclick = e => {
+    e.stopPropagation();
+    // A Won't Do sits in Completed too; its box reopens it rather than
+    // flipping it to done.
+    if (t.status === 'archive') { setTaskStatus(t, 'next'); save(); renderAll(); }
+    else toggleDone(t.id);
+  };
   row.onclick = () => openDetail(t.id);
   row.oncontextmenu = e => { e.preventDefault(); openTaskMenu(e, t.id); };
 
@@ -9576,11 +9799,60 @@ function taskRow(t) {
 function toggleDone(id) {
   const t = getTask(id);
   if (!t) return;
+  if (!isDone(t) && t.repeat && t.dueDate) { completeRepeating(t); return; }
   setTaskStatus(t, isDone(t) ? 'next' : 'done');
   if (isDone(t)) t.completedAt = Date.now();
   save(); renderAll();
   if (t.asana) asanaPushComplete(t);
 }
+/* Completing a repeating task files a done copy — so it shows in Completed
+   and in history — and moves the task itself on to its next date, with its
+   checklist reset. Attachments and the Asana link stay with the live task. */
+function completeRepeating(t) {
+  const now = Date.now();
+  const copy = JSON.parse(JSON.stringify(t));
+  Object.assign(copy, {id: uid(), status: 'done', completedAt: now, updatedAt: now});
+  ['repeat', 'repeatDom', 'reminder', 'asana', 'attachments'].forEach(k => delete copy[k]);
+  state.tasks.splice(state.tasks.indexOf(t) + 1, 0, copy);
+
+  const next = nextOccurrence(t);
+  if (t.startDate) t.startDate = addDays(t.startDate, dayDiff(t.dueDate, next));
+  t.dueDate = next;
+  (t.subtasks || []).forEach(s => { s.done = false; });
+  t.updatedAt = now;
+  save(); renderAll();
+  showToast('Done · next ' + detailWhenLabel(t));
+}
+
+function addDays(iso, n) {
+  const d = new Date(iso + 'T00:00:00');
+  d.setDate(d.getDate() + n);
+  return isoDay(d);
+}
+function dayDiff(a, b) {
+  return Math.round((new Date(b + 'T00:00:00') - new Date(a + 'T00:00:00')) / 86400000);
+}
+/* Monthly and yearly remember the day they started on, so a task on the
+   31st comes back on the 31st after passing through a short month. */
+function nextOccurrence(t) {
+  const d = new Date(t.dueDate + 'T00:00:00');
+  const clampTo = (y, m, dom) => new Date(y, m, Math.min(dom, new Date(y, m + 1, 0).getDate()));
+  switch (t.repeat) {
+    case 'daily':    d.setDate(d.getDate() + 1); return isoDay(d);
+    case 'weekdays': do { d.setDate(d.getDate() + 1); } while (d.getDay() === 0 || d.getDay() === 6); return isoDay(d);
+    case 'weekly':   d.setDate(d.getDate() + 7); return isoDay(d);
+    case 'monthly': {
+      const dom = t.repeatDom = t.repeatDom || d.getDate();
+      return isoDay(clampTo(d.getFullYear(), d.getMonth() + 1, dom));
+    }
+    case 'yearly': {
+      const dom = t.repeatDom = t.repeatDom || d.getDate();
+      return isoDay(clampTo(d.getFullYear() + 1, d.getMonth(), dom));
+    }
+  }
+  return t.dueDate;
+}
+
 /* The board and old list view still call quickToggle. */
 function quickToggle(e, id) { e.stopPropagation(); toggleDone(id); }
 
@@ -9720,8 +9992,34 @@ function detailDateLabel(iso) {
   if (n === 0)  return 'Today, ' + day;
   if (n === 1)  return 'Tomorrow, ' + day;
   if (n === -1) return 'Yesterday, ' + day;
+  if (n < -1 && n > -7) return 'Last ' + d.toLocaleDateString(undefined, {weekday:'short'}) + ', ' + day;
   if (n > 1 && n < 7) return d.toLocaleDateString(undefined, {weekday:'short'}) + ', ' + day;
   return day + (d.getFullYear() !== new Date().getFullYear() ? ' ' + d.getFullYear() : '');
+}
+
+function fmtTime(hhmm) {
+  const [h, m] = hhmm.split(':').map(Number);
+  return new Date(2000, 0, 1, h, m).toLocaleTimeString(undefined, {hour: '2-digit', minute: '2-digit'});
+}
+function shortDay(iso) {
+  return new Date(iso + 'T00:00:00').toLocaleDateString(undefined, {day: 'numeric', month: 'short'});
+}
+/* The detail chip: "Last Wed, 9. Sep", a range for a Duration task, and
+   the time when there is one. */
+function detailWhenLabel(t) {
+  if (!t.dueDate) return 'Set date';
+  let s = t.startDate && t.startDate !== t.dueDate
+    ? shortDay(t.startDate) + ' – ' + shortDay(t.dueDate)
+    : detailDateLabel(t.dueDate);
+  if (t.dueTime) s += ', ' + fmtTime(t.dueTime);
+  return s;
+}
+function rowWhenLabel(t) {
+  let s = t.startDate && t.startDate !== t.dueDate
+    ? fmtDue(t.startDate) + ' – ' + fmtDue(t.dueDate)
+    : fmtDue(t.dueDate);
+  if (t.dueTime) s += ' ' + fmtTime(t.dueTime);
+  return s;
 }
 
 /* Switching modes carries the content across: description lines become
@@ -9784,19 +10082,28 @@ function renderDetail() {
   const isList = !!t.checklist;
 
   // ── Top bar: complete · due date · priority ──
+  // An open checklist leads with its glyph; once closed it shows the same
+  // grey ticked box as any finished task, as in the reference.
+  const closed = !isOpen(t);
+  const glyph = isList && !closed;
   const check = document.getElementById('detail-check');
-  check.className = isList ? 'dtop-list' : 'dtop-check' + (isDone(t) ? ' done' : '');
+  check.className = glyph ? 'dtop-list' : 'dtop-check' + (closed ? ' done' : '');
   const nSubs = (t.subtasks || []).length;
-  check.innerHTML = isList
+  check.innerHTML = glyph
     ? checklistGlyph(t, 15)
     : `<svg width="11" height="11" viewBox="0 0 10 10" fill="none"><path d="M1.6 5.1l2.2 2.2 4.6-4.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-  check.title = isList
+  check.title = glyph
     ? 'Checklist — ' + (nSubs ? plural(nSubs, 'item') : 'empty')
-    : (isDone(t) ? 'Mark not done' : 'Mark done');
-  check.onclick = () => toggleDone(t.id);
+    : (closed ? 'Mark not done' : 'Mark done');
+  check.onclick = () => {
+    if (t.status === 'archive') { setTaskStatus(t, 'next'); save(); renderAll(); }
+    else toggleDone(t.id);
+  };
 
   const dateBtn = document.getElementById('detail-date');
-  document.getElementById('detail-date-label').textContent = detailDateLabel(t.dueDate);
+  document.getElementById('detail-date-label').textContent = detailWhenLabel(t);
+  document.getElementById('detail-date-extra').innerHTML =
+    (t.repeat ? DP_ICON.repeatSm : '') + (t.reminder != null ? DP_ICON.alarmSm : '');
   dateBtn.className = 'dtop-chip' + (t.dueDate ? ' set ' + dueClass(t.dueDate) : '');
   dateBtn.onclick = () => openDueMenu(dateBtn, t.id);
 
@@ -10096,31 +10403,348 @@ function positionNotePlus() {
 }
 
 // ── Detail menus ────────────────────────────────────────────────────────
+const DP_ICON = {
+  today:    '<svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="3.6" stroke="currentColor" stroke-width="1.5"/><path d="M10 2.3v1.6M10 16.1v1.6M2.3 10h1.6M16.1 10h1.6M4.6 4.6l1.1 1.1M14.3 14.3l1.1 1.1M4.6 15.4l1.1-1.1M14.3 5.7l1.1-1.1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+  tomorrow: '<svg viewBox="0 0 20 20" fill="none"><path d="M5.3 15.3a4.7 4.7 0 0 1 9.4 0" stroke="currentColor" stroke-width="1.5"/><path d="M2.6 15.3h14.8M10 8.1V2.7M7.9 4.8L10 2.7l2.1 2.1M3.7 10.9l1.3.6M16.3 10.9l-1.3.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  week:     '<svg viewBox="0 0 20 20" fill="none"><rect x="2.7" y="3.7" width="14.6" height="13.5" rx="3" stroke="currentColor" stroke-width="1.5"/><path d="M6.5 2.3v2.7M13.5 2.3v2.7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><text x="10" y="14.3" text-anchor="middle" font-size="7.2" font-weight="700" fill="currentColor" font-family="-apple-system,BlinkMacSystemFont,system-ui,sans-serif">+7</text></svg>',
+  month:    '<svg viewBox="0 0 20 20" fill="none"><path d="M16.2 12.4A6.7 6.7 0 0 1 7.6 3.8a6.7 6.7 0 1 0 8.6 8.6z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>',
+  clock:    '<svg class="dp-ic" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M10 6.2v4l2.6 1.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  alarm:    '<svg class="dp-ic" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="11" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M10 8.1v3.1l2 1.3M3.1 5.3l2.2-2.2M16.9 5.3l-2.2-2.2M5.7 16.3l-1.3 1.5M14.3 16.3l1.3 1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  repeat:   '<svg class="dp-ic" viewBox="0 0 20 20" fill="none"><path d="M3.8 9.2V8a3 3 0 0 1 3-3h8.4M13 2.8L15.2 5 13 7.2M16.2 10.8V12a3 3 0 0 1-3 3H4.8M7 17.2L4.8 15 7 12.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  repeatSm: '<svg width="11" height="11" viewBox="0 0 20 20" fill="none"><path d="M3.8 9.2V8a3 3 0 0 1 3-3h8.4M13 2.8L15.2 5 13 7.2M16.2 10.8V12a3 3 0 0 1-3 3H4.8M7 17.2L4.8 15 7 12.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  alarmSm:  '<svg width="12" height="12" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="11" r="6" stroke="currentColor" stroke-width="1.8"/><path d="M10 8.1v3.1l2 1.3M3.1 5.3l2.2-2.2M16.9 5.3l-2.2-2.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  chev:     '<svg class="dp-chev" width="8" height="12" viewBox="0 0 8 12" fill="none"><path d="M2 1.6L6.4 6 2 10.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  prev:     '<svg width="9" height="14" viewBox="0 0 9 14" fill="none"><path d="M6.8 1.8L1.8 7l5 5.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  next:     '<svg width="9" height="14" viewBox="0 0 9 14" fill="none"><path d="M2.2 1.8l5 5.2-5 5.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  dot:      '<svg width="11" height="11" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="4.4" stroke="currentColor" stroke-width="1.5"/></svg>',
+  back:     '<svg width="9" height="14" viewBox="0 0 9 14" fill="none"><path d="M6.8 1.8L1.8 7l5 5.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+};
+
+const DP_REMINDERS = [
+  {v: null, label: 'None'},
+  {v: 0,    label: 'On time'},
+  {v: 5,    label: '5 minutes early'},
+  {v: 30,   label: '30 minutes early'},
+  {v: 60,   label: '1 hour early'},
+  {v: 1440, label: '1 day early'},
+];
+function reminderLabel(v) {
+  const r = DP_REMINDERS.find(x => x.v === v);
+  return v == null || !r ? '' : r.label;
+}
+function repeatOptions(iso) {
+  const d = new Date((iso || todayISO()) + 'T00:00:00');
+  return [
+    {v: null,       label: 'None'},
+    {v: 'daily',    label: 'Daily'},
+    {v: 'weekdays', label: 'Weekdays (Mon–Fri)'},
+    {v: 'weekly',   label: 'Weekly on ' + d.toLocaleDateString(undefined, {weekday: 'long'})},
+    {v: 'monthly',  label: 'Monthly on day ' + d.getDate()},
+    {v: 'yearly',   label: 'Yearly on ' + shortDay(isoDay(d))},
+  ];
+}
+function repeatLabel(v) {
+  return ({daily: 'Daily', weekdays: 'Weekdays', weekly: 'Weekly', monthly: 'Monthly', yearly: 'Yearly'})[v] || '';
+}
+function addMonthsISO(iso, n) {
+  const d = new Date(iso + 'T00:00:00');
+  const dom = d.getDate();
+  const x = new Date(d.getFullYear(), d.getMonth() + n, 1);
+  x.setDate(Math.min(dom, new Date(x.getFullYear(), x.getMonth() + 1, 0).getDate()));
+  return isoDay(x);
+}
+
+/* ── Date picker ─────────────────────────────────────────────────────────
+   Laid out off the reference: Date | Duration, four quick picks, a month
+   grid, Time / Reminder / Repeat, then Clear · OK. Everything is a draft
+   until OK — except the quick picks, which commit straight away. The three
+   option rows open in place (a flyout from a popover at the window's edge
+   would only have to flip back over it). */
 function openDueMenu(anchor, id) {
   const t = getTask(id);
   if (!t) return;
-  const set = v => { t.dueDate = v; t.updatedAt = Date.now(); save(); renderAll(); };
-  const items = [
-    {label:'Today',     icon:'📅', hint: fmtDue(todayISO()), fn: () => set(todayISO())},
-    {label:'Tomorrow',  icon:'🌅', fn: () => set(isoDay(new Date(Date.now() + 86400000)))},
-    {label:'Next week', icon:'🗓️', fn: () => set(isoDay(new Date(Date.now() + 7 * 86400000)))},
-    {sep:true},
-    {html:`<div class="pop-date"><input type="date" id="pop-date-input" value="${esc(t.dueDate || '')}"></div>`},
-  ];
-  if (t.dueDate) items.push({sep:true}, {label:'Clear date', danger:true, fn: () => set('')});
-  const pop = showPop(anchor, items);
-  const input = pop.querySelector('#pop-date-input');
-  if (input) input.onchange = () => { closePops(); set(input.value || ''); };
+  closePops();
+
+  const today = todayISO();
+  const d = {
+    mode:     t.startDate ? 'duration' : 'date',
+    date:     t.dueDate || '',
+    start:    t.startDate || t.dueDate || '',
+    end:      t.dueDate || '',
+    field:    t.startDate ? 'end' : 'start',
+    time:     t.dueTime || '',
+    reminder: t.reminder ?? null,
+    repeat:   t.repeat || null,
+    panel:    'main',
+  };
+  d.view = ((d.mode === 'duration' ? d.start : d.date) || today).slice(0, 7);
+
+  const pop = document.createElement('div');
+  pop.className = 'pop open dp-pop';
+  document.body.appendChild(pop);
+  popEl = pop;
+  anchor.classList.add('menu-open');
+  let mainHeight = 0;
+
+  function apply(v) {
+    if (v.repeat !== t.repeat || v.due !== t.dueDate) delete t.repeatDom;
+    t.dueDate = v.due || '';
+    if (v.start) t.startDate = v.start; else delete t.startDate;
+    if (v.time) t.dueTime = v.time; else delete t.dueTime;
+    if (v.reminder != null) t.reminder = v.reminder; else delete t.reminder;
+    if (v.repeat) t.repeat = v.repeat; else delete t.repeat;
+    t.updatedAt = Date.now();
+    if (t.reminder != null && 'Notification' in window && Notification.permission === 'default') {
+      try { const p = Notification.requestPermission(); if (p && p.catch) p.catch(() => {}); } catch (_) {}
+    }
+    closePops(); save(); renderAll();
+  }
+  // Time, a reminder or a repeat with no date picked means "today".
+  function extras(due) {
+    return due
+      ? {time: d.time, reminder: d.reminder, repeat: d.repeat}
+      : {time: '', reminder: null, repeat: null};
+  }
+  function commit() {
+    let due = d.date, start = '';
+    if (d.mode === 'duration') {
+      let s = d.start, e = d.end || d.start;
+      if (s && e && e < s) [s, e] = [e, s];
+      due = e;
+      start = s && s !== e ? s : '';
+    }
+    if (!due && (d.time || d.reminder != null || d.repeat)) due = today;
+    apply({due, start, ...extras(due)});
+  }
+  function quick(kind) {
+    const due = {today, tomorrow: addDays(today, 1), week: addDays(today, 7), month: addMonthsISO(today, 1)}[kind];
+    apply({due, start: '', ...extras(due)});
+  }
+
+  function mainHTML() {
+    const [vy, vm] = d.view.split('-').map(Number);
+    const first = new Date(vy, vm - 1, 1);
+    const title = first.toLocaleDateString(undefined, {month: 'long', year: 'numeric'});
+    let cells = '';
+    for (let i = 0; i < 42; i++) {
+      const day = new Date(vy, vm - 1, 1 - first.getDay() + i);
+      const iso = isoDay(day);
+      const cls = ['dp-day'];
+      if (day.getMonth() !== vm - 1) cls.push('out');
+      if (iso === today) cls.push('today');
+      if (d.mode === 'date') {
+        if (iso === d.date) cls.push('sel');
+      } else {
+        const s = d.start, e = d.end || d.start;
+        if (s && iso === s) cls.push('sel', 'r-start');
+        if (e && iso === e) cls.push('sel', 'r-end');
+        if (s && e && iso > s && iso < e) cls.push('in-range');
+      }
+      cells += `<button type="button" class="${cls.join(' ')}" data-iso="${iso}"><span>${day.getDate()}</span></button>`;
+    }
+    const fieldLabel = iso => iso ? shortDay(iso) : '—';
+    const top = d.mode === 'date'
+      ? `<div class="dp-quick">
+           <button type="button" data-quick="today" data-tip="Today" aria-label="Today">${DP_ICON.today}</button>
+           <button type="button" data-quick="tomorrow" data-tip="Tomorrow" aria-label="Tomorrow">${DP_ICON.tomorrow}</button>
+           <button type="button" data-quick="week" data-tip="Next week" aria-label="Next week">${DP_ICON.week}</button>
+           <button type="button" data-quick="month" data-tip="Next month" aria-label="Next month">${DP_ICON.month}</button>
+         </div>`
+      : `<div class="dp-range">
+           <button type="button" class="dp-field${d.field === 'start' ? ' on' : ''}" data-field="start"><span class="dp-field-k">Start</span><span>${esc(fieldLabel(d.start))}</span></button>
+           <span class="dp-range-sep">–</span>
+           <button type="button" class="dp-field${d.field === 'end' ? ' on' : ''}" data-field="end"><span class="dp-field-k">End</span><span>${esc(fieldLabel(d.end))}</span></button>
+         </div>`;
+    const row = (panel, icon, label, value) =>
+      `<button type="button" class="dp-row" data-panel="${panel}">${icon}<span class="dp-row-l">${label}</span>` +
+      `<span class="dp-row-v">${esc(value)}</span>${DP_ICON.chev}</button>`;
+    return `
+      <div class="dp-seg">
+        <button type="button" class="${d.mode === 'date' ? 'on' : ''}" data-mode="date">Date</button>
+        <button type="button" class="${d.mode === 'duration' ? 'on' : ''}" data-mode="duration">Duration</button>
+      </div>
+      ${top}
+      <div class="dp-month">
+        <span class="dp-title">${esc(title)}</span>
+        <span class="dp-nav">
+          <button type="button" data-nav="-1" aria-label="Previous month">${DP_ICON.prev}</button>
+          <button type="button" data-nav="0" data-tip="This month" aria-label="This month">${DP_ICON.dot}</button>
+          <button type="button" data-nav="1" aria-label="Next month">${DP_ICON.next}</button>
+        </span>
+      </div>
+      <div class="dp-wk"><span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span></div>
+      <div class="dp-grid">${cells}</div>
+      <div class="dp-rows">
+        ${row('time', DP_ICON.clock, 'Time', d.time ? fmtTime(d.time) : '')}
+        ${row('reminder', DP_ICON.alarm, 'Reminder', reminderLabel(d.reminder))}
+        ${row('repeat', DP_ICON.repeat, 'Repeat', repeatLabel(d.repeat))}
+      </div>
+      <div class="dp-foot">
+        <button type="button" class="dp-clear">Clear</button>
+        <button type="button" class="dp-ok">OK</button>
+      </div>`;
+  }
+
+  function subHTML() {
+    const check = '<span class="pop-check"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1.8 6.2l2.6 2.6 5.8-6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
+    const opt = (on, attr, label) => `<div class="pop-item${on ? ' on' : ''}" ${attr}>${check}<span>${esc(label)}</span></div>`;
+    let title, body = '';
+    if (d.panel === 'time') {
+      title = 'Time';
+      body = `<input type="time" class="dp-time-input" value="${esc(d.time)}">` + opt(!d.time, 'data-time=""', 'No time');
+      for (let m = 0; m < 24 * 60; m += 30) {
+        const hhmm = String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+        body += opt(d.time === hhmm, `data-time="${hhmm}"`, fmtTime(hhmm));
+      }
+    } else if (d.panel === 'reminder') {
+      title = 'Reminder';
+      DP_REMINDERS.forEach(r => { body += opt(d.reminder === r.v, `data-reminder="${r.v === null ? '' : r.v}"`, r.label); });
+    } else {
+      title = 'Repeat';
+      const base = d.mode === 'duration' ? (d.start || d.end) : d.date;
+      repeatOptions(base).forEach(r => { body += opt(d.repeat === r.v, `data-repeat="${r.v || ''}"`, r.label); });
+    }
+    return `<div class="dp-sub-head"><button type="button" class="dp-back" aria-label="Back">${DP_ICON.back}</button><span>${title}</span></div>
+            <div class="dp-sub-body">${body}</div>`;
+  }
+
+  function render() {
+    const sub = d.panel !== 'main';
+    pop.classList.toggle('sub', sub);
+    // Sub-panels keep the picker's height, so it doesn't jump as you step in.
+    pop.style.height = sub && mainHeight ? mainHeight + 'px' : '';
+    pop.innerHTML = sub ? subHTML() : mainHTML();
+    if (!sub) mainHeight = pop.offsetHeight;
+    if (sub) {
+      pop.querySelector('.dp-sub-body .pop-item.on')?.scrollIntoView({block: 'center'});
+      const input = pop.querySelector('.dp-time-input');
+      if (input) input.onchange = () => { d.time = input.value || ''; };
+    }
+    positionPop(pop, anchor, {gap: 9});
+  }
+
+  pop.addEventListener('click', e => {
+    const el = e.target.closest('[data-iso],[data-mode],[data-quick],[data-nav],[data-field],[data-panel],[data-time],[data-reminder],[data-repeat],.dp-back,.dp-clear,.dp-ok');
+    if (!el) return;
+    const ds = el.dataset;
+    if (ds.iso) {
+      const iso = ds.iso;
+      if (d.mode === 'date') d.date = iso;
+      else if (d.field === 'start') {
+        d.start = iso;
+        if (d.end && d.end < iso) d.end = iso;
+        d.field = 'end';
+      } else {
+        if (d.start && iso < d.start) { d.end = d.start; d.start = iso; }
+        else d.end = iso;
+      }
+      if (iso.slice(0, 7) !== d.view) d.view = iso.slice(0, 7);
+    } else if (ds.mode) {
+      if (ds.mode === d.mode) return;
+      if (ds.mode === 'duration') { d.start = d.date; d.end = d.date; d.field = d.date ? 'end' : 'start'; }
+      else d.date = d.end || d.start;
+      d.mode = ds.mode;
+    } else if (ds.quick) {
+      return quick(ds.quick);
+    } else if (ds.nav) {
+      const n = Number(ds.nav);
+      if (n === 0) d.view = today.slice(0, 7);
+      else {
+        const [y, m] = d.view.split('-').map(Number);
+        d.view = isoDay(new Date(y, m - 1 + n, 1)).slice(0, 7);
+      }
+    } else if (ds.field) {
+      d.field = ds.field;
+    } else if (ds.panel) {
+      d.panel = ds.panel;
+    } else if ('time' in ds) {
+      d.time = ds.time; d.panel = 'main';
+    } else if ('reminder' in ds) {
+      d.reminder = ds.reminder === '' ? null : Number(ds.reminder); d.panel = 'main';
+    } else if ('repeat' in ds) {
+      d.repeat = ds.repeat || null; d.panel = 'main';
+    } else if (el.classList.contains('dp-back')) {
+      const input = pop.querySelector('.dp-time-input');
+      if (input) d.time = input.value || '';
+      d.panel = 'main';
+    } else if (el.classList.contains('dp-clear')) {
+      return apply({due: '', start: '', time: '', reminder: null, repeat: null});
+    } else if (el.classList.contains('dp-ok')) {
+      return commit();
+    }
+    render();
+  });
+  pop.addEventListener('keydown', e => {
+    // Enter in the typed time field takes it and steps back out.
+    if (e.key === 'Enter' && e.target.classList.contains('dp-time-input')) {
+      e.preventDefault();
+      d.time = e.target.value || '';
+      d.panel = 'main';
+      render();
+    }
+  });
+
+  render();
 }
+
+/* ── Priority menu ─────────────────────────────────────────────────────── */
 function openPriorityMenu(anchor, id) {
   const t = getTask(id);
   if (!t) return;
-  showPop(anchor, PRIO.map(p => ({
-    label: p.name + (p.v ? ' priority' : ''),
-    on: (t.priority || 0) === p.v,
-    fn: () => { t.priority = p.v; t.updatedAt = Date.now(); save(); renderAll(); },
-  })), {title:'Priority'});
+  const pop = showPop(anchor, [], {align: 'right'});
+  pop.classList.add('prio-pop');
+  pop.innerHTML = [1, 2, 3, 0].map(v => {
+    const p = PRIO.find(x => x.v === v);
+    const flag = v
+      ? `<svg viewBox="0 0 12 12" fill="none"><path d="M2.6 1.2v9.6" stroke="${p.color}" stroke-width="1.4" stroke-linecap="round"/><path d="M2.6 1.9h7L8.2 4.3l1.4 2.4h-7z" fill="${p.color}"/></svg>`
+      : `<svg viewBox="0 0 12 12" fill="none"><path d="M2.6 1.2v9.6" stroke="var(--text-3)" stroke-width="1.3" stroke-linecap="round"/><path d="M2.6 1.9h7L8.2 4.3l1.4 2.4h-7z" stroke="var(--text-3)" stroke-width="1.1" stroke-linejoin="round"/></svg>`;
+    return `<div class="pop-item prio-item" data-v="${v}">${flag}<span>${p.name}</span></div>`;
+  }).join('');
+  pop.querySelectorAll('.prio-item').forEach(el => el.onclick = () => {
+    closePops();
+    t.priority = Number(el.dataset.v); t.updatedAt = Date.now();
+    save(); renderAll();
+  });
+  anchor.classList.add('menu-open');
+  positionPop(pop, anchor, {align: 'right', gap: 9});
 }
+
+/* ── Reminders ────────────────────────────────────────────────────────────
+   Fire while the app is open: always a toast, plus a system notification
+   where the browser allows one (the Mac wrapper's WebView doesn't). No time
+   set means 9:00 that day. What has fired is remembered per device, so each
+   open device reminds you once — and a reminder missed while the app was
+   closed still shows on opening, if it's under 12 hours old. */
+function reminderFireAt(t) {
+  if (t.reminder == null || !t.dueDate || !isOpen(t)) return null;
+  const [h, m] = (t.dueTime || '09:00').split(':').map(Number);
+  const at = new Date(t.dueDate + 'T00:00:00');
+  at.setHours(h, m, 0, 0);
+  return at.getTime() - t.reminder * 60000;
+}
+function checkReminders() {
+  let fired;
+  try { fired = JSON.parse(localStorage.getItem('mc_reminders_fired') || '{}'); } catch (_) { fired = {}; }
+  const now = Date.now();
+  let changed = false;
+  state.tasks.forEach(t => {
+    const at = reminderFireAt(t);
+    if (at === null || at > now || now - at > 12 * 3600000) return;
+    const key = t.id + '@' + at;
+    if (fired[key]) return;
+    fired[key] = now; changed = true;
+    showToast('⏰ ' + t.name + ' · ' + detailWhenLabel(t));
+    try {
+      if ('Notification' in window && Notification.permission === 'granted')
+        new Notification(t.name, {body: detailWhenLabel(t), tag: key});
+    } catch (_) {}
+  });
+  if (!changed) return;
+  Object.keys(fired).forEach(k => { if (now - fired[k] > 3 * 86400000) delete fired[k]; });
+  try { localStorage.setItem('mc_reminders_fired', JSON.stringify(fired)); } catch (_) {}
+}
+setInterval(checkReminders, 30000);
+setTimeout(checkReminders, 3000);
 /* Move-to-list: a searchable picker, with the general list pinned on top and
    the current one marked. */
 function openMoveMenu(anchor, id) {
@@ -10474,7 +11098,7 @@ function positionPop(pop, anchor, opts = {}) {
   const w = pop.offsetWidth, h = pop.offsetHeight;
   let left = opts.align === 'right' ? r.right - w : r.left;
   if (opts.side === 'right') left = r.right + 6;
-  let top = r.bottom + 6;
+  let top = r.bottom + (opts.gap ?? 6);
   if (opts.side === 'right') top = r.top;
   if (left + w > innerWidth - M) left = innerWidth - w - M;
   if (left < M) left = M;
@@ -10566,7 +11190,7 @@ function openSortMenu(anchor) {
 function openListMenu(anchor) {
   const lid = scopeListId();
   const items = [
-    {label:'Show completed', on: UI.showCompleted, fn: () => { UI.showCompleted = !UI.showCompleted; uiSave(); renderTaskList(); }},
+    {label:'Hide completed', on: UI.hideCompleted, fn: () => { UI.hideCompleted = !UI.hideCompleted; uiSave(); renderTaskList(); }},
     {sep:true},
     {label:'Quick capture', icon:'⚡️', hint:'<kbd>C</kbd>', fn: () => openCapture()},
     {label:'New task (full form)', icon:'＋', hint:'<kbd>N</kbd>', fn: () => openTaskModal()},
