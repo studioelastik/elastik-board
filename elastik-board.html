@@ -3672,96 +3672,6 @@ label.focus-row {
 }
 .flt-chip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
 
-/* ── Asana import ───────────────────────────────────────────────────── */
-#detail-asana { display: none; margin-top: 8px; }
-.asn-src {
-  display: inline-flex; align-items: center; gap: 7px;
-  padding: 4px 9px 4px 5px; border-radius: 13px;
-  border: 1px solid var(--hairline, var(--border));
-  font-size: 11.5px; color: var(--text-2); text-decoration: none;
-  max-width: 100%; overflow: hidden;
-}
-.asn-src:hover { background: color-mix(in srgb, var(--text) 6%, transparent); }
-.asn-src-mark {
-  width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0;
-  background: #F06A6A; color: #fff;
-  font-size: 9.5px; font-weight: 700; line-height: 16px; text-align: center;
-}
-.asn-src-proj { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-/* The reason sits on its own line so the project name — the thing you click
-   to get to Asana — keeps the full width of a 300px detail pane. */
-.asn-src-why { font-size: 11px; color: var(--text-3); margin-top: 4px; }
-.asn-src-row { display: flex; gap: 5px; align-items: center; min-width: 0; }
-.asn-src-task { padding: 4px 9px; flex-shrink: 0; color: var(--text-3); }
-.asn-src-why::before { content: '·'; margin-right: 6px; }
-
-/* The notification popover is the one .pop whose rows wrap, so it carries
-   its own width — sized by content it ran out to 880px. */
-.pop.pop-notes { width: 330px; min-width: 0; }
-/* .pop-note-body is left alone — it is already a -webkit-box, and
-   display:block here would kill its line clamp. */
-.pop-notes .pop-note-name,
-.pop-notes .pop-note-sub { display: block; }
-.pop-notes .pop-note-name {
-  line-height: 1.35; overflow-wrap: anywhere;
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-}
-.pop-note.unread .pop-note-name { font-weight: 600; }
-.pop-note-body {
-  font-size: 11.5px; color: var(--text-2); margin-top: 2px;
-  /* Comments carry pasted file paths with no break opportunities, which
-     otherwise run straight out of the popover. */
-  overflow-wrap: anywhere;
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-}
-.pop-foot {
-  padding: 7px 9px 3px; font-size: 11px; color: var(--accent); cursor: pointer; text-align: center;
-}
-.pop-foot:hover { text-decoration: underline; }
-
-/* Asana settings modal */
-.asn-hint { font-size: 12px; color: var(--text-3); line-height: 1.55; }
-.asn-row {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 14px; padding: 11px 0; border-top: 1px solid var(--hairline, var(--border));
-}
-.asn-row:first-of-type { border-top: none; }
-.asn-row-label { font-size: 13px; color: var(--text); }
-.asn-row-sub   { font-size: 11.5px; color: var(--text-3); margin-top: 2px; line-height: 1.45; }
-.asn-who { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text); }
-.asn-who-dot { width: 7px; height: 7px; border-radius: 50%; background: #38A169; flex-shrink: 0; }
-#asana-last  { font-size: 11px; color: var(--text-3); margin: 3px 0 0 15px; letter-spacing: .02em; }
-#asana-status { font-size: 11px; color: var(--text-3); margin: 6px 0 0 15px; min-height: 14px; }
-#asana-error  { font-size: 12px; color: #E86868; margin-top: 6px; min-height: 16px; line-height: 1.5; }
-#asana-projects {
-  max-height: 168px; overflow-y: auto; margin-top: 8px;
-  border: 1px solid var(--hairline, var(--border)); border-radius: 7px; padding: 6px;
-}
-.asn-proj {
-  display: flex; align-items: center; gap: 8px;
-  padding: 4px 6px; border-radius: 5px; font-size: 12.5px; color: var(--text-2); cursor: pointer;
-}
-.asn-proj:hover { background: color-mix(in srgb, var(--text) 6%, transparent); }
-.asn-proj input { accent-color: var(--accent); }
-.asn-steps { margin: 12px 0 4px; }
-#asana-walked { font-size: 11px; color: var(--text-3); margin-top: 6px; }
-.asn-proj-sep {
-  padding: 8px 6px 3px; font-size: 10px; font-weight: 600;
-  letter-spacing: .05em; text-transform: uppercase; color: var(--text-3);
-}
-.asn-more { padding: 5px 6px; font-size: 11.5px; color: var(--accent); cursor: pointer; }
-.asn-more:hover { text-decoration: underline; }
-.asn-links { display: flex; gap: 14px; margin-top: 7px; }
-.asn-links span { font-size: 11.5px; color: var(--accent); cursor: pointer; }
-.asn-links span:hover { text-decoration: underline; }
-.asn-proj.auto span { color: var(--text); }
-#asana-every {
-  padding: 6px 9px; font-size: 12.5px; font-family: inherit;
-  border: none; border-radius: var(--r);
-  background: var(--surface2); color: var(--text); outline: none; flex-shrink: 0;
-}
-#asana-writeback { accent-color: var(--accent); width: 15px; height: 15px; flex-shrink: 0; }
-
 /* ── Desktop shell ─────────────────────────────────────────────────── */
 @media (min-width: 769px) {
   :root { --sidebar: 246px; }
@@ -4820,7 +4730,6 @@ body.chrome-off #col-filter-bar { display: none !important; }
               </button>
             </div>
             <div id="detail-tags"></div>
-            <div id="detail-asana"></div>
             <div id="detail-note-wrap">
               <button id="detail-plus" aria-label="Insert" data-tip="Insert  ·  /">
                 <svg width="13" height="13" viewBox="0 0 12 12" fill="none"><path d="M6 1.5v9M1.5 6h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
@@ -5039,13 +4948,6 @@ body.chrome-off #col-filter-bar { display: none !important; }
         <input type="file" id="import-data-input" accept="application/json,.json" style="display:none" onchange="importDataJSON(event)">
       </div>
     </div>
-    <div class="settings-row">
-      <div>
-        <div class="settings-label">Asana</div>
-        <div class="settings-sub">Import the tasks you're assigned or mentioned on</div>
-      </div>
-      <button class="zoom-btn" onclick="openAsanaModal()" title="Asana import" style="width:auto;padding:0 12px;gap:6px;font-size:12px;">Set up…</button>
-    </div>
     <div class="modal-actions" style="margin-top:8px">
       <button class="btn-cancel" onclick="closeSettingsModal()">Close</button>
     </div>
@@ -5139,92 +5041,6 @@ body.chrome-off #col-filter-bar { display: none !important; }
       <div class="modal-actions">
         <button class="btn-danger" onclick="disconnectFirebase()">Disconnect</button>
         <button class="btn-save" onclick="closeSyncModal()">Done</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Asana Modal -->
-<div class="modal-overlay" id="asana-modal">
-  <div class="modal">
-    <h3>Asana</h3>
-
-    <div id="asana-panel-setup">
-      <p class="asn-hint">
-        Pulls in the Asana tasks assigned to you, plus the ones where somebody
-        @mentioned you in a comment. They land in an <strong>Asana</strong> list,
-        and new comments show up under the bell.
-      </p>
-      <div class="sync-steps asn-steps">
-        <div class="sync-step">
-          <span class="sync-step-n">1</span>
-          <span>In Asana, open your profile photo → <strong>Settings → Apps → Manage developer apps</strong></span>
-        </div>
-        <div class="sync-step">
-          <span class="sync-step-n">2</span>
-          <span><strong>Create new token</strong>, name it <code>Mission Control</code>, and copy it</span>
-        </div>
-        <div class="sync-step">
-          <span class="sync-step-n">3</span>
-          <span>Paste it below. It is stored on this device only — it is never sent to the cloud sync.</span>
-        </div>
-      </div>
-      <div class="form-group" style="margin-top:14px">
-        <label>Personal access token</label>
-        <input type="password" id="asana-token-input" placeholder="2/1200000000000000/1234567890abcdef:…"
-               autocomplete="off" autocorrect="off" spellcheck="false">
-      </div>
-      <p id="asana-error"></p>
-      <div class="modal-actions">
-        <button class="btn-cancel" onclick="closeAsanaModal()">Cancel</button>
-        <button class="btn-save" id="btn-connect-asana" onclick="asanaConnectFromForm()">Connect</button>
-      </div>
-    </div>
-
-    <div id="asana-panel-connected" style="display:none">
-      <div class="asn-who"><span class="asn-who-dot"></span><span id="asana-who"></span></div>
-      <p id="asana-last"></p>
-      <p id="asana-status"></p>
-
-      <div class="asn-row" style="margin-top:12px">
-        <div>
-          <div class="asn-row-label">Projects to watch</div>
-          <div class="asn-row-sub" id="asana-scope-sub"></div>
-        </div>
-      </div>
-      <div id="asana-projects"></div>
-      <p id="asana-walked"></p>
-      <div class="asn-links">
-        <span id="asana-reset-scope" hidden>Back to automatic</span>
-        <span id="asana-full-scan">Scan every project once</span>
-      </div>
-
-      <div class="asn-row">
-        <div>
-          <div class="asn-row-label">Check automatically</div>
-          <div class="asn-row-sub">Only while this window is open.</div>
-        </div>
-        <select id="asana-every" >
-          <option value="0">Off</option>
-          <option value="5">Every 5 min</option>
-          <option value="15">Every 15 min</option>
-          <option value="30">Every 30 min</option>
-          <option value="60">Hourly</option>
-        </select>
-      </div>
-
-      <div class="asn-row">
-        <div>
-          <div class="asn-row-label">Write completions back</div>
-          <div class="asn-row-sub">Off, this is a read-only mirror. On, ticking an imported task here completes it in the real Asana.</div>
-        </div>
-        <input type="checkbox" id="asana-writeback">
-      </div>
-
-      <div class="modal-actions">
-        <button class="btn-danger" onclick="asanaDisconnectFromPanel()">Disconnect</button>
-        <button class="btn-cancel" onclick="asanaSync()">Sync now</button>
-        <button class="btn-save" onclick="closeAsanaModal()">Done</button>
       </div>
     </div>
   </div>
@@ -9098,7 +8914,7 @@ function uiSave() {
    runs for the local blob and for every remote snapshot alike. */
 function shellMigrate(raw) {
   if (!Array.isArray(raw.savedFilters)) raw.savedFilters = [];
-  if (!Array.isArray(raw.asanaNotes)) raw.asanaNotes = [];
+  delete raw.asanaNotes;            // the Asana notification feed, from the removed import
   if (!Array.isArray(raw.trash)) raw.trash = [];
   if (typeof raw.listLimit !== 'number') raw.listLimit = 9;
   (raw.projects || []).forEach((p, i) => {
@@ -9575,7 +9391,7 @@ function renderRail() {
   ['rail-tasks','rail-calendar'].forEach(id =>
     document.getElementById(id)?.classList.toggle('active', map[currentView] === id));
   const bell = document.getElementById('rail-bell');
-  if (bell) bell.classList.toggle('has-alert', notificationItems().length > 0 || asanaUnread() > 0);
+  if (bell) bell.classList.toggle('has-alert', notificationItems().length > 0);
 }
 
 /* Dropping a task onto a sidebar row re-files it. */
@@ -9879,16 +9695,15 @@ function toggleDone(id) {
   setTaskStatus(t, isDone(t) ? 'next' : 'done');
   if (isDone(t)) t.completedAt = Date.now();
   save(); renderAll();
-  if (t.asana) asanaPushComplete(t);
 }
 /* Completing a repeating task files a done copy — so it shows in Completed
    and in history — and moves the task itself on to its next date, with its
-   checklist reset. Attachments and the Asana link stay with the live task. */
+   checklist reset. Attachments stay with the live task. */
 function completeRepeating(t) {
   const now = Date.now();
   const copy = JSON.parse(JSON.stringify(t));
   Object.assign(copy, {id: uid(), status: 'done', completedAt: now, updatedAt: now});
-  ['repeat', 'repeatDom', 'reminder', 'asana', 'attachments'].forEach(k => delete copy[k]);
+  ['repeat', 'repeatDom', 'reminder', 'attachments'].forEach(k => delete copy[k]);
   state.tasks.splice(state.tasks.indexOf(t) + 1, 0, copy);
 
   const next = nextOccurrence(t);
@@ -10270,8 +10085,6 @@ function renderDetail() {
     renderAttachGallery(t, gallery);
   }
   document.getElementById('detail-attach-btn').onclick = () => uploadDetailAttachment(t.id);
-
-  renderDetailAsana(t);
 
   // ── Footer ──
   const listBtn = document.getElementById('detail-list-btn');
@@ -11287,8 +11100,6 @@ function openListMenu(anchor) {
   items.push(
     {sep:true},
     {label:'Cloud sync…', icon:'☁︎', fn: () => openSyncModal()},
-    {label:'Asana…', icon:'⁂', fn: () => openAsanaModal()},
-    {label:'Notifications', icon:'◎', hint: asanaUnread() || '', fn: () => openNotifications(anchor)},
     {label:'Get latest version', icon:'↺', fn: () => location.reload()},
     {label:'Settings…', icon:'⚙︎', fn: () => openSettingsModal()},
   );
@@ -11354,53 +11165,11 @@ function notificationItems() {
 }
 function openNotifications(anchor) {
   const items = notificationItems();
-  const notes = asanaNotes();
   const pop = showPop(anchor, [], {side:'right'});
-  pop.classList.add('pop-notes');
-  pop.innerHTML = '';
-  if (!items.length && !notes.length) {
-    pop.innerHTML = `<div class="pop-title">Notifications</div>` +
-      `<div class="pop-empty">Nothing overdue or due today.<br>You're clear.</div>`;
-    positionPop(pop, anchor, {side:'right'});
-    return;
-  }
-  // Asana first — it's news from other people, where the due-date rows below
-  // are things this board already knows.
-  if (notes.length) {
-    const unread = asanaUnread();
-    pop.insertAdjacentHTML('beforeend',
-      `<div class="pop-title">From Asana${unread ? ' · ' + unread + ' new' : ''}</div>`);
-    notes.slice(0, 10).forEach(n => {
-      const row = document.createElement('div');
-      row.className = 'pop-note' + (n.read ? '' : ' unread');
-      const what = n.kind === 'mention'  ? `${esc(n.author)} mentioned you`
-                 : n.kind === 'assigned' ? 'Assigned to you'
-                 :                         `${esc(n.author)} commented`;
-      row.innerHTML =
-        `<span class="pop-note-dot" style="background:${n.read ? 'var(--text-3)' : '#F06A6A'}"></span>` +
-        `<span style="min-width:0"><span class="pop-note-name">${esc(n.task)}</span>` +
-        `<span class="pop-note-sub">${what} · ${asanaWhen(n.at)}</span>` +
-        (n.text ? `<span class="pop-note-body">${esc(n.text)}</span>` : '') +
-        `</span>`;
-      row.onclick = () => {
-        n.read = true; save(); closePops(); renderRail();
-        const t = asanaFindTask(n.taskGid);
-        if (t) { openScope({type:'list', id: t.pid}); setTimeout(() => openDetail(t.id), 40); }
-        else if (n.url) window.open(n.url, '_blank', 'noopener');
-      };
-      pop.appendChild(row);
-    });
-    if (asanaUnread()) {
-      const foot = document.createElement('div');
-      foot.className = 'pop-foot';
-      foot.textContent = 'Mark all read';
-      foot.onclick = e => { e.stopPropagation(); asanaMarkNotesRead(); closePops(); };
-      pop.appendChild(foot);
-    }
-    if (items.length) pop.insertAdjacentHTML('beforeend', '<div class="pop-sep"></div>');
-  }
-  if (items.length) {
-    pop.insertAdjacentHTML('beforeend', `<div class="pop-title">Due</div>`);
+  pop.innerHTML = `<div class="pop-title">Notifications</div>`;
+  if (!items.length) {
+    pop.insertAdjacentHTML('beforeend', `<div class="pop-empty">Nothing overdue or due today.<br>You're clear.</div>`);
+  } else {
     items.slice(0, 12).forEach(t => {
       const over = (daysFromToday(t.dueDate) ?? 0) < 0;
       const row = document.createElement('div');
@@ -11413,17 +11182,6 @@ function openNotifications(anchor) {
     });
   }
   positionPop(pop, anchor, {side:'right'});
-}
-/* "4 min ago" / "Tue" — notification rows need a stamp, not a full date. */
-function asanaWhen(iso) {
-  const d = new Date(iso);
-  if (isNaN(d)) return '';
-  const mins = Math.round((Date.now() - d.getTime()) / 60000);
-  if (mins < 1)    return 'just now';
-  if (mins < 60)   return mins + ' min ago';
-  if (mins < 1440) return Math.round(mins / 60) + ' h ago';
-  if (mins < 10080) return d.toLocaleDateString(undefined, {weekday: 'short'});
-  return d.toLocaleDateString(undefined, {day: 'numeric', month: 'short'});
 }
 
 function openHelp(anchor) {
@@ -11457,7 +11215,6 @@ function openAvatarMenu(anchor) {
     {label: dark ? 'Light appearance' : 'Dark appearance', icon: dark ? '☀︎' : '☾', fn: () => toggleTheme()},
     {sep:true},
     {label:'Cloud sync…', icon:'☁︎', fn: () => openSyncModal()},
-    {label:'Asana…', icon:'⁂', fn: () => openAsanaModal()},
     {label:'Settings…', icon:'⚙︎', fn: () => openSettingsModal()},
     {label:'Get latest version', icon:'↺', fn: () => location.reload()},
   ], {side:'right'});
@@ -11467,614 +11224,6 @@ function editListLimit() {
   const cur = state.listLimit || 9;
   const v = parseInt(prompt('How many lists should this workspace allow?', cur), 10);
   if (!isNaN(v) && v > 0) { state.listLimit = v; save(); renderSidebar(); }
-}
-
-// ── Asana import ───────────────────────────────────────────────────────
-/* Brings the Asana work you're actually on into the board: tasks assigned
-   to you, and tasks where somebody @mentioned you in a comment.
-
-   Asana's advanced-search endpoint answers both in one query, but it is
-   premium-only and 402s on a free workspace — so we walk the projects
-   instead. An @mention makes you a follower of the task, and `followers`
-   rides along on the bulk task list, so the candidate set costs no extra
-   requests; only that short list needs its comments read to confirm the
-   mention is really yours. Those verdicts are cached against the task's
-   modified_at, so later syncs re-read almost nothing.
-
-   The token is a Personal Access Token and lives in localStorage only —
-   deliberately never in `state`, so it never reaches Firebase. */
-
-const ASANA_API   = 'https://app.asana.com/api/1.0';
-const ASANA_LIST  = '_asana';        // the Mission Control list imports land in
-const ASANA_TASK_FIELDS = [
-  'name','notes','due_on','due_at','completed','permalink_url','modified_at',
-  'created_at','assignee.gid','assignee.name','followers.gid','projects.gid','projects.name',
-].join(',');
-const ASANA_STORY_FIELDS = 'resource_subtype,text,html_text,created_at,created_by.gid,created_by.name';
-const ASANA_STORY_BUDGET = 180;      // story requests per sync, to stay inside the rate limit
-const ASANA_NOTE_CAP     = 60;       // notifications kept in state
-const ASANA_FIRST_RUN_DAYS = 7;      // how far back the first sync looks for notifications
-const ASANA_MENTION_KEEP_DAYS = 60;  // how long a project stays in scope after a mention there
-const ASANA_FULL_SWEEP_DAYS   = 7;   // how often every project gets walked, to find new ones
-
-const asanaCfg = {
-  get token()      { return prefGet('mc_asana_token', ''); },
-  set token(v)     { v ? prefSet('mc_asana_token', v) : prefRemove('mc_asana_token'); },
-  get workspace()  { return prefGet('mc_asana_workspace', ''); },
-  set workspace(v) { prefSet('mc_asana_workspace', v || ''); },
-  get me()         { return prefGetJSON('mc_asana_me', null); },
-  set me(v)        { prefSetJSON('mc_asana_me', v); },
-  get projects()   { return prefGetJSON('mc_asana_projects', null); },   // null = every project
-  set projects(v)  { prefSetJSON('mc_asana_projects', v); },
-  get known()      { return prefGetJSON('mc_asana_known', []) || []; },  // cached project list
-  set known(v)     { prefSetJSON('mc_asana_known', v); },
-  get writeback()  { return prefGet('mc_asana_writeback', '0') === '1'; },
-  set writeback(v) { prefSet('mc_asana_writeback', v ? '1' : '0'); },
-  get lastSync()   { return prefGet('mc_asana_lastsync', ''); },
-  set lastSync(v)  { prefSet('mc_asana_lastsync', v || ''); },
-  // gid → ISO date a mention of the user was last confirmed in that project
-  get mentionProj()  { return prefGetJSON('mc_asana_mentionproj', {}) || {}; },
-  set mentionProj(v) { prefSetJSON('mc_asana_mentionproj', v); },
-  get lastFullScan()   { return prefGet('mc_asana_fullscan', ''); },
-  set lastFullScan(v)  { prefSet('mc_asana_fullscan', v || ''); },
-  get lastScan()   { return prefGetJSON('mc_asana_lastscan', null); },
-  set lastScan(v)  { prefSetJSON('mc_asana_lastscan', v); },
-  get every()      { return parseInt(prefGet('mc_asana_every', '15'), 10) || 0; }, // minutes; 0 = off
-  set every(v)     { prefSet('mc_asana_every', String(v)); },
-};
-function asanaConnected() { return !!asanaCfg.token && !!asanaCfg.workspace; }
-
-// ── Transport ──
-let asanaBusy = false;
-
-async function asanaRaw(path, params = {}, method = 'GET', body = null, tries = 0) {
-  const url = new URL(ASANA_API + path);
-  Object.entries(params).forEach(([k, v]) => {
-    if (v !== null && v !== undefined && v !== '') url.searchParams.set(k, v);
-  });
-  const opts = {method, headers: {Authorization: 'Bearer ' + asanaCfg.token, Accept: 'application/json'}};
-  if (body) {
-    opts.headers['Content-Type'] = 'application/json';
-    opts.body = JSON.stringify({data: body});
-  }
-  const res = await fetch(url, opts);
-  // Asana answers 429 with the seconds to wait; back off once rather than
-  // hammering — a sync that walks many projects can brush the limit.
-  if (res.status === 429 && tries < 3) {
-    const wait = (parseInt(res.headers.get('Retry-After') || '5', 10) || 5) * 1000;
-    await new Promise(r => setTimeout(r, wait));
-    return asanaRaw(path, params, method, body, tries + 1);
-  }
-  if (!res.ok) {
-    let msg = 'HTTP ' + res.status;
-    try {
-      const j = await res.json();
-      if (j && j.errors && j.errors[0] && j.errors[0].message) msg = j.errors[0].message;
-    } catch(_) {}
-    if (res.status === 401) msg = 'Token rejected — create a new one in Asana.';
-    if (res.status === 402) msg = 'That needs a paid Asana plan.';
-    const err = new Error(msg); err.status = res.status; throw err;
-  }
-  return res.json();
-}
-async function asanaGet(path, params)  { return (await asanaRaw(path, params)).data; }
-async function asanaPut(path, body)    { return (await asanaRaw(path, {}, 'PUT', body)).data; }
-
-/* Follows Asana's offset pagination to the end (capped, so a pathological
-   project can't spin forever). */
-async function asanaAll(path, params = {}) {
-  const out = [];
-  let offset = null;
-  for (let page = 0; page < 25; page++) {
-    const env = await asanaRaw(path, {...params, limit: 100, ...(offset ? {offset} : {})});
-    out.push(...(env.data || []));
-    offset = env.next_page && env.next_page.offset;
-    if (!offset) break;
-  }
-  return out;
-}
-
-// ── Connecting ──
-async function asanaConnect(token) {
-  const previous = asanaCfg.token;
-  asanaCfg.token = token;
-  try {
-    const me = await asanaGet('/users/me', {opt_fields: 'name,email,workspaces.name'});
-    asanaCfg.me = {gid: me.gid, name: me.name, email: me.email};
-    const spaces = me.workspaces || [];
-    if (!asanaCfg.workspace || !spaces.some(w => w.gid === asanaCfg.workspace))
-      asanaCfg.workspace = (spaces[0] || {}).gid || '';
-    return me;
-  } catch (e) {
-    asanaCfg.token = previous;
-    throw e;
-  }
-}
-function asanaDisconnect() {
-  ['mc_asana_token','mc_asana_workspace','mc_asana_me','mc_asana_projects',
-   'mc_asana_known','mc_asana_lastsync','mc_asana_mentions'].forEach(prefRemove);
-  renderRail();
-}
-
-// ── Mapping Asana → Mission Control ──
-function asanaEnsureList() {
-  let p = getProject(ASANA_LIST);
-  if (!p) {
-    p = {id: ASANA_LIST, name: 'Asana', color: '#F06A6A', emoji: '🅰️', focused: false};
-    state.projects.push(p);
-  }
-  return p;
-}
-/* Project names become tags, so "PetCo Grafik intern" reads as
-   #PetCo-Grafik-intern rather than three broken tags. */
-function asanaTag(name) {
-  return String(name || '').trim().replace(/\s+/g, '-').replace(/[#,]/g, '').slice(0, 40);
-}
-function asanaFindTask(gid) {
-  return state.tasks.find(t => t.asana && t.asana.gid === gid);
-}
-/* Refresh the fields Asana owns; leave everything Mission Control owns
-   (status, priority, time entries, attachments, local tags) alone. */
-/* Asana's plain `text` collapses a mention to a bare name; the HTML keeps the
-   paragraph breaks worth preserving. Decoding is left to the parser — hand-
-   rolled entity replacement mangles every umlaut, and these comments are
-   mostly German. DOMParser builds an inert document: no scripts run and no
-   images are fetched, unlike innerHTML on a live node. */
-function asanaCommentText(s) {
-  const html = s.html_text || '';
-  const plain = (s.text || '').trim();
-  if (!html) return plain;
-  try {
-    const doc = new DOMParser().parseFromString(html, 'text/html');
-    doc.body.querySelectorAll('script,style').forEach(el => el.remove());
-    doc.body.querySelectorAll('br').forEach(br => br.replaceWith('\n'));
-    doc.body.querySelectorAll('p,div,li,h1,h2,h3,h4,h5,h6').forEach(el => el.append('\n'));
-    const out = (doc.body.textContent || '')
-      .replace(/[ \t]+\n/g, '\n')
-      .replace(/\n{3,}/g, '\n\n')
-      .trim();
-    return out || plain;
-  } catch(_) { return plain; }
-}
-function asanaMentionNote(m) {
-  if (!m || !m.text) return '';
-  const when = m.at ? new Date(m.at) : null;
-  const stamp = when && !isNaN(when)
-    ? when.toLocaleDateString(undefined, {day: 'numeric', month: 'short'}) + ', ' +
-      when.toLocaleTimeString(undefined, {hour: '2-digit', minute: '2-digit'})
-    : '';
-  return `${m.author}${stamp ? ' · ' + stamp : ''}\n${m.text}`;
-}
-function asanaApply(t, a, reason, projUrl, mention) {
-  const projNames = (a.projects || []).map(p => p.name).filter(Boolean);
-  const projTags  = projNames.map(asanaTag).filter(Boolean);
-  t.name    = a.name || '(untitled)';
-  t.dueDate = a.due_on || (a.due_at ? a.due_at.slice(0, 10) : '');
-  /* The body is the reason this task is on the board: the most recent comment
-     that named you, not the task's own description. Tasks that are here only
-     because they're assigned to you have no such comment, so those keep the
-     description. Skipped once the rich editor owns the body (noteEJ). */
-  const mentionNote = asanaMentionNote(mention);
-  if (!t.noteEJ) t.notes = mentionNote || a.notes || '';
-  const keep = (t.tags || []).filter(x => !t._asanaTags || !t._asanaTags.includes(x));
-  t.tags = [...new Set([...keep, ...projTags])];
-  t._asanaTags = projTags;
-  t.asana = {
-    gid: a.gid,
-    url: a.permalink_url || ('https://app.asana.com/0/0/' + a.gid),
-    project: projNames[0] || '',
-    projectGid: (a.projects || []).map(p => p.gid)[0] || '',
-    projectUrl: (projUrl && projUrl.get((a.projects || []).map(p => p.gid)[0])) || '',
-    reason,                                   // 'assigned' | 'mention' | 'both'
-    modified: a.modified_at || '',
-    at: Date.now(),
-  };
-  t.updatedAt = Date.now();
-}
-
-// ── Notifications ──
-function asanaNotes() {
-  if (!Array.isArray(state.asanaNotes)) state.asanaNotes = [];
-  return state.asanaNotes;
-}
-function asanaUnread() { return asanaNotes().filter(n => !n.read).length; }
-function asanaMarkNotesRead() {
-  asanaNotes().forEach(n => n.read = true);
-  save(); renderRail();
-}
-/* An @mention is the one place a user's gid appears in a story's HTML, so
-   that match is exact. `text` renders the mention as a bare name, which is
-   too loose to trust — only fall back to it when html_text is missing. */
-function asanaMentionsMe(story, myGid, myName) {
-  const html = story.html_text || '';
-  if (myGid && html.includes('data-asana-gid="' + myGid + '"')) return true;
-  if (!html && myName && story.text) return story.text.includes('@' + myName);
-  return false;
-}
-
-// ── The sync itself ──
-function asanaStatus(msg) {
-  const el = document.getElementById('asana-status');
-  if (el) el.textContent = msg || '';
-}
-async function asanaSync(opts = {}) {
-  if (asanaBusy) return;
-  if (!asanaConnected()) {
-    if (!opts.silent) showToast('Connect Asana first.');
-    return;
-  }
-  asanaBusy = true;
-  const startedAt = new Date().toISOString();
-  const since     = asanaCfg.lastSync;
-  // A first run shouldn't dump months of old comments into the bell.
-  const noteSince = since || new Date(Date.now() - ASANA_FIRST_RUN_DAYS * 86400000).toISOString();
-  const me     = asanaCfg.me || {};
-  const myGid  = me.gid || '';
-  const myName = me.name || '';
-  const mentionCache = prefGetJSON('mc_asana_mentions', {}) || {};
-  try {
-    /* My Tasks first: it is one call, it catches tasks that sit in no project
-       at all, and the projects it names are half the answer to which projects
-       are worth walking. */
-    asanaStatus('Reading My Tasks…');
-    const byGid = new Map();
-    const myTasks = await asanaAll('/tasks', {
-      assignee: 'me', workspace: asanaCfg.workspace, completed_since: 'now',
-      opt_fields: ASANA_TASK_FIELDS,
-    });
-    myTasks.forEach(a => byGid.set(a.gid, a));
-    const projectsWithMyTasks = new Set();
-    myTasks.forEach(a => (a.projects || []).forEach(p => projectsWithMyTasks.add(p.gid)));
-
-    /* `members` and `permalink_url` ride along on the bulk project list, so
-       working out which projects matter costs one paged call rather than one
-       call per project. */
-    asanaStatus('Reading projects…');
-    const allProjects = await asanaAll('/projects', {
-      workspace: asanaCfg.workspace, archived: false,
-      opt_fields: 'name,color,permalink_url',
-    });
-    const mentionProj = asanaCfg.mentionProj;
-    const mentionCutoff = new Date(Date.now() - ASANA_MENTION_KEEP_DAYS * 86400000).toISOString();
-    const isRelevant = p =>
-      projectsWithMyTasks.has(p.gid) ||
-      (mentionProj[p.gid] || '') > mentionCutoff;
-    /* Narrowing to relevant projects means a first-ever mention somewhere the
-       user has no tasks and no membership would never be found — so every so
-       often, walk the lot to pick up new ground. */
-    const sweepDue = opts.fullScan || !asanaCfg.lastFullScan ||
-      asanaCfg.lastFullScan < new Date(Date.now() - ASANA_FULL_SWEEP_DAYS * 86400000).toISOString();
-    asanaCfg.known = allProjects.map(p => ({
-      gid: p.gid, name: p.name, url: p.permalink_url || '', auto: isRelevant(p),
-    }));
-    const pick = asanaCfg.projects;
-    let projects = Array.isArray(pick)
-      ? allProjects.filter(p => pick.includes(p.gid))        // the user picked explicitly
-      : (sweepDue ? allProjects : allProjects.filter(isRelevant));
-    const projUrl = new Map(allProjects.map(p => [p.gid, p.permalink_url || '']));
-
-    // Every open task in those projects.
-    let walked = 0;
-    for (const p of projects) {
-      asanaStatus(`Reading ${p.name}… (${++walked}/${projects.length})`);
-      const rows = await asanaAll('/tasks', {
-        project: p.gid, completed_since: 'now', opt_fields: ASANA_TASK_FIELDS,
-      });
-      rows.forEach(a => { if (!byGid.has(a.gid)) byGid.set(a.gid, a); });
-    }
-    if (!Array.isArray(pick) && sweepDue) asanaCfg.lastFullScan = startedAt;
-    asanaCfg.lastScan = {walked: projects.length, total: allProjects.length, sweep: !!sweepDue};
-
-    // Split into the two things the user asked for.
-    const assigned = [], followed = [];
-    byGid.forEach(a => {
-      const mine    = !!(a.assignee && a.assignee.gid === myGid);
-      const follows = (a.followers || []).some(f => f.gid === myGid);
-      if (mine) assigned.push(a);
-      else if (follows) followed.push(a);
-    });
-
-    /* Stories are the expensive call, so only two sets get them: followed
-       tasks whose mention verdict is missing or stale, and assigned tasks
-       that changed since the last sync (for the comment notifications). */
-    const needStories = [];
-    followed.forEach(a => {
-      const c = mentionCache[a.gid];
-      if (!c || c.checked < (a.modified_at || '') || (c.hit && !c.mention)) needStories.push(a);
-    });
-    assigned.forEach(a => { if ((a.modified_at || '') > since) needStories.push(a); });
-
-    const fresh = [];
-    let budget = ASANA_STORY_BUDGET, read = 0;
-    for (const a of needStories) {
-      if (budget-- <= 0) break;                // resume on the next sync
-      asanaStatus(`Reading comments… ${++read}/${Math.min(needStories.length, ASANA_STORY_BUDGET)}`);
-      let stories = [];
-      try {
-        stories = await asanaGet(`/tasks/${a.gid}/stories`, {opt_fields: ASANA_STORY_FIELDS, limit: 100}) || [];
-      } catch(_) { continue; }                 // a task we lost access to shouldn't kill the run
-      let hit = false, mention = null;
-      stories.forEach(s => {
-        if (s.resource_subtype !== 'comment_added') return;
-        const mine = asanaMentionsMe(s, myGid, myName);
-        if (mine) {
-          hit = true;
-          // Stories come back oldest first, but don't rely on it — compare.
-          if (!mention || (s.created_at || '') > (mention.at || ''))
-            mention = {
-              at: s.created_at || '',
-              author: (s.created_by && s.created_by.name) || 'Someone',
-              text: asanaCommentText(s),
-            };
-        }
-        const byMe = s.created_by && s.created_by.gid === myGid;
-        if (byMe || (s.created_at || '') <= noteSince) return;
-        const assignedToMe = !!(a.assignee && a.assignee.gid === myGid);
-        if (!mine && !assignedToMe) return;
-        fresh.push({
-          id: 's' + s.gid,
-          kind: mine ? 'mention' : 'comment',
-          at: s.created_at,
-          author: (s.created_by && s.created_by.name) || 'Someone',
-          task: a.name,
-          taskGid: a.gid,
-          url: a.permalink_url || '',
-          text: (s.text || '').replace(/\s+/g, ' ').trim().slice(0, 220),
-          read: false,
-        });
-      });
-      mentionCache[a.gid] = {hit, checked: a.modified_at || startedAt, mention};
-      // Remember where mentions actually happen, so that project keeps being
-      // walked even once the user has no task of their own in it.
-      if (hit) (a.projects || []).forEach(p => { mentionProj[p.gid] = startedAt; });
-    }
-    asanaCfg.mentionProj = mentionProj;
-    // A task assigned to you since the last sync is worth a line too.
-    assigned.forEach(a => {
-      if ((a.created_at || '') <= noteSince) return;
-      fresh.push({
-        id: 'a' + a.gid, kind: 'assigned', at: a.created_at, author: '',
-        task: a.name, taskGid: a.gid, url: a.permalink_url || '', text: '', read: false,
-      });
-    });
-    prefSetJSON('mc_asana_mentions', mentionCache);
-
-    // Followed tasks only come in once a mention is actually confirmed.
-    const confirmed = followed.filter(a => (mentionCache[a.gid] || {}).hit);
-    const wanted = new Map();
-    assigned.forEach(a => wanted.set(a.gid, 'assigned'));
-    confirmed.forEach(a => wanted.set(a.gid, wanted.has(a.gid) ? 'both' : 'mention'));
-
-    // Write it into the board.
-    asanaEnsureList();
-    let added = 0, updated = 0, closed = 0;
-    wanted.forEach((reason, gid) => {
-      const a = byGid.get(gid);
-      let t = asanaFindTask(gid);
-      if (!t) {
-        t = {
-          id: uid(), pid: ASANA_LIST, name: '', status: 'next', notes: '',
-          dueDate: '', tags: [], priority: 0, createdAt: Date.now(), updatedAt: Date.now(),
-        };
-        state.tasks.unshift(t);
-        added++;
-      } else updated++;
-      asanaApply(t, a, reason, projUrl, (mentionCache[gid] || {}).mention);
-    });
-    /* Anything imported that Asana no longer hands back is done, reassigned,
-       or out of reach. Close it rather than delete it — time entries and
-       attachments hang off the task id.
-       Only tasks this run could actually have seen count: My Tasks is always
-       re-read in full, so a missing assigned task is real news, but a task
-       from a project the user has since unticked is simply out of scope and
-       must be left alone. */
-    const scanned = new Set(projects.map(p => p.gid));
-    state.tasks.forEach(t => {
-      if (!t.asana || !t.asana.gid || wanted.has(t.asana.gid)) return;
-      if (isDone(t) || t.status === 'archive') return;
-      const wasAssigned = t.asana.reason === 'assigned' || t.asana.reason === 'both';
-      const inScope = !t.asana.projectGid || scanned.has(t.asana.projectGid);
-      if (!wasAssigned && !inScope) return;
-      setTaskStatus(t, 'done');
-      t.completedAt = Date.now();
-      closed++;
-    });
-
-    // Newest first, de-duplicated against what's already in the bell.
-    const seen = new Set(asanaNotes().map(n => n.id));
-    const incoming = fresh.filter(n => !seen.has(n.id)).sort((x, y) => (y.at || '').localeCompare(x.at || ''));
-    state.asanaNotes = [...incoming, ...asanaNotes()].slice(0, ASANA_NOTE_CAP);
-
-    asanaCfg.lastSync = startedAt;
-    save(); renderAll();
-    asanaStatus('');
-    asanaRenderPanel();
-    if (!opts.silent || added || incoming.length) {
-      const bits = [];
-      if (added)            bits.push(`${added} new`);
-      if (updated)          bits.push(`${updated} updated`);
-      if (closed)           bits.push(`${closed} closed`);
-      if (incoming.length)  bits.push(`${incoming.length} notification${incoming.length > 1 ? 's' : ''}`);
-      showToast(bits.length ? 'Asana: ' + bits.join(' · ') : 'Asana: nothing new');
-    }
-  } catch (e) {
-    console.error('Asana sync failed', e);
-    const hint = e.status === 402
-      ? 'That workspace needs a paid Asana plan for this call.'
-      : e.message;
-    asanaStatus('Last sync failed — ' + hint);
-    if (!opts.silent) showToast('Asana: ' + hint);
-  } finally {
-    asanaBusy = false;
-  }
-}
-
-/* Completing an imported task can push back to Asana, but only when the
-   user has explicitly switched that on — off, this stays a read-only
-   mirror and nothing this app does can alter their real Asana. */
-async function asanaPushComplete(t) {
-  if (!asanaCfg.writeback || !asanaConnected()) return;
-  if (!t || !t.asana || !t.asana.gid) return;
-  const done = isDone(t);
-  try {
-    await asanaPut('/tasks/' + t.asana.gid, {completed: done});
-    showToast(done ? 'Marked complete in Asana' : 'Reopened in Asana');
-  } catch (e) {
-    showToast('Asana write failed: ' + e.message);
-  }
-}
-
-// ── Detail pane: where this task came from ──
-function renderDetailAsana(t) {
-  const box = document.getElementById('detail-asana');
-  if (!box) return;
-  if (!t || !t.asana || !t.asana.gid) { box.innerHTML = ''; box.style.display = 'none'; return; }
-  const why = t.asana.reason === 'mention' ? 'You were mentioned'
-            : t.asana.reason === 'both'    ? 'Assigned to you · mentioned'
-            :                                'Assigned to you';
-  box.style.display = 'block';
-  // The project chip opens the project board in Asana; the task's own
-  // permalink sits beside it rather than hiding under the project name.
-  const projHref = t.asana.projectUrl || (t.asana.projectGid
-    ? 'https://app.asana.com/0/' + t.asana.projectGid
-    : t.asana.url);
-  box.innerHTML =
-    `<div class="asn-src-row">` +
-      `<a class="asn-src" href="${esc(projHref)}" target="_blank" rel="noopener" title="Open this project in Asana">` +
-        `<span class="asn-src-mark">A</span>` +
-        `<span class="asn-src-proj">${esc(t.asana.project || 'Asana')}</span>` +
-      `</a>` +
-      `<a class="asn-src asn-src-task" href="${esc(t.asana.url)}" target="_blank" rel="noopener" title="Open this task in Asana">Task ↗</a>` +
-    `</div>` +
-    `<div class="asn-src-why">${esc(why)}</div>`;
-}
-
-// ── Settings panel ──
-function openAsanaModal() {
-  closeSettingsModal();
-  asanaRenderPanel();
-  document.getElementById('asana-modal').classList.add('open');
-  closeDrawer();
-}
-function closeAsanaModal() { document.getElementById('asana-modal').classList.remove('open'); }
-
-let asanaShowAllProjects = false;
-function asanaRenderPanel() {
-  const on = asanaConnected();
-  const setup = document.getElementById('asana-panel-setup');
-  const live  = document.getElementById('asana-panel-connected');
-  if (!setup || !live) return;
-  setup.style.display = on ? 'none'  : 'block';
-  live.style.display  = on ? 'block' : 'none';
-  if (!on) return;
-
-  const me = asanaCfg.me || {};
-  document.getElementById('asana-who').textContent = me.name || me.email || 'Connected';
-  const last = asanaCfg.lastSync;
-  document.getElementById('asana-last').textContent = last
-    ? 'Last checked ' + new Date(last).toLocaleString(undefined, {dateStyle: 'medium', timeStyle: 'short'})
-    : 'Not synced yet';
-
-  const pick   = asanaCfg.projects;
-  const known  = asanaCfg.known;
-  const custom = Array.isArray(pick);
-  const box    = document.getElementById('asana-projects');
-  const note   = document.getElementById('asana-scope-sub');
-  const isOn    = p => custom ? pick.includes(p.gid) : !!p.auto;
-  const watched = known.filter(isOn);
-  const rest    = known.filter(p => !isOn(p));
-  const scan    = asanaCfg.lastScan;
-
-  if (note) note.textContent = custom
-    ? `You picked these by hand — ${watched.length} of ${known.length} projects.`
-    : `Watching ${watched.length} of ${known.length}: the projects you have a task assigned in, or were mentioned in recently.`;
-
-  if (!known.length) {
-    box.innerHTML = `<div class="asn-hint">Run a sync once and your projects will be listed here.</div>`;
-  } else {
-    const row = p => `<label class="asn-proj${isOn(p) ? ' auto' : ''}">` +
-      `<input type="checkbox" data-gid="${esc(p.gid)}"${isOn(p) ? ' checked' : ''}>` +
-      `<span>${esc(p.name)}</span></label>`;
-    box.innerHTML =
-      (watched.length ? watched.map(row).join('') : `<div class="asn-hint">Nothing yet — no tasks assigned to you and no recent mentions.</div>`) +
-      (rest.length
-        ? (asanaShowAllProjects
-            ? `<div class="asn-proj-sep">Not watched</div>` + rest.map(row).join('')
-            : `<div class="asn-more" id="asana-show-all">Show the other ${rest.length}…</div>`)
-        : '');
-    const more = document.getElementById('asana-show-all');
-    if (more) more.onclick = () => { asanaShowAllProjects = true; asanaRenderPanel(); };
-    box.querySelectorAll('input[data-gid]').forEach(cb => {
-      // Touching any box switches the whole thing from automatic to an
-      // explicit list — otherwise the next sync would silently undo the edit.
-      cb.onchange = () => {
-        const now = new Set(known.filter(isOn).map(p => p.gid));
-        cb.checked ? now.add(cb.dataset.gid) : now.delete(cb.dataset.gid);
-        asanaCfg.projects = [...now];
-        asanaShowAllProjects = true;
-        asanaRenderPanel();
-      };
-    });
-  }
-  const walked = document.getElementById('asana-walked');
-  if (walked) walked.textContent = scan
-    ? `Last sync read ${scan.walked} project${scan.walked === 1 ? '' : 's'}` +
-      (scan.sweep && scan.walked === scan.total ? ' — the weekly sweep of all of them.' : '.')
-    : '';
-  const reset = document.getElementById('asana-reset-scope');
-  if (reset) {
-    reset.hidden = !custom;
-    reset.onclick = () => { asanaCfg.projects = null; asanaShowAllProjects = false; asanaRenderPanel(); };
-  }
-  const full = document.getElementById('asana-full-scan');
-  if (full) full.onclick = () => { closeAsanaModal(); asanaSync({fullScan: true}); };
-  const wb = document.getElementById('asana-writeback');
-  if (wb) { wb.checked = asanaCfg.writeback; wb.onchange = () => { asanaCfg.writeback = wb.checked; }; }
-  const ev = document.getElementById('asana-every');
-  if (ev) { ev.value = String(asanaCfg.every); ev.onchange = () => { asanaCfg.every = parseInt(ev.value, 10) || 0; asanaSchedule(); }; }
-}
-
-async function asanaConnectFromForm() {
-  const input = document.getElementById('asana-token-input');
-  const err   = document.getElementById('asana-error');
-  const btn   = document.getElementById('btn-connect-asana');
-  const token = (input.value || '').trim();
-  if (err) err.textContent = '';
-  if (!token) { if (err) err.textContent = 'Paste your personal access token.'; return; }
-  if (btn) { btn.textContent = 'Connecting…'; btn.disabled = true; }
-  try {
-    await asanaConnect(token);
-    input.value = '';
-    asanaRenderPanel();
-    asanaSync();
-    asanaSchedule();
-  } catch (e) {
-    if (err) err.textContent = e.message;
-  } finally {
-    if (btn) { btn.textContent = 'Connect'; btn.disabled = false; }
-  }
-}
-function asanaDisconnectFromPanel() {
-  asanaDisconnect();
-  asanaRenderPanel();
-  showToast('Asana disconnected. Imported tasks stay on the board.');
-}
-
-// ── Background refresh ──
-let asanaTimer = null;
-function asanaSchedule() {
-  if (asanaTimer) { clearInterval(asanaTimer); asanaTimer = null; }
-  const mins = asanaCfg.every;
-  if (!mins || !asanaConnected()) return;
-  asanaTimer = setInterval(() => {
-    if (document.visibilityState === 'visible') asanaSync({silent: true});
-  }, mins * 60000);
-}
-function asanaBoot() {
-  if (!asanaConnected()) return;
-  asanaSchedule();
-  // Catch up shortly after launch, once the first render has settled.
-  setTimeout(() => asanaSync({silent: true}), 2500);
 }
 
 // ── Filter builder ─────────────────────────────────────────────────────
@@ -12447,7 +11596,10 @@ if (location.hash.startsWith('#task-')) {
   const id = location.hash.slice(6);
   if (getTask(id)) requestAnimationFrame(() => openCard(id, {pushHistory: false}));
 }
-asanaBoot();
+// The Asana import is gone; its token and scan state were kept per device.
+try {
+  Object.keys(localStorage).filter(k => k.startsWith('mc_asana_')).forEach(k => localStorage.removeItem(k));
+} catch (_) {}
 if (firebaseURL && firebaseAPIKey) {
   setSyncStatus('syncing');
   // If the previous session has unsynced edits (pending_sync flag set),
