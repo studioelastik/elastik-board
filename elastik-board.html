@@ -4296,7 +4296,7 @@ body.chrome-off #col-filter-bar { display: none !important; }
 
   /* ── Sidebar spacing, off the reference ─────────────────────────────
      Rows 36 tall on a 38 pitch, inset 9 with an 8 radius; glyph centred
-     30 in, label at 48. The divider under Inbox is inset like the rows.
+     30 in, label at 48. The divider under the smart lists is inset like the rows.
      Heads sit 36 below the divider and 20.5 above their first row's
      centre; the empty-state box is inset 10 and 46 tall. Every value is
      from the 2x screenshot, halved. */
@@ -4335,7 +4335,6 @@ body.chrome-off #col-filter-bar { display: none !important; }
     font-size: 8.5px; font-weight: 700; letter-spacing: -.03em;
   }
   .sm-datebox.sm-week { font-size: 8.5px; letter-spacing: -.02em; }
-  .sm-glyph svg.sm-inbox { width: 17px; height: 17px; }
 
   /* ── Mac wrapper: no titlebar strip ─────────────────────────────────
      The wrapper draws the page under a transparent titlebar. Each pane
@@ -4477,7 +4476,7 @@ body.chrome-off #col-filter-bar { display: none !important; }
         Time
       </div>
     </div>
-    <!-- Smart lists — Today / Next 7 Days / Inbox, rendered by renderSmartLists() -->
+    <!-- Smart lists — Today / Next 7 Days (+ Captures when there are any), rendered by renderSmartLists() -->
     <div id="smart-lists"></div>
 
     <div id="sidebar-scroll">
@@ -6757,7 +6756,7 @@ function runSearch(query, targetId) {
       if (kind === 'task') {
         if (typeof openCard === 'function') openCard(id);
       } else if (kind === 'capture') {
-        setView('inbox');
+        setView('captures');
       }
     });
   });
@@ -6903,9 +6902,9 @@ document.addEventListener('keydown', e => {
     return;
   }
 
-  // Number keys -> view switching. Today is currently disabled, so the
-  // active order is Inbox, Board, List, Time.
-  const viewMap = { '1':'inbox', '2':'kanban', '3':'list', '4':'time' };
+  // Number keys -> view switching. 1 and 2 (Tasks, Calendar) are handled by
+  // the shell's own shortcuts further down; these are the older views.
+  const viewMap = { '3':'list', '4':'time' };
   if (viewMap[e.key]) {
     e.preventDefault();
     setView(viewMap[e.key]);
@@ -9012,6 +9011,8 @@ let taskScope = (function () {
     // (deleted on another device, or the old Asana list) — either way the
     // session opens on Today rather than on an empty "No list".
     if (s.type === 'section') return {type:'today'};
+    // Inbox was a second door into General; it's General now.
+    if (s.type === 'inbox') return {type:'list', id:'_todos'};
     if (s.type === 'list' && !getProject(s.id)) return {type:'today'};
     return s;
   }
@@ -9028,7 +9029,6 @@ function scopeTitle() {
   switch (taskScope.type) {
     case 'today':     return 'Today';
     case 'next7':     return 'Next 7 Days';
-    case 'inbox':     return 'Inbox';
     case 'completed': return 'Completed';
     case 'trash':     return 'Trash';
     case 'tag':       return '#' + taskScope.id;
@@ -9045,7 +9045,6 @@ function scopeEmoji() {
   switch (taskScope.type) {
     case 'today': return '📅';
     case 'next7': return '🗓️';
-    case 'inbox': return '📥';
     case 'completed': return '✅';
     case 'trash': return '🗑️';
     case 'tag': return '🏷️';
@@ -9094,9 +9093,6 @@ function scopeTasks() {
     case 'next7':
       out = out.filter(t => isOpen(t) && dueOrStartedWithin(t, 7));
       break;
-    case 'inbox':
-      out = out.filter(t => isOpen(t) && t.pid === '_todos');
-      break;
     case 'list':
       out = out.filter(t => t.pid === taskScope.id);
       break;
@@ -9134,7 +9130,6 @@ function scopeCompleted() {
   switch (type) {
     case 'today':  out = closed.filter(t => doneToday(t) && dueOrStartedWithin(t, 0)); break;
     case 'next7':  out = closed.filter(t => doneToday(t) && dueOrStartedWithin(t, 7)); break;
-    case 'inbox':  out = closed.filter(t => t.pid === '_todos'); break;
     case 'list':   out = closed.filter(t => t.pid === taskScope.id); break;
     case 'tag':    out = closed.filter(t => (t.tags || []).includes(taskScope.id)); break;
     case 'filter': {
@@ -9209,7 +9204,6 @@ function smartCounts() {
   return {
     today: open.filter(t => { const n = daysFromToday(t.dueDate); return n !== null && n <= 0; }).length,
     next7: open.filter(t => { const n = daysFromToday(t.dueDate); return n !== null && n <= 7; }).length,
-    inbox: open.filter(t => t.pid === '_todos').length + (state.inbox || []).length,
   };
 }
 
@@ -9231,11 +9225,6 @@ function renderSmartLists() {
       <span class="sm-glyph"><span class="sm-datebox sm-week">${wd}</span></span>
       <span class="sm-label">Next 7 Days</span>
       <span class="sm-count">${c.next7 || ''}</span>
-    </div>
-    <div class="sm-item${on('inbox')}" data-scope="inbox">
-      <span class="sm-glyph"><svg class="sm-inbox" viewBox="0 0 18 18" fill="none"><path d="M1.7 9.5 4 3.5Q4.45 2.4 5.65 2.4h6.7q1.2 0 1.65 1.1l2.3 6V13q0 2.7-2.7 2.7H4.4Q1.7 15.7 1.7 13z" stroke="currentColor" stroke-width="1.45" stroke-linejoin="round"/><path d="M1.9 9.5h3.6q.75 0 1.05.7l.3.75q.3.75 1.1.75h2.1q.8 0 1.1-.75l.3-.75q.3-.7 1.05-.7h3.6" stroke="currentColor" stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-      <span class="sm-label">Inbox</span>
-      <span class="sm-count">${c.inbox || ''}</span>
     </div>
     ${captures ? `<div class="sm-item${currentView === 'captures' ? ' active' : ''}" data-scope="captures">
       <span class="sm-glyph"><svg viewBox="0 0 16 16" fill="none"><path d="M9.4 1.4 3.6 9.1h3.6l-1 5.5 5.9-7.9H8.4l1-5.3z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg></span>
@@ -9425,7 +9414,6 @@ function attachListDrop(el, pid, smart) {
     if (pid) t.pid = pid;
     else if (smart === 'today') t.dueDate = todayISO();
     else if (smart === 'next7') t.dueDate = isoDay(new Date(Date.now() + 6 * 86400000));
-    else if (smart === 'inbox') t.pid = '_todos';
     t.updatedAt = Date.now();
     save(); renderAll();
   };
@@ -9587,7 +9575,6 @@ function renderTaskList() {
     const msg = {
       today: ['🌤️', 'Nothing due today.'],
       next7: ['🗓️', 'The week ahead is clear.'],
-      inbox: ['📥', 'Inbox zero.'],
       completed: ['✅', 'Nothing completed yet.'],
       trash: ['🗑️', 'Trash is empty.'],
     }[taskScope.type] || ['✨', 'No tasks here yet.'];
@@ -11414,7 +11401,7 @@ function saveProject() {
 // ── View plumbing ──────────────────────────────────────────────────────
 function setView(v) {
   if (v === 'today') { openScope({type:'today'}); return; }
-  if (v === 'inbox') { openScope({type:'inbox'}); return; }
+  if (v === 'inbox') { openScope({type:'list', id:'_todos'}); return; }   // old callers
   currentView = v;
   try { localStorage.setItem('elastik_view', v); } catch (_) {}
 
