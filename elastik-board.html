@@ -4072,11 +4072,53 @@ body.chrome-off #col-filter-bar { display: none !important; }
 .pop-item .pop-sub { font-family: 'Apple Color Emoji','Segoe UI Emoji',sans-serif; }
 
 #detail-notes {
+  position: relative;
   width: 100%; min-height: 76px; margin-top: 4px;
   border: none; outline: none; background: none; resize: none;
   font-family: inherit; font-size: 14px; line-height: 1.55; color: var(--text-2);
+  white-space: pre-wrap; overflow-wrap: anywhere; cursor: text;
+  counter-reset: md-ol;
 }
-#detail-notes::placeholder { color: var(--text-3); }
+#detail-notes.is-empty::before {
+  content: attr(data-placeholder); position: absolute; left: 0; top: 0;
+  color: var(--text-3); pointer-events: none;
+}
+/* One line of the description. Its marker — bullet, number, checkbox — is
+   the ::before, so the caret never has to step over it. */
+.md-line { position: relative; min-height: 1.55em; --ind: calc(var(--i, 0) * 22px); }
+.md-line:not([data-k="ol"]) { counter-reset: md-ol; }
+.md-line[data-k="ul"], .md-line[data-k="ol"],
+.md-line[data-k="todo"], .md-line[data-k="done"] { padding-left: calc(var(--ind) + 24px); }
+.md-line[data-k="ul"]::before {
+  content: ''; position: absolute; left: calc(var(--ind) + 8px); top: calc(.775em - 2.5px);
+  width: 5px; height: 5px; border-radius: 50%; background: currentColor;
+}
+.md-line[data-k="ol"] { counter-increment: md-ol; }
+.md-line[data-k="ol"]::before {
+  content: counter(md-ol) '.'; position: absolute; left: var(--ind); width: 18px;
+  text-align: right; color: var(--text-3); font-variant-numeric: tabular-nums;
+}
+.md-line[data-k="todo"]::before, .md-line[data-k="done"]::before {
+  content: ''; position: absolute; left: calc(var(--ind) + 1px); top: calc(.775em - 8px);
+  width: 16px; height: 16px; box-sizing: border-box;
+  border: 1.5px solid var(--mc-check); border-radius: 4px; cursor: pointer;
+}
+.md-line[data-k="todo"]:hover::before { border-color: var(--accent); }
+.md-line[data-k="done"] { color: var(--text-3); text-decoration: line-through; }
+.md-line[data-k="done"]::before {
+  background: var(--accent) no-repeat center / 12px
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.6 6.2l2.2 2.2 4.6-4.8' fill='none' stroke='white' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  border-color: var(--accent);
+}
+.md-line[data-k="h1"] { font-size: 20px; line-height: 1.4; font-weight: 650; color: var(--text); margin-top: 4px; }
+.md-line[data-k="h2"] { font-size: 17px; line-height: 1.45; font-weight: 650; color: var(--text); margin-top: 3px; }
+.md-line[data-k="h3"] { font-size: 15px; line-height: 1.5; font-weight: 650; color: var(--text); }
+.md-line[data-k="quote"] { padding-left: 13px; box-shadow: inset 3px 0 var(--mc-check); color: var(--text-3); }
+.md-line[data-k="hr"] { cursor: default; }
+.md-line[data-k="hr"]::before {
+  content: ''; position: absolute; left: 0; right: 0; top: 50%;
+  border-top: 1px solid var(--mc-line);
+}
 
 /* Checklist */
 #detail-subtasks { margin-top: 6px; }
@@ -4733,7 +4775,7 @@ body.chrome-off #col-filter-bar { display: none !important; }
               <button id="detail-plus" aria-label="Insert" data-tip="Insert  ·  /">
                 <svg width="13" height="13" viewBox="0 0 12 12" fill="none"><path d="M6 1.5v9M1.5 6h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
               </button>
-              <textarea id="detail-notes" placeholder="Write something or type / for commands"></textarea>
+              <div id="detail-notes" contenteditable="true" role="textbox" aria-multiline="true" data-placeholder="Write something or type / for commands"></div>
             </div>
             <div id="detail-subtasks"></div>
             <div id="detail-attach"></div>
@@ -10046,30 +10088,36 @@ function renderDetail() {
 
   // ── Description ──
   const notes = document.getElementById('detail-notes');
-  notes.value = t.notes || '';
-  notes.placeholder = isList ? 'Description' : 'Write something or type / for commands';
-  autoGrow(notes);
-  notes.onblur = notes.onchange = () => {
-    if (notes.value === (t.notes || '')) return;
-    t.notes = notes.value;
+  notes.dataset.placeholder = isList ? 'Description' : 'Write something or type / for commands';
+  // Typing in progress wins over a re-render: flush it first, so the check
+  // below finds nothing to rebuild. Otherwise only rebuild when the stored
+  // text moved on — a rebuild costs the caret.
+  if (notes.dataset.tid === t.id && document.activeElement === notes) notes._md?.commit();
+  if (notes.dataset.tid !== t.id || noteEditorValue(notes) !== (t.notes || '')) {
+    const keep = notes.dataset.tid === t.id && document.activeElement === notes ? mdCaretIndex(notes) : null;
+    notes.dataset.tid = t.id;
+    setNoteEditor(notes, t.notes || '');
+    if (keep) mdRestore(notes, keep);
+  }
+  let saveTimer = 0;
+  const commit = () => {
+    clearTimeout(saveTimer);
+    mdSync(notes);
+    const v = noteEditorValue(notes);
+    if (v === (t.notes || '')) return;
+    t.notes = v;
     // The rich editor mirrors its blocks into .notes; editing the plain text
     // here has to drop those blocks or the card view would resurrect them.
     delete t.noteEJ;
     touch(); save(); renderTaskList();
   };
-  notes.oninput = () => {
-    autoGrow(notes); positionNotePlus();
+  bindNoteEditor(notes, {
+    commit,
+    soon: () => { clearTimeout(saveTimer); saveTimer = setTimeout(commit, 700); },
     // "/" on an empty line opens the same menu the + does — the promise the
     // placeholder makes.
-    const caret = notes.selectionStart ?? 0;
-    const before = notes.value.slice(0, caret);
-    if (before.endsWith('/') && /(^|\n)\s*\/$/.test(before)) {
-      notes.value = notes.value.slice(0, caret - 1) + notes.value.slice(caret);
-      notes.selectionStart = notes.selectionEnd = caret - 1;
-      openNoteInsertMenu(document.getElementById('detail-plus'), t.id);
-    }
-  };
-  notes.onkeyup = notes.onclick = positionNotePlus;
+    slash: () => openNoteInsertMenu(document.getElementById('detail-plus'), t.id),
+  });
   positionNotePlus();
   document.getElementById('detail-plus').onclick = e => openNoteInsertMenu(e.currentTarget, t.id);
   document.getElementById('detail-notes-btn').onclick = () => openCard(t.id);
@@ -10176,60 +10224,411 @@ function focusSub(i) {
 }
 
 // ── Description insert menu ─────────────────────────────────────────────
-/* The description is plain text, so the block types are written as the
-   markdown the rest of the app already understands — "- [ ] " round-trips
-   through the checklist converter, for one. */
+/* The description is stored as markdown — search, the card view and the
+   checklist converter all read it that way ("- [ ] " round-trips through the
+   converter, for one) — but it is edited as lines that draw their own
+   marker: a real checkbox, a bullet, a running number. */
 const NOTE_BLOCKS = [
-  {label:'Heading 1',   icon:'H₁', line:'# '},
-  {label:'Heading 2',   icon:'H₂', line:'## '},
-  {label:'Heading 3',   icon:'H₃', line:'### '},
-  {label:'Bulleted List',  icon:'•', line:'- '},
-  {label:'Numbered List',  icon:'1.', line:'1. '},
-  {label:'Check Item',     icon:'☑', line:'- [ ] '},
-  {label:'Quote',          icon:'❝', line:'> '},
-  {label:'Horizontal Line',icon:'―', block:'---'},
+  {label:'Heading 1',      icon:'H₁', k:'h1'},
+  {label:'Heading 2',      icon:'H₂', k:'h2'},
+  {label:'Heading 3',      icon:'H₃', k:'h3'},
+  {label:'Bulleted List',  icon:'•',  k:'ul'},
+  {label:'Numbered List',  icon:'1.', k:'ol'},
+  {label:'Check Item',     icon:'☑', k:'todo'},
+  {label:'Quote',          icon:'❝', k:'quote'},
+  {label:'Horizontal Line',icon:'―', k:'hr'},
 ];
+const MD_LIST = new Set(['ul', 'ol', 'todo', 'done']);
+const MD_RULE = /^(-{3,}|\*{3,}|_{3,})$/;
 
-function noteTextarea() { return document.getElementById('detail-notes'); }
+function noteEditor() { return document.getElementById('detail-notes'); }
 
-/* Puts `prefix` at the start of the caret's line, or drops `block` in as a
-   line of its own. */
-function applyNoteBlock(ta, spec) {
-  const v = ta.value;
-  const caret = ta.selectionStart ?? v.length;
-  const lineStart = v.lastIndexOf('\n', caret - 1) + 1;
-  if (spec.block) {
-    const atLineStart = caret === lineStart;
-    const ins = (atLineStart ? '' : '\n') + spec.block + '\n';
-    ta.value = v.slice(0, caret) + ins + v.slice(caret);
-    ta.selectionStart = ta.selectionEnd = caret + ins.length;
-  } else {
-    ta.value = v.slice(0, lineStart) + spec.line + v.slice(lineStart);
-    const to = caret + spec.line.length;
-    ta.selectionStart = ta.selectionEnd = to;
+// ── Markdown ⇄ lines ──
+function mdParseLine(raw) {
+  const ind = raw.match(/^ */)[0].length, s = raw.slice(ind);
+  const i = Math.min(3, Math.floor(ind / 2));
+  let m;
+  if ((m = s.match(/^[-*+] \[([ xX])\](?: (.*))?$/))) return {k: m[1] === ' ' ? 'todo' : 'done', i, text: m[2] || ''};
+  if ((m = s.match(/^[-*+•] (.*)$/)))  return {k: 'ul', i, text: m[1]};
+  if ((m = s.match(/^\d+[.)] (.*)$/))) return {k: 'ol', i, text: m[1]};
+  if (MD_RULE.test(s))                 return {k: 'hr', i: 0, text: ''};
+  if ((m = raw.match(/^(#{1,3}) (.*)$/))) return {k: 'h' + m[1].length, i: 0, text: m[2]};
+  if ((m = raw.match(/^> ?(.*)$/)))      return {k: 'quote', i: 0, text: m[1]};
+  return {k: 'p', i: 0, text: raw};
+}
+function mdLineMarkdown(k, i, text, n) {
+  const pad = '  '.repeat(i);
+  switch (k) {
+    case 'ul':    return pad + '- ' + text;
+    case 'ol':    return pad + n + '. ' + text;
+    case 'todo':  return pad + '- [ ] ' + text;
+    case 'done':  return pad + '- [x] ' + text;
+    case 'h1':    return '# ' + text;
+    case 'h2':    return '## ' + text;
+    case 'h3':    return '### ' + text;
+    case 'quote': return '> ' + text;
+    case 'hr':    return '---';
+    default:      return text;
   }
-  ta.focus();
-  autoGrow(ta);
-  ta.dispatchEvent(new Event('change'));
+}
+function mdText(line) { return line.textContent.replace(/ /g, ' ').replace(/​/g, ''); }
+function mdKind(line) { return line.dataset.k || 'p'; }
+function mdIndent(line) { return +line.dataset.i || 0; }
+
+function noteEditorValue(ed) {
+  let n = 0;
+  return [...ed.children].map(l => {
+    const k = mdKind(l);
+    n = k === 'ol' ? n + 1 : 0;
+    return mdLineMarkdown(k, mdIndent(l), mdText(l), n);
+  }).join('\n');
+}
+function mdSetKind(line, k, i = 0) {
+  if (!MD_LIST.has(k)) i = 0;
+  line.dataset.k = k;
+  if (i) { line.dataset.i = i; line.style.setProperty('--i', i); }
+  else   { delete line.dataset.i; line.style.removeProperty('--i'); }
+  if (k === 'hr') { line.contentEditable = 'false'; line.textContent = ''; }
+  else line.removeAttribute('contenteditable');
+}
+function mdSetText(line, text) {
+  line.textContent = text;
+  if (!text) line.appendChild(document.createElement('br'));
+}
+function mdMakeLine(k = 'p', i = 0, text = '') {
+  const l = document.createElement('div');
+  l.className = 'md-line';
+  mdSetKind(l, k, i);
+  if (k !== 'hr') mdSetText(l, text);
+  return l;
+}
+function setNoteEditor(ed, md) {
+  ed._caret = null;
+  ed.replaceChildren(...(md || '').split('\n').map(r => {
+    const p = mdParseLine(r);
+    return mdMakeLine(p.k, p.i, p.text);
+  }));
+  mdSync(ed);
+}
+
+// ── Caret ──
+function mdLineOf(ed, node) {
+  while (node && node.parentNode !== ed) node = node.parentNode;
+  return node && node.nodeType === 1 ? node : null;
+}
+function mdCaret(ed) {
+  const sel = getSelection();
+  if (!sel.rangeCount || !ed.contains(sel.anchorNode)) return null;
+  const r = sel.getRangeAt(0);
+  const line = mdLineOf(ed, r.startContainer);
+  if (!line) return null;
+  const pre = document.createRange();
+  pre.selectNodeContents(line);
+  pre.setEnd(r.startContainer, r.startOffset);
+  return {line, offset: pre.toString().length, collapsed: r.collapsed};
+}
+function mdPlace(line, offset) {
+  const sel = getSelection(), r = document.createRange();
+  const w = document.createTreeWalker(line, NodeFilter.SHOW_TEXT);
+  let n, left = offset;
+  while ((n = w.nextNode())) {
+    if (left <= n.length) { r.setStart(n, left); r.collapse(true); sel.removeAllRanges(); sel.addRange(r); return; }
+    left -= n.length;
+  }
+  r.selectNodeContents(line);
+  r.collapse(!offset);
+  sel.removeAllRanges(); sel.addRange(r);
+}
+function mdCaretIndex(ed) {
+  const c = mdCaret(ed);
+  return c ? {idx: [...ed.children].indexOf(c.line), offset: c.offset} : null;
+}
+function mdRestore(ed, at) {
+  const line = ed.children[Math.min(at.idx, ed.children.length - 1)];
+  if (!line) return;
+  ed.focus();
+  mdPlace(line, Math.min(at.offset, mdText(line).length));
+}
+
+/* Keeps the editor a flat run of line <div>s, whatever the browser did to it:
+   stray text gets wrapped, pasted spans flattened, empty lines kept open. */
+function mdSync(ed) {
+  const c = mdCaret(ed);
+  let place = null, run = null;
+  for (const n of [...ed.childNodes]) {
+    if (n.nodeType === 1 && n.tagName === 'DIV') { run = null; continue; }
+    if (n.nodeType === 3 && !n.textContent) { n.remove(); continue; }
+    if (!run) { run = document.createElement('div'); run.className = 'md-line'; mdSetKind(run, 'p'); ed.insertBefore(run, n); }
+    run.appendChild(n);
+    place = {line: run, offset: Infinity};
+  }
+  for (const l of ed.children) {
+    if (!l.classList.contains('md-line')) { l.className = 'md-line'; l.removeAttribute('style'); mdSetKind(l, 'p'); }
+    if (mdKind(l) === 'hr') continue;
+    const text = mdText(l), brs = l.querySelectorAll('br').length;
+    const junk = [...l.children].some(e => e.tagName !== 'BR') || brs > 1 || (brs === 1 && l.lastChild.tagName !== 'BR');
+    if (junk || (!text && !brs)) {
+      mdSetText(l, text);
+      if (c && l === c.line && !place) place = {line: l, offset: c.offset};
+    }
+  }
+  if (!ed.children.length) { ed.appendChild(mdMakeLine()); if (c || place) place = {line: ed.firstChild, offset: 0}; }
+  if (place && ed.contains(place.line)) mdPlace(place.line, Math.min(place.offset, mdText(place.line).length));
+  const only = ed.children.length === 1 ? ed.firstElementChild : null;
+  ed.classList.toggle('is-empty', !!only && mdKind(only) === 'p' && !mdText(only));
+}
+
+// ── Editing ──
+function bindNoteEditor(ed, hooks) {
+  ed._md = hooks;
+  const after = () => { mdSync(ed); positionNotePlus(); };
+
+  ed.onkeydown = e => {
+    if (e.isComposing) return;
+    let c = mdCaret(ed);
+    if (!c) return;
+    const plain = !e.metaKey && !e.ctrlKey && !e.altKey;
+
+    // ⌘↩ ticks the check item under the caret.
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && /^(todo|done)$/.test(mdKind(c.line))) {
+      e.preventDefault();
+      mdSetKind(c.line, mdKind(c.line) === 'todo' ? 'done' : 'todo', mdIndent(c.line));
+      hooks.commit();
+      return;
+    }
+    if (e.key === 'Enter' && plain) {
+      e.preventDefault();
+      if (!c.collapsed) { document.execCommand('delete'); mdSync(ed); c = mdCaret(ed); if (!c) return; }
+      const {line} = c, k = mdKind(line), i = mdIndent(line), text = mdText(line);
+      // Enter on an empty item leaves the list, one level at a time.
+      if ((MD_LIST.has(k) || k === 'quote') && !text && !e.shiftKey) {
+        mdSetKind(line, i ? k : 'p', i ? i - 1 : 0);
+        mdPlace(line, 0); after(); hooks.soon();
+        return;
+      }
+      // A line of markdown left without its trailing space still counts.
+      if ((k === 'p' && /^([-*+•]|\d+[.)]|[-*+] \[[ xX]?\]|\[[ xX]?\]|#{1,3}|>)$/.test(text.trim())) ||
+          (k === 'ul' && /^\[[ xX]?\]$/.test(text.trim()))) {
+        const raw = text.trim().replace(/^(?:[-*+] )?\[\]/, '- [ ]').replace(/^\[/, '- [');
+        const p = mdParseLine(raw + ' ');
+        if (k === 'ul') p.i = i;
+        mdSetKind(line, p.k, p.i); mdSetText(line, p.text);
+        mdPlace(line, 0); after(); hooks.soon();
+        return;
+      }
+      if (k === 'p' && MD_RULE.test(text.trim())) {
+        mdSetKind(line, 'hr');
+        const next = mdMakeLine();
+        line.after(next); mdPlace(next, 0); after(); hooks.soon();
+        return;
+      }
+      const cont = e.shiftKey ? 'p'
+        : k === 'done' ? 'todo'
+        : (MD_LIST.has(k) || k === 'quote') ? k : 'p';
+      if (c.offset === 0 && text) {
+        // At the head of a line: open an empty one above and stay put.
+        line.before(mdMakeLine(MD_LIST.has(k) || k === 'quote' ? cont : 'p', i));
+        mdPlace(line, 0);
+      } else {
+        mdSetText(line, text.slice(0, c.offset));
+        const next = mdMakeLine(cont, i, text.slice(c.offset));
+        line.after(next);
+        mdPlace(next, 0);
+      }
+      after(); hooks.soon();
+      return;
+    }
+    if (e.key === 'Backspace' && plain && c.collapsed && c.offset === 0) {
+      const {line} = c, k = mdKind(line), i = mdIndent(line);
+      e.preventDefault();
+      if (k !== 'p') {
+        // First the marker goes (outdenting first), then the line merges up.
+        mdSetKind(line, i ? k : 'p', i ? i - 1 : 0);
+        mdPlace(line, 0);
+      } else {
+        const prev = line.previousElementSibling;
+        if (!prev) return;
+        if (mdKind(prev) === 'hr') prev.remove();
+        else {
+          const pt = mdText(prev);
+          mdSetText(prev, pt + mdText(line));
+          line.remove();
+          mdPlace(prev, pt.length);
+        }
+      }
+      after(); hooks.soon();
+      return;
+    }
+    if (e.key === 'Delete' && plain && c.collapsed && c.offset === mdText(c.line).length) {
+      const next = c.line.nextElementSibling;
+      if (!next) return;
+      e.preventDefault();
+      if (mdKind(next) === 'hr') next.remove();
+      else {
+        const t0 = mdText(c.line);
+        mdSetText(c.line, t0 + mdText(next));
+        next.remove();
+        mdPlace(c.line, t0.length);
+      }
+      after(); hooks.soon();
+      return;
+    }
+    if (e.key === 'Tab' && !e.metaKey && !e.ctrlKey && MD_LIST.has(mdKind(c.line))) {
+      e.preventDefault();
+      const i = Math.max(0, Math.min(3, mdIndent(c.line) + (e.shiftKey ? -1 : 1)));
+      mdSetKind(c.line, mdKind(c.line), i);
+      mdPlace(c.line, c.offset); hooks.soon();
+    }
+  };
+
+  ed.oninput = () => {
+    mdSync(ed);
+    const c = mdCaret(ed);
+    if (c && c.collapsed) {
+      const l = c.line, k = mdKind(l), text = mdText(l), head = text.slice(0, c.offset);
+      // Markdown typed at the head of a line turns into the real thing.
+      let to = null, m;
+      if (k === 'p') {
+        if ((m = head.match(/^(?:[-*+] )?\[([ xX]?)\] /))) to = /x/i.test(m[1]) ? 'done' : 'todo';
+        else if ((m = head.match(/^[-*+•] /))) to = 'ul';
+        else if ((m = head.match(/^\d+[.)] /))) to = 'ol';
+        else if ((m = head.match(/^(#{1,3}) /))) to = 'h' + m[1].length;
+        else if ((m = head.match(/^> /))) to = 'quote';
+        else if (/^\s*\/$/.test(head) && text.length === head.length) {
+          mdSetText(l, text.slice(0, -1)); mdPlace(l, c.offset - 1);
+          after(); hooks.slash();
+          return;
+        }
+      } else if (k === 'ul' && (m = head.match(/^(?:[-*+] )?\[([ xX]?)\] /))) to = /x/i.test(m[1]) ? 'done' : 'todo';
+      if (to) {
+        mdSetKind(l, to, mdIndent(l));
+        mdSetText(l, text.slice(m[0].length));
+        mdPlace(l, c.offset - m[0].length);
+        mdSync(ed);
+      }
+    }
+    positionNotePlus();
+    hooks.soon();
+  };
+
+  // A click on a checkbox ticks it and leaves the caret where it was.
+  ed.onmousedown = e => {
+    const line = mdLineOf(ed, e.target);
+    if (!line || !/^(todo|done)$/.test(mdKind(line))) return;
+    const x = e.clientX - line.getBoundingClientRect().left - mdIndent(line) * 22;
+    if (x < -2 || x > 20) return;
+    e.preventDefault();
+    mdSetKind(line, mdKind(line) === 'todo' ? 'done' : 'todo', mdIndent(line));
+    hooks.commit();
+  };
+
+  // Paste arrives as plain text; several lines come in as their own blocks.
+  ed.onpaste = e => {
+    e.preventDefault();
+    const text = (e.clipboardData?.getData('text/plain') || '').replace(/\r\n?/g, '\n');
+    if (!text) return;
+    if (!getSelection().isCollapsed) { document.execCommand('delete'); mdSync(ed); }
+    const c = mdCaret(ed);
+    if (!c) return;
+    const parts = text.split('\n');
+    const cur = mdText(c.line), before = cur.slice(0, c.offset), tail = cur.slice(c.offset);
+    let line = c.line, at;
+    if (parts.length === 1) {
+      mdSetText(line, before + parts[0] + tail);
+      at = before.length + parts[0].length;
+    } else {
+      const first = !cur && mdKind(line) === 'p' ? mdParseLine(parts[0]) : null;
+      if (first) { mdSetKind(line, first.k, first.i); mdSetText(line, first.text); }
+      else mdSetText(line, before + parts[0]);
+      for (const raw of parts.slice(1)) {
+        const p = mdParseLine(raw);
+        const nl = mdMakeLine(p.k, p.i, p.text);
+        line.after(nl); line = nl;
+      }
+      at = mdText(line).length;
+      if (tail) mdSetText(line, mdText(line) + tail);
+    }
+    mdPlace(line, at);
+    after(); hooks.soon();
+  };
+
+  // Copying a selection takes its markdown along, not just the bare text.
+  ed.oncopy = e => {
+    const sel = getSelection();
+    if (sel.isCollapsed || !e.clipboardData) return;
+    const r = sel.getRangeAt(0);
+    const a = mdLineOf(ed, r.startContainer), b = mdLineOf(ed, r.endContainer);
+    if (!a || !b || a === b) return;
+    const box = document.createElement('div');
+    box.appendChild(r.cloneContents());
+    const lines = [...box.children].filter(x => x.tagName === 'DIV');
+    if (!lines.length) return;
+    e.preventDefault();
+    e.clipboardData.setData('text/plain', noteEditorValue({children: lines}));
+  };
+
+  ed.onblur = () => hooks.commit();
+  ed.onkeyup = ed.onclick = positionNotePlus;
+}
+
+/* Remembers where the caret was, so the insert menu — which takes focus —
+   can still act on the caret's line. */
+document.addEventListener('selectionchange', () => {
+  const ed = noteEditor();
+  if (ed && document.activeElement === ed) ed._caret = mdCaretIndex(ed);
+});
+function mdCaretLine(ed) {
+  const at = ed._caret || {idx: ed.children.length - 1, offset: Infinity};
+  const line = ed.children[Math.min(at.idx, ed.children.length - 1)];
+  return {line, offset: Math.min(at.offset, line ? mdText(line).length : 0)};
+}
+
+/* Turns the caret's line into `spec`'s block (or back to text if it already
+   is one), or drops a rule in below it. */
+function applyNoteBlock(ed, spec) {
+  let {line, offset} = mdCaretLine(ed);
+  if (!line) return;
+  ed.focus();
+  if (spec.k === 'hr') {
+    let next;
+    if (mdKind(line) === 'p' && !mdText(line)) { mdSetKind(line, 'hr'); next = line.nextElementSibling; }
+    else { const hr = mdMakeLine('hr'); line.after(hr); line = hr; next = hr.nextElementSibling; }
+    if (!next || mdKind(next) === 'hr') { next = mdMakeLine(); line.after(next); }
+    mdPlace(next, 0);
+  } else {
+    const k = mdKind(line) === spec.k ? 'p' : spec.k;
+    mdSetKind(line, k, MD_LIST.has(mdKind(line)) ? mdIndent(line) : 0);
+    mdPlace(line, offset);
+  }
+  ed._md?.commit();
   positionNotePlus();
+}
+
+/* Drops `str` in at the caret. */
+function insertNoteText(ed, str) {
+  const {line, offset} = mdCaretLine(ed);
+  if (!line) return;
+  if (mdKind(line) === 'hr') return;
+  const text = mdText(line);
+  ed.focus();
+  mdSetText(line, text.slice(0, offset) + str + text.slice(offset));
+  mdPlace(line, offset + str.length);
+  ed._md?.commit();
 }
 
 function openNoteInsertMenu(anchor, id) {
   const t = getTask(id);
-  const ta = noteTextarea();
-  if (!t || !ta) return;
-  const items = NOTE_BLOCKS.map(b => ({label: b.label, icon: b.icon, fn: () => applyNoteBlock(ta, b)}));
+  const ed = noteEditor();
+  if (!t || !ed) return;
+  if (document.activeElement === ed) ed._caret = mdCaretIndex(ed);
+  const items = NOTE_BLOCKS.map(b => ({label: b.label, icon: b.icon, fn: () => applyNoteBlock(ed, b)}));
   items.push(
     {sep:true},
     {label:'Link…', icon:'🔗', fn: () => {
       const url = (prompt('Link address') || '').trim();
       if (!url) return;
       const text = (prompt('Link text', url) || url).trim();
-      const caret = ta.selectionStart ?? ta.value.length;
-      const ins = `[${text}](${url})`;
-      ta.value = ta.value.slice(0, caret) + ins + ta.value.slice(caret);
-      ta.selectionStart = ta.selectionEnd = caret + ins.length;
-      ta.focus(); autoGrow(ta); ta.dispatchEvent(new Event('change'));
+      insertNoteText(ed, `[${text}](${url})`);
     }},
     {label:'Subtask', icon:'⌐', fn: () => {
       setChecklistMode(t, true);
@@ -10237,14 +10636,14 @@ function openNoteInsertMenu(anchor, id) {
       setTimeout(() => document.getElementById('sub-new-input')?.focus(), 30);
     }},
     {label:'Tag', icon:'🏷', fn: () => document.getElementById('detail-tag-input')?.focus()},
-    {label:'Linked task/note', icon:'⧉', fn: () => pickLinkedTask(anchor, t, ta)},
+    {label:'Linked task/note', icon:'⧉', fn: () => pickLinkedTask(anchor, t, ed)},
   );
   showPop(anchor, items);
 }
 
 /* Links to another task by its deep link, the same #task-<id> the app already
    restores on load. */
-function pickLinkedTask(anchor, t, ta) {
+function pickLinkedTask(anchor, t, ed) {
   closePops();
   const pop = document.createElement('div');
   pop.className = 'pop open';
@@ -10265,12 +10664,8 @@ function pickLinkedTask(anchor, t, ta) {
       : '<div class="pop-empty">No task matches that.</div>';
     results.querySelectorAll('.pop-item').forEach(el => el.onclick = () => {
       const task = getTask(el.dataset.id);
-      const caret = ta.selectionStart ?? ta.value.length;
-      const ins = `[${task.name}](#task-${task.id})`;
-      ta.value = ta.value.slice(0, caret) + ins + ta.value.slice(caret);
-      ta.selectionStart = ta.selectionEnd = caret + ins.length;
       closePops();
-      ta.focus(); autoGrow(ta); ta.dispatchEvent(new Event('change'));
+      insertNoteText(ed, `[${task.name}](#task-${task.id})`);
     });
   };
   draw('');
@@ -10283,14 +10678,14 @@ function pickLinkedTask(anchor, t, ta) {
 
 /* The + tracks the caret's line, the way the reference's gutter does. */
 function positionNotePlus() {
-  const ta = noteTextarea();
+  const ed = noteEditor();
   const plus = document.getElementById('detail-plus');
-  if (!ta || !plus) return;
-  const before = ta.value.slice(0, ta.selectionStart ?? 0);
-  const line = before.split('\n').length - 1;
-  const cs = getComputedStyle(ta);
-  const lh = parseFloat(cs.lineHeight) || 21;
-  plus.style.top = (ta.offsetTop + line * lh) + 'px';
+  if (!ed || !plus) return;
+  const c = document.activeElement === ed ? mdCaret(ed) : null;
+  const line = c ? c.line : (ed._caret && ed.children[ed._caret.idx]) || ed.firstElementChild;
+  if (!line) { plus.style.top = ed.offsetTop + 'px'; return; }
+  const lh = parseFloat(getComputedStyle(line).lineHeight) || 21;
+  plus.style.top = (ed.offsetTop + line.offsetTop + Math.max(0, (lh - 21) / 2)) + 'px';
 }
 
 // ── Detail menus ────────────────────────────────────────────────────────
