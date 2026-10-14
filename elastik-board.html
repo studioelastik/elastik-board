@@ -4441,6 +4441,7 @@ body.chrome-off #col-filter-bar { display: none !important; }
   flex-shrink: 0; height: 30px; padding: 0 14px; border-radius: 8px; border: none;
   background: var(--accent); color: #fff; font: inherit; font-weight: 600; cursor: pointer;
 }
+#drawer-more { display: none; }
 #drawer-sync-btn {
   display: none; align-items: center; gap: 6px;
   background: none; border: none; padding: 4px 0; cursor: pointer;
@@ -4476,6 +4477,21 @@ body.chrome-off #col-filter-bar { display: none !important; }
   }
   #sidebar-footer button svg { width: 18px; height: 18px; }
   #drawer-sync-btn { display: flex; }
+
+  /* Completed, Trash, New list, Cloud sync and Settings fold behind one
+     "More" row, so the lists get the height. */
+  #sidebar { width: min(380px, 92vw); }
+  #drawer-more {
+    display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+    min-height: 48px; margin: 0; padding: 0 18px;
+    background: none; border: none; border-top: 1px solid var(--mc-line);
+    font-family: inherit; font-size: 16px; color: var(--text-2); cursor: pointer;
+  }
+  #drawer-more-sub { margin-left: auto; font-size: 13px; color: var(--accent); font-weight: 600; }
+  #drawer-more .dm-chev { transition: transform .2s; }
+  #sidebar:not(.more-open) #drawer-more .dm-chev { transform: rotate(180deg); }
+  #sidebar:not(.more-open) #sidebar-bottom,
+  #sidebar:not(.more-open) #sidebar-footer { display: none; }
   #sync-nag { font-size: 14px; }
 
   /* A home-screen app draws under the status bar, so every full-height
@@ -4671,6 +4687,11 @@ body.chrome-off #col-filter-bar { display: none !important; }
 
     <div id="sidebar-resize" title="Drag to resize · double-click to reset"></div>
 
+    <button id="drawer-more" type="button" onclick="toggleDrawerMore()" aria-expanded="false">
+      <span>More</span>
+      <span id="drawer-more-sub"></span>
+      <svg class="dm-chev" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5L6 7.5l3-3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
     <div id="sidebar-bottom">
       <div class="sm-item" id="sm-completed" onclick="openScope({type:'completed'})">
         <span class="sm-glyph"><svg viewBox="0 0 16 16" fill="none"><rect x="1.6" y="1.6" width="12.8" height="12.8" rx="3" stroke="currentColor" stroke-width="1.4"/><path d="M4.8 8.1l2.1 2.1 4.2-4.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
@@ -7643,6 +7664,16 @@ function initPullToRefresh() {
   });
 }
 
+/* The phone drawer's "More" fold — remembered per device. */
+function toggleDrawerMore(force) {
+  const sb = document.getElementById('sidebar');
+  if (!sb) return;
+  const open = typeof force === 'boolean' ? force : !sb.classList.contains('more-open');
+  sb.classList.toggle('more-open', open);
+  document.getElementById('drawer-more')?.setAttribute('aria-expanded', open);
+  try { localStorage.setItem('mc_drawer_more', open ? '1' : '0'); } catch (_) {}
+}
+
 function syncConnected() { return !!firebaseURL && !!firebaseAPIKey && !!firebaseToken; }
 
 /* Every place that says whether this device syncs: the banner over the task
@@ -7656,6 +7687,8 @@ function renderSyncPrompts() {
   if (btn) btn.classList.toggle('off', !on);
   const st = document.getElementById('drawer-sync-state');
   if (st) st.textContent = on ? 'On' : 'Sign in';
+  const more = document.getElementById('drawer-more-sub');
+  if (more) more.textContent = on ? '' : 'Sign in';
   const sub = document.getElementById('settings-sync-sub');
   if (sub) sub.textContent = on ? 'Syncing live' : 'Not signed in on this device';
   const sb = document.getElementById('settings-sync-btn');
@@ -12155,6 +12188,7 @@ if (location.hash.startsWith('#task-')) {
 }
 renderSyncPrompts();
 initPullToRefresh();
+try { toggleDrawerMore(localStorage.getItem('mc_drawer_more') === '1'); } catch (_) {}
 // The full placeholder doesn't fit beside Cancel on a phone.
 if (matchMedia('(max-width: 768px)').matches) {
   const si = document.getElementById('search-input');
