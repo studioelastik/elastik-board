@@ -2606,7 +2606,11 @@ label.focus-row {
   min-width: 0;
 }
 #search-input::placeholder { color: var(--text-3); }
-#search-hint { font-size: 11px; color: var(--text-3); white-space: nowrap; }
+#search-hint {
+  font-size: 11px; color: var(--text-3); white-space: nowrap;
+  background: none; border: none; padding: 0; font-family: inherit; cursor: pointer;
+}
+#search-hint .sh-phone { display: none; }
 #search-hint .cap-hint-key {
   font-family: var(--mono);
   padding: 1px 6px; border-radius: 4px;
@@ -4481,7 +4485,18 @@ body.chrome-off #col-filter-bar { display: none !important; }
   #sidebar { padding-top: calc(env(safe-area-inset-top, 0px) + 22px); }
   #tasks-head { padding-top: 14px; padding-bottom: 12px; }
   #time-view { padding-top: calc(env(safe-area-inset-top, 0px) + 22px); }
-  #search-overlay { padding: calc(env(safe-area-inset-top, 0px) + 24px) 14px 24px; }
+  /* Search sits in the middle of the space the keyboard leaves, as a big
+     field: 56px tall, 20px type, with Cancel in place of the esc hint. */
+  #search-overlay { padding: max(calc(env(safe-area-inset-top, 0px) + 24px), 20vh) 16px 24px; }
+  #search-stage { border-radius: 18px; }
+  #search-input-row { padding: 0 18px; min-height: 60px; gap: 12px; }
+  #search-input-row > svg { width: 22px; height: 22px; }
+  #search-input { font-size: 20px; }
+  #search-hint { font-size: 16px; color: var(--accent); }
+  #search-hint .sh-desk { display: none; }
+  #search-hint .sh-phone { display: inline; }
+  #search-results { max-height: 38vh; }
+  .sr-empty { font-size: 15px; }
   #detail-foot { padding-bottom: calc(7px + env(safe-area-inset-bottom, 0px)); }
 
   /* The list is the scroller — nothing above it scrolls on a phone. */
@@ -4950,7 +4965,7 @@ body.chrome-off #col-filter-bar { display: none !important; }
     <div id="search-input-row">
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="opacity:.55"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M11 11l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
       <input id="search-input" type="text" placeholder="Search tasks, notes, captures…" autocomplete="off" autocorrect="off" spellcheck="false">
-      <span id="search-hint"><span class="cap-hint-key">esc</span> close</span>
+      <button id="search-hint" type="button" onclick="closeSearch()"><span class="sh-desk"><span class="cap-hint-key">esc</span> close</span><span class="sh-phone">Cancel</span></button>
     </div>
     <div id="search-results"></div>
   </div>
@@ -12140,6 +12155,11 @@ if (location.hash.startsWith('#task-')) {
 }
 renderSyncPrompts();
 initPullToRefresh();
+// The full placeholder doesn't fit beside Cancel on a phone.
+if (matchMedia('(max-width: 768px)').matches) {
+  const si = document.getElementById('search-input');
+  if (si) si.placeholder = 'Search';
+}
 // The Asana import is gone; its token and scan state were kept per device.
 try {
   Object.keys(localStorage).filter(k => k.startsWith('mc_asana_')).forEach(k => localStorage.removeItem(k));
