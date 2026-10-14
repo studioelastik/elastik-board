@@ -4492,6 +4492,14 @@ body.chrome-off #col-filter-bar { display: none !important; }
   .tl-name { flex: 1 1 0; }
 }
 
+/* The bottom bar wears the rail's glyphs: filled shapes whose cut-outs take
+   the bar's colour, the same weight and size as on the Mac. */
+.bnav-btn:not(.bnav-add) { color: var(--mc-rail-ic, var(--text-3)); }
+.bnav-btn.active { color: var(--accent); }
+.bnav-btn svg { width: 22px; height: 22px; }
+.bnav-btn .cut      { stroke: var(--surface); }
+.bnav-btn .cut-fill { fill: var(--surface); }
+
 /* Pull to refresh (phones): there is no browser reload in a home-screen app. */
 #ptr {
   height: 0; overflow: hidden; flex-shrink: 0;
@@ -4901,23 +4909,23 @@ body.chrome-off #col-filter-bar { display: none !important; }
   <!-- Bottom nav (mobile) -->
   <nav id="bottom-nav">
     <button class="bnav-btn" id="bnav-menu" onclick="openDrawer()">
-      <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M2 4.5h14M2 9h14M2 13.5h14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M3 5.5h16M3 11h16M3 16.5h16" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
       <span>Menu</span>
     </button>
     <button class="bnav-btn" id="bnav-search" onclick="openSearch()">
-      <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="8" cy="8" r="5.4" stroke="currentColor" stroke-width="1.6"/><path d="M12.2 12.2l3.2 3.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="9.6" cy="9.6" r="6.6" stroke="currentColor" stroke-width="2.4"/><path d="M14.6 14.6l5 5" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>
       <span>Search</span>
     </button>
     <button class="bnav-btn bnav-add" onclick="openTaskModal()">
       <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M11 4v14M4 11h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
     </button>
     <button class="bnav-btn" id="bnav-tasks" onclick="setView('tasks')">
-      <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2.2" y="2.2" width="13.6" height="13.6" rx="3.4" stroke="currentColor" stroke-width="1.5"/><path d="M5.8 9.2l2.3 2.3 4.3-4.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <svg width="22" height="22" viewBox="0 0 22 22"><rect x="1" y="1" width="20" height="20" rx="5" fill="currentColor"/><path class="cut" d="M6.4 11.3l3.1 3.1 6.1-6.5" fill="none" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
       <span>Tasks</span>
     </button>
     <button class="bnav-btn" id="bnav-time" onclick="setView('time')">
-      <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9.5" r="6.5" stroke="currentColor" stroke-width="1.5"/><path d="M9 5.5V9.5l2.5 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <span>Time</span>
+      <svg width="22" height="22" viewBox="0 0 22 22"><rect x="1" y="2" width="20" height="18.5" rx="4.6" fill="currentColor"/><path class="cut" d="M1.5 7.4h19" fill="none" stroke-width="1.2" opacity=".6"/><g class="cut-fill"><circle cx="6.8" cy="11.4" r="1.25"/><circle cx="11" cy="11.4" r="1.25"/><circle cx="15.2" cy="11.4" r="1.25"/><circle cx="6.8" cy="15.4" r="1.25"/><circle cx="11" cy="15.4" r="1.25"/></g></svg>
+      <span>Calendar</span>
     </button>
   </nav>
 
