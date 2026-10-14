@@ -4476,8 +4476,10 @@ body.chrome-off #col-filter-bar { display: none !important; }
 
   /* A home-screen app draws under the status bar, so every full-height
      pane starts below it and ends above the home indicator. */
-  #tasks-pane { padding-top: env(safe-area-inset-top, 0px); }
-  #detail-pane { padding-top: env(safe-area-inset-top, 0px); }
+  #tasks-pane { padding-top: calc(env(safe-area-inset-top, 0px) + 18px); }
+  #detail-pane { padding-top: calc(env(safe-area-inset-top, 0px) + 10px); }
+  #sidebar { padding-top: calc(env(safe-area-inset-top, 0px) + 22px); }
+  #tasks-head { padding-top: 14px; padding-bottom: 12px; }
   #detail-foot { padding-bottom: calc(7px + env(safe-area-inset-bottom, 0px)); }
 
   /* The list is the scroller — nothing above it scrolls on a phone. */
