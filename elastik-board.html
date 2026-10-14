@@ -4473,7 +4473,32 @@ body.chrome-off #col-filter-bar { display: none !important; }
   #sidebar-footer button svg { width: 18px; height: 18px; }
   #drawer-sync-btn { display: flex; }
   #sync-nag { font-size: 14px; }
+
+  /* A home-screen app draws under the status bar, so every full-height
+     pane starts below it and ends above the home indicator. */
+  #tasks-pane { padding-top: env(safe-area-inset-top, 0px); }
+  #detail-pane { padding-top: env(safe-area-inset-top, 0px); }
+  #detail-foot { padding-bottom: calc(7px + env(safe-area-inset-bottom, 0px)); }
+
+  /* The list is the scroller — nothing above it scrolls on a phone. */
+  #tasks-list {
+    overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain;
+    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* A long name wraps inside its row instead of dropping below the box. */
+  .tl-name { flex: 1 1 0; }
 }
+
+/* Pull to refresh (phones): there is no browser reload in a home-screen app. */
+#ptr {
+  height: 0; overflow: hidden; flex-shrink: 0;
+  display: flex; align-items: flex-end; justify-content: center;
+  font-size: 12px; color: var(--text-3);
+  transition: height .2s;
+}
+#ptr.dragging { transition: none; }
+#ptr span { padding-bottom: 10px; }
 </style>
 
 <!-- EditorJS core + block tools (rich-text notes editor) -->
@@ -7555,6 +7580,42 @@ async function firebaseFetch(url, options = {}) {
 
 let _lastSyncedAt = null;
 let _lastSyncErrorToastAt = 0;
+/* Pulling the task list down from its top reloads the app — the newest
+   version and a fresh copy of the data. A home-screen app has no reload
+   button of its own. */
+function initPullToRefresh() {
+  const list = document.getElementById('tasks-list');
+  if (!list || document.getElementById('ptr')) return;
+  const ind = document.createElement('div');
+  ind.id = 'ptr';
+  ind.innerHTML = '<span>Pull to refresh</span>';
+  list.before(ind);
+  const label = ind.firstChild, NEED = 64;
+  let y0 = null, pull = 0;
+  list.addEventListener('touchstart', e => {
+    y0 = list.scrollTop <= 0 && e.touches.length === 1 ? e.touches[0].clientY : null;
+    pull = 0;
+  }, {passive: true});
+  list.addEventListener('touchmove', e => {
+    if (y0 == null) return;
+    if (list.scrollTop > 0) { y0 = null; ind.style.height = '0'; return; }
+    pull = Math.max(0, (e.touches[0].clientY - y0) * 0.5);
+    ind.classList.add('dragging');
+    ind.style.height = Math.min(pull, 80) + 'px';
+    label.textContent = pull >= NEED ? 'Release to refresh' : 'Pull to refresh';
+  }, {passive: true});
+  list.addEventListener('touchend', () => {
+    if (y0 == null) return;
+    y0 = null;
+    ind.classList.remove('dragging');
+    if (pull >= NEED) {
+      label.textContent = 'Refreshing…';
+      ind.style.height = '44px';
+      location.reload();
+    } else ind.style.height = '0';
+  });
+}
+
 function syncConnected() { return !!firebaseURL && !!firebaseAPIKey && !!firebaseToken; }
 
 /* Every place that says whether this device syncs: the banner over the task
@@ -12066,6 +12127,7 @@ if (location.hash.startsWith('#task-')) {
   if (getTask(id)) requestAnimationFrame(() => openCard(id, {pushHistory: false}));
 }
 renderSyncPrompts();
+initPullToRefresh();
 // The Asana import is gone; its token and scan state were kept per device.
 try {
   Object.keys(localStorage).filter(k => k.startsWith('mc_asana_')).forEach(k => localStorage.removeItem(k));
