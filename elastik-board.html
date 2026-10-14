@@ -4151,6 +4151,15 @@ body.chrome-off #col-filter-bar { display: none !important; }
 .sub-row { align-items: flex-start; }
 .sub-row .sub-check { margin-top: calc((1.4em - 16px) / 2 + 1px); }
 .sub-row .sub-del { align-self: center; }
+.sub-done-head {
+  display: flex; align-items: center; gap: 6px;
+  margin-top: 12px; padding: 6px 0; width: 100%;
+  border: none; background: none; cursor: pointer;
+  font-family: inherit; font-size: 13px; font-weight: 600; color: var(--text-2);
+}
+.sub-done-head span { font-weight: 400; color: var(--text-3); }
+.sub-done-head svg { transition: transform .15s; color: var(--text-3); }
+.sub-done-head.open svg { transform: rotate(90deg); }
 .sub-name::placeholder { color: var(--text-3); }
 .sub-row.done .sub-name { color: var(--text-3); text-decoration: line-through; }
 .sub-del {
@@ -10355,18 +10364,33 @@ function renderSubtasks(t) {
   box.style.display = '';
   const subs = t.subtasks || (t.subtasks = []);
 
-  box.innerHTML = subs.map((sub, i) => `
+  // Ticked items move down into a Completed section of their own; data-i
+  // keeps pointing at each item's place in t.subtasks.
+  const row = (sub, i) => `
     <div class="sub-row${sub.done ? ' done' : ''}" data-i="${i}">
-      <button class="sub-check${sub.done ? ' done' : ''}" aria-label="Toggle item">
+      <button class="sub-check${sub.done ? ' done' : ''}" data-i="${i}" aria-label="Toggle item">
         <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1.6 5.1l2.2 2.2 4.6-4.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
       <textarea class="sub-name" rows="1" data-i="${i}">${esc(sub.name)}</textarea>
       <button class="sub-del" data-i="${i}" aria-label="Delete item">×</button>
-    </div>`).join('') + `
+    </div>`;
+  const indexed = subs.map((sub, i) => [sub, i]);
+  const open = indexed.filter(([x]) => !x.done), closed = indexed.filter(([x]) => x.done);
+  const showDone = prefGet('mc_sub_done_open') !== '0';
+  box.innerHTML = open.map(([x, i]) => row(x, i)).join('') + `
     <div class="sub-row sub-new">
       <button class="sub-check" tabindex="-1" aria-hidden="true"></button>
       <textarea class="sub-name" rows="1" id="sub-new-input" placeholder='Press "Enter" to create an item'></textarea>
-    </div>`;
+    </div>` + (closed.length ? `
+    <button class="sub-done-head${showDone ? ' open' : ''}" type="button">
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M3.5 2l3 3-3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Completed <span>${closed.length}</span>
+    </button>
+    <div class="sub-done-list"${showDone ? '' : ' hidden'}>${closed.map(([x, i]) => row(x, i)).join('')}</div>` : '');
+  box.querySelector('.sub-done-head')?.addEventListener('click', () => {
+    prefSet('mc_sub_done_open', showDone ? '0' : '1');
+    renderSubtasks(t);
+  });
 
   // Items are textareas so a long one wraps instead of running off the edge.
   box.querySelectorAll('.sub-name').forEach(el => {
@@ -10386,8 +10410,8 @@ function renderSubtasks(t) {
     }
   };
 
-  box.querySelectorAll('.sub-check').forEach((b, i) => {
-    if (i >= subs.length) return;
+  box.querySelectorAll('.sub-check[data-i]').forEach(b => {
+    const i = parseInt(b.dataset.i, 10);
     b.onclick = () => { subs[i].done = !subs[i].done; commit(); renderSubtasks(t); };
   });
   box.querySelectorAll('.sub-del').forEach(b => b.onclick = () => {
@@ -10427,8 +10451,7 @@ function renderSubtasks(t) {
   };
 }
 function focusSub(i) {
-  const rows = document.querySelectorAll('#detail-subtasks .sub-row:not(.sub-new) .sub-name');
-  const el = i < 0 ? null : rows[i];
+  const el = i < 0 ? null : document.querySelector(`#detail-subtasks .sub-name[data-i="${i}"]`);
   if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
   else document.getElementById('sub-new-input')?.focus();
 }
