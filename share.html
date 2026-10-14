@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Shared list</title>
+<link rel="icon" href="icon.svg">
+<style>
+:root {
+  --bg: #FFFFFF; --surface: #FFFFFF; --fill: #F2F2F4; --hover: rgba(0,0,0,.04);
+  --text: #1D1D1F; --text-2: #48484A; --text-3: #8E8E93;
+  --line: rgba(0,0,0,.08); --check: #C6C6C6;
+  --accent: #007AFF; --accent-bg: rgba(0,122,255,.10); --danger: #E24B4A;
+  --mc-check: var(--check); --mc-line: var(--line);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #141416; --surface: #1C1C1E; --fill: #2A2A2D; --hover: rgba(255,255,255,.05);
+    --text: #F2F2F7; --text-2: #C7C7CC; --text-3: #8E8E93;
+    --line: rgba(255,255,255,.10); --check: #55555A;
+    --accent: #0A84FF; --accent-bg: rgba(10,132,255,.16);
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--text); }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  font-size: 15px; line-height: 1.45; -webkit-font-smoothing: antialiased;
+  overscroll-behavior-x: none;
+}
+button { font: inherit; color: inherit; }
+#page {
+  max-width: 720px; margin: 0 auto;
+  padding: calc(env(safe-area-inset-top, 0px) + 40px) 24px calc(env(safe-area-inset-bottom, 0px) + 60px);
+}
+@media (max-width: 600px) { #page { padding-left: 18px; padding-right: 18px; padding-top: calc(env(safe-area-inset-top, 0px) + 24px); } }
+
+/* Header */
+#head { margin-bottom: 22px; }
+#title { display: flex; align-items: center; gap: 12px; font-size: 30px; font-weight: 700; letter-spacing: -.02em; line-height: 1.15; margin: 0; }
+#title .emoji { font-family: 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif; font-weight: 400; }
+#sub { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 13px; color: var(--text-3); flex-wrap: wrap; }
+.pill { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border-radius: 999px; background: var(--fill); color: var(--text-2); font-weight: 500; }
+.pill.edit { background: var(--accent-bg); color: var(--accent); }
+.live-dot { width: 7px; height: 7px; border-radius: 50%; background: #34C759; }
+.live-dot.off { background: var(--text-3); }
+
+/* Add */
+#add {
+  display: flex; align-items: center; gap: 10px;
+  height: 46px; padding: 0 14px; margin-bottom: 8px;
+  border-radius: 12px; background: var(--fill);
+}
+#add[hidden] { display: none; }
+#add svg { color: var(--text-3); flex-shrink: 0; }
+#add input { flex: 1; min-width: 0; border: none; background: none; outline: none; font: inherit; font-size: 16px; color: var(--text); }
+#add input::placeholder { color: var(--text-3); }
+
+/* Rows */
+.task { border-bottom: 1px solid var(--line); }
+.row {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 12px 4px; cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.row:hover { background: var(--hover); }
+.task.open > .row { background: none; }
+.check {
+  width: 20px; height: 20px; flex-shrink: 0; margin-top: 1px; padding: 0;
+  border-radius: 6px; border: 1.6px solid var(--check); background: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.check svg { opacity: 0; color: #fff; }
+.check.done { background: var(--check); border-color: var(--check); }
+.check.done svg { opacity: 1; }
+.check.p1 { border-color: #E24B4A; } .check.p2 { border-color: #E8A84B; } .check.p3 { border-color: #3B7CE8; }
+.check:disabled { cursor: default; }
+.glyph { width: 20px; height: 20px; flex-shrink: 0; margin-top: 1px; color: var(--text-2); display: flex; align-items: center; justify-content: center; }
+.row-main { flex: 1; min-width: 0; }
+.row-name { font-size: 16px; color: var(--text); overflow-wrap: anywhere; }
+.task.done .row-name { color: var(--text-3); }
+.row-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 3px; font-size: 13px; color: var(--text-3); }
+.row-meta:empty { display: none; }
+.due.today { color: var(--accent); } .due.over { color: var(--danger); }
+.chev { color: var(--text-3); margin-top: 3px; transition: transform .15s; flex-shrink: 0; }
+.task.open .chev { transform: rotate(90deg); }
+
+/* Panel */
+.panel { padding: 2px 4px 18px 36px; }
+@media (max-width: 600px) { .panel { padding-left: 4px; } }
+.p-name {
+  width: 100%; display: block; border: none; outline: none; background: none; resize: none; overflow: hidden;
+  font: inherit; font-size: 20px; font-weight: 600; color: var(--text); padding: 0; margin: 0 0 10px; line-height: 1.3;
+}
+.p-ctrls { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px;
+  border-radius: 8px; border: 1px solid var(--line); background: var(--surface);
+  font-size: 14px; color: var(--text-2); cursor: pointer; position: relative;
+}
+.chip input[type=date] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+.chip.set { color: var(--text); }
+.chip .x { color: var(--text-3); padding-left: 2px; }
+.prio { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.prio button { height: 30px; padding: 0 10px; border: none; background: var(--surface); cursor: pointer; font-size: 13px; color: var(--text-2); display: flex; align-items: center; gap: 5px; }
+.prio button + button { border-left: 1px solid var(--line); }
+.prio button.on { background: var(--accent-bg); color: var(--accent); }
+.p-label { font-size: 12px; font-weight: 600; color: var(--text-3); letter-spacing: .04em; text-transform: uppercase; margin: 16px 0 6px; }
+.p-foot { display: flex; justify-content: flex-end; margin-top: 18px; }
+.p-del { border: none; background: none; color: var(--danger); font-size: 14px; cursor: pointer; padding: 6px 0; }
+.ro-meta { font-size: 14px; color: var(--text-2); margin-bottom: 12px; display: flex; gap: 14px; flex-wrap: wrap; }
+
+/* Checklist */
+.sub-row { display: flex; align-items: flex-start; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.sub-check { width: 17px; height: 17px; flex-shrink: 0; margin-top: 2px; padding: 0; border-radius: 5px; border: 1.5px solid var(--check); background: none; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.sub-check svg { opacity: 0; color: #fff; }
+.sub-check.done { background: var(--accent); border-color: var(--accent); }
+.sub-check.done svg { opacity: 1; }
+.sub-new .sub-check { border-style: dashed; cursor: default; }
+.sub-name { flex: 1; min-width: 0; border: none; outline: none; background: none; resize: none; overflow: hidden; font: inherit; font-size: 15px; color: var(--text); padding: 0; margin: 0; line-height: 1.4; display: block; }
+.sub-name::placeholder { color: var(--text-3); }
+.sub-row.done .sub-name { color: var(--text-3); text-decoration: line-through; }
+.sub-del { border: none; background: none; color: var(--text-3); cursor: pointer; font-size: 17px; line-height: 1; padding: 0 2px; }
+.sub-done-head, .done-head {
+  display: flex; align-items: center; gap: 6px; width: 100%; margin-top: 12px; padding: 6px 0;
+  border: none; background: none; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--text-2);
+}
+.done-head { font-size: 16px; margin-top: 22px; }
+.sub-done-head span, .done-head span { font-weight: 400; color: var(--text-3); }
+.sub-done-head svg, .done-head svg { transition: transform .15s; color: var(--text-3); }
+.sub-done-head.open svg, .done-head.open svg { transform: rotate(90deg); }
+.add-checklist { border: 1px dashed var(--line); background: none; border-radius: 8px; height: 32px; padding: 0 12px; font-size: 14px; color: var(--text-3); cursor: pointer; }
+
+/* Notes editor (same as the app's description) */
+.notes-ed {
+  position: relative;
+  width: 100%; min-height: 76px; margin-top: 4px;
+  border: none; outline: none; background: none; resize: none;
+  font-family: inherit; font-size: 14px; line-height: 1.55; color: var(--text-2);
+  white-space: pre-wrap; overflow-wrap: anywhere; cursor: text;
+  counter-reset: md-ol;
+}
+.notes-ed.is-empty::before {
+  content: attr(data-placeholder); position: absolute; left: 0; top: 0;
+  color: var(--text-3); pointer-events: none;
+}
+/* One line of the description. Its marker — bullet, number, checkbox — is
+   the ::before, so the caret never has to step over it. */
+.md-line { position: relative; min-height: 1.55em; --ind: calc(var(--i, 0) * 22px); }
+.md-line:not([data-k="ol"]) { counter-reset: md-ol; }
+.md-line[data-k="ul"], .md-line[data-k="ol"],
+.md-line[data-k="todo"], .md-line[data-k="done"] { padding-left: calc(var(--ind) + 24px); }
+.md-line[data-k="ul"]::before {
+  content: ''; position: absolute; left: calc(var(--ind) + 8px); top: calc(.775em - 2.5px);
+  width: 5px; height: 5px; border-radius: 50%; background: currentColor;
+}
+.md-line[data-k="ol"] { counter-increment: md-ol; }
+.md-line[data-k="ol"]::before {
+  content: counter(md-ol) '.'; position: absolute; left: var(--ind); width: 18px;
+  text-align: right; color: var(--text-3); font-variant-numeric: tabular-nums;
+}
+.md-line[data-k="todo"]::before, .md-line[data-k="done"]::before {
+  content: ''; position: absolute; left: calc(var(--ind) + 1px); top: calc(.775em - 8px);
+  width: 16px; height: 16px; box-sizing: border-box;
+  border: 1.5px solid var(--mc-check); border-radius: 4px; cursor: pointer;
+}
+.md-line[data-k="todo"]:hover::before { border-color: var(--accent); }
+.md-line[data-k="done"] { color: var(--text-3); text-decoration: line-through; }
+.md-line[data-k="done"]::before {
+  background: var(--accent) no-repeat center / 12px
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.6 6.2l2.2 2.2 4.6-4.8' fill='none' stroke='white' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  border-color: var(--accent);
+}
+.md-line[data-k="h1"] { font-size: 20px; line-height: 1.4; font-weight: 650; color: var(--text); margin-top: 4px; }
+.md-line[data-k="h2"] { font-size: 17px; line-height: 1.45; font-weight: 650; color: var(--text); margin-top: 3px; }
+.md-line[data-k="h3"] { font-size: 15px; line-height: 1.5; font-weight: 650; color: var(--text); }
+.md-line[data-k="quote"] { padding-left: 13px; box-shadow: inset 3px 0 var(--mc-check); color: var(--text-3); }
+.md-line[data-k="hr"] { cursor: default; }
+.md-line[data-k="hr"]::before {
+  content: ''; position: absolute; left: 0; right: 0; top: 50%;
+  border-top: 1px solid var(--mc-line);
+}
+.notes-ed { min-height: 30px !important; font-size: 15px !important; color: var(--text) !important; }
+.notes-ed[contenteditable=false] { cursor: default; }
+
+/* States */
+.empty { text-align: center; color: var(--text-3); padding: 48px 12px; font-size: 15px; }
+#notice { display: none; margin-bottom: 14px; padding: 10px 14px; border-radius: 10px; background: var(--fill); font-size: 14px; color: var(--text-2); }
+#notice.on { display: block; }
+#toast {
+  position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 24px); transform: translateX(-50%);
+  background: #1D1D1F; color: #fff; padding: 9px 16px; border-radius: 10px; font-size: 14px;
+  opacity: 0; pointer-events: none; transition: opacity .2s;
+}
+#toast.on { opacity: 1; }
+#foot { margin-top: 40px; text-align: center; font-size: 12px; color: var(--text-3); }
+</style>
+</head>
+<body>
+<main id="page">
+  <header id="head">
+    <h1 id="title"><span class="emoji" id="emoji"></span><span id="name">Loading…</span></h1>
+    <div id="sub"></div>
+  </header>
+  <div id="notice"></div>
+  <div id="add" hidden>
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2.5v11M2.5 8h11" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+    <input id="add-input" type="text" placeholder="Add a task" enterkeyhint="done" autocomplete="off">
+  </div>
+  <div id="list"></div>
+  <div id="foot">Shared from Mission Control</div>
+</main>
+<div id="toast"></div>
+<script>
+/* A list shared from Mission Control, opened from a link. #v=<key> reads it;
+   #v=<key>&e=<edit key> also edits it, as an anonymous Firebase user who has
+   proved the edit key. Everything is live both ways. */
+const DB      = localStorage.getItem('mcshare_db') || 'https://board-2cb94-default-rtdb.europe-west1.firebasedatabase.app';
+const API_KEY = 'AIzaSyDWJ2vWggtQiHIWkmAsATue4HLIyE1QM58';
+const AUTH_ID = localStorage.getItem('mcshare_auth') || 'https://identitytoolkit.googleapis.com';
+const AUTH_ST = localStorage.getItem('mcshare_auth') || 'https://securetoken.googleapis.com';
+const hash = new URLSearchParams(location.hash.slice(1));
+const KEY = hash.get('v') || '', EDIT = hash.get('e') || '';
+
+let data = null;          // the share: {owner, list, tasks}
+let canEdit = false;
+let openId = null;
+let live = false;
+let showDone = localStorage.getItem('mcshare_done') !== '0';
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => Math.random().toString(36).slice(2, 9);
+function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('on'), 2600); }
+function autoGrow(el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; }
+function positionNotePlus() {}
+
+// ── Auth (editors only) ──
+async function anonAuth() {
+  let a = null;
+  try { a = JSON.parse(localStorage.getItem('mcshare_anon') || 'null'); } catch (_) {}
+  if (a && a.exp > Date.now() + 60000) return a;
+  let res, d;
+  if (a && a.refresh) {
+    res = await fetch(`${AUTH_ST}/v1/token?key=${API_KEY}`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({grant_type: 'refresh_token', refresh_token: a.refresh})});
+    d = await res.json();
+    if (res.ok) a = {token: d.id_token, refresh: d.refresh_token, uid: d.user_id, exp: Date.now() + (+d.expires_in || 3600) * 1000};
+    else a = null;
+  }
+  if (!a) {
+    res = await fetch(`${AUTH_ID}/v1/accounts:signUp?key=${API_KEY}`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({returnSecureToken: true})});
+    d = await res.json();
+    if (!res.ok) throw new Error((d.error && d.error.message) || 'sign-in failed');
+    a = {token: d.idToken, refresh: d.refreshToken, uid: d.localId, exp: Date.now() + (+d.expiresIn || 3600) * 1000};
+  }
+  localStorage.setItem('mcshare_anon', JSON.stringify(a));
+  return a;
+}
+async function dbWrite(path, method, body) {
+  const a = await anonAuth();
+  const res = await fetch(`${DB}/${path}.json?auth=${a.token}`, {method, body: body === undefined ? undefined : JSON.stringify(body)});
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return res;
+}
+async function becomeEditor() {
+  if (!EDIT) return false;
+  try {
+    const a = await anonAuth();
+    await dbWrite(`shareEditors/${KEY}/${a.uid}`, 'PUT', EDIT);
+    return true;
+  } catch (e) {
+    console.warn('[share] edit access refused', e);
+    notice('This edit link has been reset, so the list is view-only for you.');
+    return false;
+  }
+}
+
+// ── Live data ──
+function setPath(obj, path, val) {
+  const parts = path.split('/').filter(Boolean);
+  if (!parts.length) return val;
+  const root = obj && typeof obj === 'object' ? obj : {};
+  let o = root;
+  parts.slice(0, -1).forEach(p => { if (!o[p] || typeof o[p] !== 'object') o[p] = {}; o = o[p]; });
+  const last = parts[parts.length - 1];
+  if (val === null) delete o[last]; else o[last] = val;
+  return root;
+}
+function connect() {
+  const es = new EventSource(`${DB}/shares/${KEY}.json`);
+  es.addEventListener('put', e => { const {path, data: d} = JSON.parse(e.data); data = setPath(data, path, d); live = true; render(); });
+  es.addEventListener('patch', e => {
+    const {path, data: d} = JSON.parse(e.data);
+    Object.entries(d || {}).forEach(([k, v]) => { data = setPath(data, (path === '/' ? '' : path) + '/' + k, v); });
+    render();
+  });
+  es.onerror = () => { live = false; renderHead(); };
+  es.onopen = () => { live = true; renderHead(); };
+}
+
+// ── Writes ──
+const tasks = () => data && data.tasks ? data.tasks : {};
+const getTask = id => tasks()[id];
+const saveTimers = {};
+function saveTask(t, now) {
+  t.updatedAt = Date.now();
+  data.tasks = data.tasks || {};
+  data.tasks[t.id] = t;
+  clearTimeout(saveTimers[t.id]);
+  const go = () => dbWrite(`shares/${KEY}/tasks/${t.id}`, 'PUT', clean(t)).catch(() => toast('Couldn’t save — check your connection'));
+  if (now) go(); else saveTimers[t.id] = setTimeout(go, 600);
+}
+function clean(v) { return JSON.parse(JSON.stringify(v, (k, x) => (x === undefined ? null : x))); }
+function removeTask(id) {
+  delete data.tasks[id];
+  if (openId === id) openId = null;
+  render();
+  dbWrite(`shares/${KEY}/tasks/${id}`, 'DELETE').catch(() => toast('Couldn’t delete — check your connection'));
+}
+function addTask(name) {
+  const all = Object.values(tasks());
+  const ord = all.reduce((m, t) => Math.max(m, t.ord || 0), -1) + 1;
+  const now = Date.now();
+  const t = {id: uid(), name, status: 'next', notes: '', priority: 0, ord, createdAt: now};
+  saveTask(t, true);
+  render();
+}
+const isDone = t => t.status === 'done' || t.status === 'archive';
+function toggleDone(t) {
+  t.status = isDone(t) ? 'next' : 'done';
+  if (t.status === 'done') t.completedAt = Date.now(); else delete t.completedAt;
+  saveTask(t, true);
+  render();
+}
+
+// ── Dates ──
+const isoDay = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const today = () => isoDay(new Date());
+function dueLabel(t) {
+  if (!t.dueDate) return null;
+  const d = new Date(t.dueDate + 'T00:00:00'), td = new Date(today() + 'T00:00:00');
+  const diff = Math.round((d - td) / 864e5);
+  let s = diff === 0 ? 'Today' : diff === 1 ? 'Tomorrow' : diff === -1 ? 'Yesterday'
+    : d.toLocaleDateString(undefined, {day: 'numeric', month: 'short', year: d.getFullYear() === td.getFullYear() ? undefined : 'numeric'});
+  if (t.dueTime) s += ' ' + t.dueTime;
+  return {s, cls: diff === 0 ? 'today' : diff < 0 && !isDone(t) ? 'over' : ''};
+}
+const PRIO = [{v: 0, name: 'None'}, {v: 3, name: 'Low', c: '#3B7CE8'}, {v: 2, name: 'Medium', c: '#E8A84B'}, {v: 1, name: 'High', c: '#E24B4A'}];
+const flag = c => `<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.6 1.4v9.2" stroke="${c}" stroke-width="1.3" stroke-linecap="round"/><path d="M2.6 2.1h6.6L7.9 4.4l1.3 2.3H2.6z" fill="${c}"/></svg>`;
+const CHECK = '<svg width="11" height="11" viewBox="0 0 10 10" fill="none"><path d="M1.6 5.1l2.2 2.2 4.6-4.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const CHEV = '<svg class="chev" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4.5 2.5l3.5 3.5-3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const LIST_GLYPH = '<svg width="16" height="16" viewBox="0 0 18 18" fill="none"><rect x="1.8" y="1.8" width="14.4" height="14.4" rx="3.4" stroke="currentColor" stroke-width="1.4"/><path d="M5.5 6.4h7M5.5 9h7M5.5 11.6h4.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>';
+
+// ── Render ──
+function notice(msg) { const n = $('notice'); n.textContent = msg || ''; n.classList.toggle('on', !!msg); }
+function renderHead() {
+  const l = (data && data.list) || {};
+  $('emoji').textContent = l.emoji || '📄';
+  $('name').textContent = l.name || 'Shared list';
+  document.title = (l.name || 'Shared list') + ' · Mission Control';
+  $('sub').innerHTML =
+    `<span class="pill${canEdit ? ' edit' : ''}">${canEdit ? 'You can edit' : 'View only'}</span>` +
+    `<span style="display:inline-flex;align-items:center;gap:6px"><span class="live-dot${live ? '' : ' off'}"></span>${live ? 'Live' : 'Reconnecting…'}</span>`;
+}
+function rowHTML(t) {
+  const subs = t.subtasks || [];
+  const meta = [];
+  const due = dueLabel(t);
+  if (due) meta.push(`<span class="due ${due.cls}">${esc(due.s)}</span>`);
+  if (t.priority) { const p = PRIO.find(x => x.v === t.priority); if (p) meta.push(`<span style="display:inline-flex;align-items:center;gap:4px">${flag(p.c)}${p.name}</span>`); }
+  if (subs.length) meta.push(`<span>${subs.filter(s => s.done).length}/${subs.length}</span>`);
+  if ((t.notes || '').trim()) meta.push('<span>Notes</span>');
+  const lead = t.checklist && !isDone(t)
+    ? `<span class="glyph">${LIST_GLYPH}</span>`
+    : `<button class="check${isDone(t) ? ' done' : ''}${t.priority ? ' p' + t.priority : ''}" data-act="done"${canEdit ? '' : ' disabled'} aria-label="Done">${CHECK}</button>`;
+  return `${lead}<div class="row-main"><div class="row-name">${esc(t.name || 'Untitled')}</div><div class="row-meta">${meta.join('')}</div></div>${CHEV}`;
+}
+
+function render() {
+  renderHead();
+  $('add').hidden = !canEdit || !data;
+  const box = $('list');
+  if (data === null) {
+    box.innerHTML = '<div class="empty">This link no longer works — the list was unshared or the link was reset.</div>';
+    $('add').hidden = true;
+    $('sub').innerHTML = '';
+    return;
+  }
+  const all = Object.entries(tasks()).map(([id, t]) => Object.assign(t, {id}));
+  const open = all.filter(t => !isDone(t)).sort((a, b) => (a.ord ?? 0) - (b.ord ?? 0));
+  const done = all.filter(isDone).sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0));
+  if (openId && !getTask(openId)) openId = null;
+
+  // Keyed: rows are reused, and an open panel someone is typing in is left alone.
+  const keep = new Map([...box.querySelectorAll('.task')].map(el => [el.dataset.id, el]));
+  const frag = [];
+  const make = t => {
+    let el = keep.get(t.id);
+    if (!el) { el = document.createElement('div'); el.className = 'task'; el.dataset.id = t.id; el.innerHTML = '<div class="row"></div>'; }
+    keep.delete(t.id);
+    el.classList.toggle('done', isDone(t));
+    el.classList.toggle('open', openId === t.id);
+    el.querySelector('.row').innerHTML = rowHTML(t);
+    let panel = el.querySelector('.panel');
+    if (openId === t.id) {
+      if (!panel || !panel.contains(document.activeElement) || panel.dataset.tid !== t.id) {
+        panel?.remove();
+        panel = buildPanel(t);
+        el.appendChild(panel);
+      }
+    } else panel?.remove();
+    return el;
+  };
+  open.forEach(t => frag.push(make(t)));
+  let head = box.querySelector('.done-head');
+  if (done.length) {
+    if (!head) { head = document.createElement('button'); head.className = 'done-head'; head.type = 'button'; }
+    head.classList.toggle('open', showDone);
+    head.innerHTML = `<svg width="11" height="11" viewBox="0 0 10 10" fill="none"><path d="M3.5 2l3 3-3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Completed <span>${done.length}</span>`;
+    head.onclick = () => { showDone = !showDone; localStorage.setItem('mcshare_done', showDone ? '1' : '0'); render(); };
+    frag.push(head);
+    if (showDone) done.forEach(t => frag.push(make(t)));
+  }
+  keep.forEach(el => el.remove());
+  [...box.children].forEach(c => { if (!frag.includes(c)) c.remove(); });
+  frag.forEach(el => box.appendChild(el));
+  box.querySelector('.empty')?.remove();
+  if (!all.length) box.insertAdjacentHTML('afterbegin', `<div class="empty">${canEdit ? 'No tasks yet — add the first one above.' : 'No tasks in this list yet.'}</div>`);
+}
+
+$('list').addEventListener('click', e => {
+  const row = e.target.closest('.row');
+  if (!row) return;
+  const id = row.parentElement.dataset.id, t = getTask(id);
+  if (!t) return;
+  if (e.target.closest('[data-act=done]')) { if (canEdit) toggleDone(t); return; }
+  openId = openId === id ? null : id;
+  render();
+});
+
+// ── The open task ──
+function buildPanel(t) {
+  const p = document.createElement('div');
+  p.className = 'panel';
+  p.dataset.tid = t.id;
+  const due = dueLabel(t);
+  const prio = PRIO.find(x => x.v === (t.priority || 0)) || PRIO[0];
+  if (canEdit) {
+    p.innerHTML = `
+      <textarea class="p-name" rows="1" placeholder="Task name">${esc(t.name)}</textarea>
+      <div class="p-ctrls">
+        <label class="chip${due ? ' set' : ''}">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="1.9" y="3" width="12.2" height="11.1" rx="2.4" stroke="currentColor" stroke-width="1.4"/><path d="M2.1 6.5h11.8M5.4 1.9v2.2M10.6 1.9v2.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+          <span>${due ? esc(due.s) : 'Add date'}</span>
+          <input type="date" value="${esc(t.dueDate || '')}">
+        </label>
+        ${t.dueDate ? '<button class="chip p-clear-date" type="button" aria-label="Clear date">Clear date</button>' : ''}
+        <div class="prio">${PRIO.map(x => `<button type="button" data-p="${x.v}" class="${x.v === (t.priority || 0) ? 'on' : ''}">${x.c ? flag(x.c) : ''}${x.name}</button>`).join('')}</div>
+      </div>
+      <div class="p-label">Description</div>
+      <div class="notes-ed" contenteditable="true" data-placeholder="Add notes — - for a bullet, [ ] for a check item"></div>
+      <div class="p-subs"></div>
+      <div class="p-foot"><button class="p-del" type="button">Delete task</button></div>`;
+    const name = p.querySelector('.p-name');
+    requestAnimationFrame(() => autoGrow(name));
+    name.addEventListener('input', () => { autoGrow(name); t.name = name.value; saveTask(t); updateRow(t); });
+    name.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); name.blur(); } });
+    name.addEventListener('blur', () => { if (!name.value.trim()) { name.value = t.name = 'Untitled'; } saveTask(t, true); });
+    p.querySelector('input[type=date]').addEventListener('change', e => {
+      if (e.target.value) t.dueDate = e.target.value; else delete t.dueDate;
+      saveTask(t, true); rebuild(t);
+    });
+    p.querySelector('.p-clear-date')?.addEventListener('click', () => { delete t.dueDate; delete t.dueTime; saveTask(t, true); rebuild(t); });
+    p.querySelectorAll('.prio button').forEach(b => b.onclick = () => { t.priority = +b.dataset.p; saveTask(t, true); rebuild(t); });
+    p.querySelector('.p-del').onclick = () => { if (confirm('Delete this task for everyone?')) removeTask(t.id); };
+  } else {
+    p.innerHTML = `
+      <div class="ro-meta">${due ? `<span class="due ${due.cls}">${esc(due.s)}</span>` : ''}${t.priority ? `<span>${prio.name} priority</span>` : ''}</div>
+      ${(t.notes || '').trim() ? '<div class="notes-ed" contenteditable="false"></div>' : (t.subtasks || []).length ? '' : '<div class="ro-meta">No notes.</div>'}
+      <div class="p-subs"></div>`;
+  }
+  const ed = p.querySelector('.notes-ed');
+  if (ed) {
+    setNoteEditor(ed, t.notes || '');
+    if (canEdit) {
+      let timer = 0;
+      const commit = () => {
+        clearTimeout(timer);
+        mdSync(ed);
+        const v = noteEditorValue(ed);
+        if (v === (t.notes || '')) return;
+        t.notes = v; saveTask(t, true); updateRow(t);
+      };
+      bindNoteEditor(ed, {commit, soon: () => { clearTimeout(timer); timer = setTimeout(commit, 700); }, slash: () => {}});
+    }
+  }
+  renderSubs(t, p.querySelector('.p-subs'));
+  return p;
+}
+function updateRow(t) {
+  const el = document.querySelector(`.task[data-id="${t.id}"] > .row`);
+  if (el) el.innerHTML = rowHTML(t);
+}
+function rebuild(t) {
+  const el = document.querySelector(`.task[data-id="${t.id}"]`);
+  if (!el) return;
+  el.querySelector('.panel')?.remove();
+  el.appendChild(buildPanel(t));
+  updateRow(t);
+}
+
+// Checklist, as in the app: open items, a new-item row, then Completed.
+function renderSubs(t, box) {
+  const subs = t.subtasks || [];
+  if (!subs.length && !t.checklist) {
+    box.innerHTML = canEdit ? '<button class="add-checklist" type="button">+ Add a checklist</button>' : '';
+    box.querySelector('.add-checklist')?.addEventListener('click', () => { t.checklist = true; t.subtasks = []; saveTask(t, true); renderSubs(t, box); box.querySelector('.sub-new .sub-name')?.focus(); });
+    return;
+  }
+  const ro = canEdit ? '' : ' readonly';
+  const row = (s, i) => `
+    <div class="sub-row${s.done ? ' done' : ''}">
+      <button class="sub-check${s.done ? ' done' : ''}" data-i="${i}" type="button"${canEdit ? '' : ' disabled'}>${CHECK}</button>
+      <textarea class="sub-name" rows="1" data-i="${i}"${ro}>${esc(s.name)}</textarea>
+      ${canEdit ? `<button class="sub-del" data-i="${i}" type="button" aria-label="Delete item">×</button>` : ''}
+    </div>`;
+  const idx = subs.map((s, i) => [s, i]);
+  const open = idx.filter(([s]) => !s.done), closed = idx.filter(([s]) => s.done);
+  const sdOpen = localStorage.getItem('mcshare_sub_done') !== '0';
+  box.innerHTML = '<div class="p-label">Checklist</div>' + open.map(([s, i]) => row(s, i)).join('') +
+    (canEdit ? `<div class="sub-row sub-new"><span class="sub-check"></span><textarea class="sub-name" rows="1" placeholder="Add an item"></textarea></div>` : '') +
+    (closed.length ? `<button class="sub-done-head${sdOpen ? ' open' : ''}" type="button"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M3.5 2l3 3-3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Completed <span>${closed.length}</span></button>
+      <div${sdOpen ? '' : ' hidden'}>${closed.map(([s, i]) => row(s, i)).join('')}</div>` : '');
+  box.querySelectorAll('.sub-name').forEach(el => { requestAnimationFrame(() => autoGrow(el)); el.addEventListener('input', () => autoGrow(el)); });
+  box.querySelector('.sub-done-head')?.addEventListener('click', () => { localStorage.setItem('mcshare_sub_done', sdOpen ? '0' : '1'); renderSubs(t, box); });
+  if (!canEdit) return;
+  const commit = () => { t.subtasks = subs; saveTask(t, true); updateRow(t); };
+  box.querySelectorAll('.sub-check[data-i]').forEach(b => b.onclick = () => { const s = subs[+b.dataset.i]; s.done = !s.done; commit(); renderSubs(t, box); });
+  box.querySelectorAll('.sub-del').forEach(b => b.onclick = () => { subs.splice(+b.dataset.i, 1); commit(); renderSubs(t, box); });
+  box.querySelectorAll('.sub-name[data-i]').forEach(el => {
+    const i = +el.dataset.i;
+    el.addEventListener('change', () => { const v = el.value.trim(); if (v) subs[i].name = v; else subs.splice(i, 1); commit(); renderSubs(t, box); });
+    el.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); el.blur(); } });
+  });
+  const fresh = box.querySelector('.sub-new .sub-name');
+  fresh.addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const v = fresh.value.trim();
+    if (!v) return;
+    subs.push({id: uid(), name: v, done: false});
+    t.checklist = true;
+    commit(); renderSubs(t, box);
+    box.querySelector('.sub-new .sub-name')?.focus();
+  });
+}
+
+// ── Add ──
+$('add-input').addEventListener('keydown', e => {
+  if (e.key !== 'Enter' || e.isComposing) return;
+  const v = e.target.value.trim();
+  if (!v) return;
+  e.target.value = '';
+  addTask(v);
+});
+
+/* ── Description editor ──
+   Copied from elastik-board.html (the task description editor), so a shared
+   description reads and edits exactly as it does in the app. Keep the two
+   in step when either changes. */
+const MD_LIST = new Set(['ul', 'ol', 'todo', 'done']);
+const MD_RULE = /^(-{3,}|\*{3,}|_{3,})$/;
+
+function noteEditor() { return document.getElementById('detail-notes'); }
+
+// ── Markdown ⇄ lines ──
+function mdParseLine(raw) {
+  const ind = raw.match(/^ */)[0].length, s = raw.slice(ind);
+  const i = Math.min(3, Math.floor(ind / 2));
+  let m;
+  if ((m = s.match(/^[-*+] \[([ xX])\](?: (.*))?$/))) return {k: m[1] === ' ' ? 'todo' : 'done', i, text: m[2] || ''};
+  if ((m = s.match(/^[-*+•] (.*)$/)))  return {k: 'ul', i, text: m[1]};
+  if ((m = s.match(/^\d+[.)] (.*)$/))) return {k: 'ol', i, text: m[1]};
+  if (MD_RULE.test(s))                 return {k: 'hr', i: 0, text: ''};
+  if ((m = raw.match(/^(#{1,3}) (.*)$/))) return {k: 'h' + m[1].length, i: 0, text: m[2]};
+  if ((m = raw.match(/^> ?(.*)$/)))      return {k: 'quote', i: 0, text: m[1]};
+  return {k: 'p', i: 0, text: raw};
+}
+function mdLineMarkdown(k, i, text, n) {
+  const pad = '  '.repeat(i);
+  switch (k) {
+    case 'ul':    return pad + '- ' + text;
+    case 'ol':    return pad + n + '. ' + text;
+    case 'todo':  return pad + '- [ ] ' + text;
+    case 'done':  return pad + '- [x] ' + text;
+    case 'h1':    return '# ' + text;
+    case 'h2':    return '## ' + text;
+    case 'h3':    return '### ' + text;
+    case 'quote': return '> ' + text;
+    case 'hr':    return '---';
+    default:      return text;
+  }
+}
+function mdText(line) { return line.textContent.replace(/ /g, ' ').replace(/​/g, ''); }
+function mdKind(line) { return line.dataset.k || 'p'; }
+function mdIndent(line) { return +line.dataset.i || 0; }
+
+function noteEditorValue(ed) {
+  let n = 0;
+  return [...ed.children].map(l => {
+    const k = mdKind(l);
+    n = k === 'ol' ? n + 1 : 0;
+    return mdLineMarkdown(k, mdIndent(l), mdText(l), n);
+  }).join('\n');
+}
+function mdSetKind(line, k, i = 0) {
+  if (!MD_LIST.has(k)) i = 0;
+  line.dataset.k = k;
+  if (i) { line.dataset.i = i; line.style.setProperty('--i', i); }
+  else   { delete line.dataset.i; line.style.removeProperty('--i'); }
+  if (k === 'hr') { line.contentEditable = 'false'; line.textContent = ''; }
+  else line.removeAttribute('contenteditable');
+}
+function mdSetText(line, text) {
+  line.textContent = text;
+  if (!text) line.appendChild(document.createElement('br'));
+}
+function mdMakeLine(k = 'p', i = 0, text = '') {
+  const l = document.createElement('div');
+  l.className = 'md-line';
+  mdSetKind(l, k, i);
+  if (k !== 'hr') mdSetText(l, text);
+  return l;
+}
+function setNoteEditor(ed, md) {
+  ed._caret = null;
+  ed.replaceChildren(...(md || '').split('\n').map(r => {
+    const p = mdParseLine(r);
+    return mdMakeLine(p.k, p.i, p.text);
+  }));
+  mdSync(ed);
+}
+
+// ── Caret ──
+function mdLineOf(ed, node) {
+  while (node && node.parentNode !== ed) node = node.parentNode;
+  return node && node.nodeType === 1 ? node : null;
+}
+function mdCaret(ed) {
+  const sel = getSelection();
+  if (!sel.rangeCount || !ed.contains(sel.anchorNode)) return null;
+  const r = sel.getRangeAt(0);
+  const line = mdLineOf(ed, r.startContainer);
+  if (!line) return null;
+  const pre = document.createRange();
+  pre.selectNodeContents(line);
+  pre.setEnd(r.startContainer, r.startOffset);
+  return {line, offset: pre.toString().length, collapsed: r.collapsed};
+}
+function mdPlace(line, offset) {
+  const sel = getSelection(), r = document.createRange();
+  const w = document.createTreeWalker(line, NodeFilter.SHOW_TEXT);
+  let n, left = offset;
+  while ((n = w.nextNode())) {
+    if (left <= n.length) { r.setStart(n, left); r.collapse(true); sel.removeAllRanges(); sel.addRange(r); return; }
+    left -= n.length;
+  }
+  r.selectNodeContents(line);
+  r.collapse(!offset);
+  sel.removeAllRanges(); sel.addRange(r);
+}
+function mdCaretIndex(ed) {
+  const c = mdCaret(ed);
+  return c ? {idx: [...ed.children].indexOf(c.line), offset: c.offset} : null;
+}
+function mdRestore(ed, at) {
+  const line = ed.children[Math.min(at.idx, ed.children.length - 1)];
+  if (!line) return;
+  ed.focus();
+  mdPlace(line, Math.min(at.offset, mdText(line).length));
+}
+
+/* Keeps the editor a flat run of line <div>s, whatever the browser did to it:
+   stray text gets wrapped, pasted spans flattened, empty lines kept open. */
+function mdSync(ed) {
+  const c = mdCaret(ed);
+  let place = null, run = null;
+  for (const n of [...ed.childNodes]) {
+    if (n.nodeType === 1 && n.tagName === 'DIV') { run = null; continue; }
+    if (n.nodeType === 3 && !n.textContent) { n.remove(); continue; }
+    if (!run) { run = document.createElement('div'); run.className = 'md-line'; mdSetKind(run, 'p'); ed.insertBefore(run, n); }
+    run.appendChild(n);
+    place = {line: run, offset: Infinity};
+  }
+  for (const l of ed.children) {
+    if (!l.classList.contains('md-line')) { l.className = 'md-line'; l.removeAttribute('style'); mdSetKind(l, 'p'); }
+    if (mdKind(l) === 'hr') continue;
+    const text = mdText(l), brs = l.querySelectorAll('br').length;
+    const junk = [...l.children].some(e => e.tagName !== 'BR') || brs > 1 || (brs === 1 && l.lastChild.tagName !== 'BR');
+    if (junk || (!text && !brs)) {
+      mdSetText(l, text);
+      if (c && l === c.line && !place) place = {line: l, offset: c.offset};
+    }
+  }
+  if (!ed.children.length) { ed.appendChild(mdMakeLine()); if (c || place) place = {line: ed.firstChild, offset: 0}; }
+  if (place && ed.contains(place.line)) mdPlace(place.line, Math.min(place.offset, mdText(place.line).length));
+  const only = ed.children.length === 1 ? ed.firstElementChild : null;
+  ed.classList.toggle('is-empty', !!only && mdKind(only) === 'p' && !mdText(only));
+}
+
+// ── Editing ──
+function bindNoteEditor(ed, hooks) {
+  ed._md = hooks;
+  const after = () => { mdSync(ed); positionNotePlus(); };
+
+  ed.onkeydown = e => {
+    if (e.isComposing) return;
+    let c = mdCaret(ed);
+    if (!c) return;
+    const plain = !e.metaKey && !e.ctrlKey && !e.altKey;
+
+    // ⌘↩ ticks the check item under the caret.
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && /^(todo|done)$/.test(mdKind(c.line))) {
+      e.preventDefault();
+      mdSetKind(c.line, mdKind(c.line) === 'todo' ? 'done' : 'todo', mdIndent(c.line));
+      hooks.commit();
+      return;
+    }
+    if (e.key === 'Enter' && plain) {
+      e.preventDefault();
+      if (!c.collapsed) { document.execCommand('delete'); mdSync(ed); c = mdCaret(ed); if (!c) return; }
+      const {line} = c, k = mdKind(line), i = mdIndent(line), text = mdText(line);
+      // Enter on an empty item leaves the list, one level at a time.
+      if ((MD_LIST.has(k) || k === 'quote') && !text && !e.shiftKey) {
+        mdSetKind(line, i ? k : 'p', i ? i - 1 : 0);
+        mdPlace(line, 0); after(); hooks.soon();
+        return;
+      }
+      // A line of markdown left without its trailing space still counts.
+      if ((k === 'p' && /^([-*+•]|\d+[.)]|[-*+] \[[ xX]?\]|\[[ xX]?\]|#{1,3}|>)$/.test(text.trim())) ||
+          (k === 'ul' && /^\[[ xX]?\]$/.test(text.trim()))) {
+        const raw = text.trim().replace(/^(?:[-*+] )?\[\]/, '- [ ]').replace(/^\[/, '- [');
+        const p = mdParseLine(raw + ' ');
+        if (k === 'ul') p.i = i;
+        mdSetKind(line, p.k, p.i); mdSetText(line, p.text);
+        mdPlace(line, 0); after(); hooks.soon();
+        return;
+      }
+      if (k === 'p' && MD_RULE.test(text.trim())) {
+        mdSetKind(line, 'hr');
+        const next = mdMakeLine();
+        line.after(next); mdPlace(next, 0); after(); hooks.soon();
+        return;
+      }
+      const cont = e.shiftKey ? 'p'
+        : k === 'done' ? 'todo'
+        : (MD_LIST.has(k) || k === 'quote') ? k : 'p';
+      if (c.offset === 0 && text) {
+        // At the head of a line: open an empty one above and stay put.
+        line.before(mdMakeLine(MD_LIST.has(k) || k === 'quote' ? cont : 'p', i));
+        mdPlace(line, 0);
+      } else {
+        mdSetText(line, text.slice(0, c.offset));
+        const next = mdMakeLine(cont, i, text.slice(c.offset));
+        line.after(next);
+        mdPlace(next, 0);
+      }
+      after(); hooks.soon();
+      return;
+    }
+    if (e.key === 'Backspace' && plain && c.collapsed && c.offset === 0) {
+      const {line} = c, k = mdKind(line), i = mdIndent(line);
+      e.preventDefault();
+      if (k !== 'p') {
+        // First the marker goes (outdenting first), then the line merges up.
+        mdSetKind(line, i ? k : 'p', i ? i - 1 : 0);
+        mdPlace(line, 0);
+      } else {
+        const prev = line.previousElementSibling;
+        if (!prev) return;
+        if (mdKind(prev) === 'hr') prev.remove();
+        else {
+          const pt = mdText(prev);
+          mdSetText(prev, pt + mdText(line));
+          line.remove();
+          mdPlace(prev, pt.length);
+        }
+      }
+      after(); hooks.soon();
+      return;
+    }
+    if (e.key === 'Delete' && plain && c.collapsed && c.offset === mdText(c.line).length) {
+      const next = c.line.nextElementSibling;
+      if (!next) return;
+      e.preventDefault();
+      if (mdKind(next) === 'hr') next.remove();
+      else {
+        const t0 = mdText(c.line);
+        mdSetText(c.line, t0 + mdText(next));
+        next.remove();
+        mdPlace(c.line, t0.length);
+      }
+      after(); hooks.soon();
+      return;
+    }
+    if (e.key === 'Tab' && !e.metaKey && !e.ctrlKey && MD_LIST.has(mdKind(c.line))) {
+      e.preventDefault();
+      const i = Math.max(0, Math.min(3, mdIndent(c.line) + (e.shiftKey ? -1 : 1)));
+      mdSetKind(c.line, mdKind(c.line), i);
+      mdPlace(c.line, c.offset); hooks.soon();
+    }
+  };
+
+  ed.oninput = () => {
+    mdSync(ed);
+    const c = mdCaret(ed);
+    if (c && c.collapsed) {
+      const l = c.line, k = mdKind(l), text = mdText(l), head = text.slice(0, c.offset);
+      // Markdown typed at the head of a line turns into the real thing.
+      let to = null, m;
+      if (k === 'p') {
+        if ((m = head.match(/^(?:[-*+] )?\[([ xX]?)\] /))) to = /x/i.test(m[1]) ? 'done' : 'todo';
+        else if ((m = head.match(/^[-*+•] /))) to = 'ul';
+        else if ((m = head.match(/^\d+[.)] /))) to = 'ol';
+        else if ((m = head.match(/^(#{1,3}) /))) to = 'h' + m[1].length;
+        else if ((m = head.match(/^> /))) to = 'quote';
+        else if (/^\s*\/$/.test(head) && text.length === head.length) {
+          mdSetText(l, text.slice(0, -1)); mdPlace(l, c.offset - 1);
+          after(); hooks.slash();
+          return;
+        }
+      } else if (k === 'ul' && (m = head.match(/^(?:[-*+] )?\[([ xX]?)\] /))) to = /x/i.test(m[1]) ? 'done' : 'todo';
+      if (to) {
+        mdSetKind(l, to, mdIndent(l));
+        mdSetText(l, text.slice(m[0].length));
+        mdPlace(l, c.offset - m[0].length);
+        mdSync(ed);
+      }
+    }
+    positionNotePlus();
+    hooks.soon();
+  };
+
+  // A click on a checkbox ticks it and leaves the caret where it was.
+  ed.onmousedown = e => {
+    const line = mdLineOf(ed, e.target);
+    if (!line || !/^(todo|done)$/.test(mdKind(line))) return;
+    const x = e.clientX - line.getBoundingClientRect().left - mdIndent(line) * 22;
+    if (x < -2 || x > 20) return;
+    e.preventDefault();
+    mdSetKind(line, mdKind(line) === 'todo' ? 'done' : 'todo', mdIndent(line));
+    hooks.commit();
+  };
+
+  // Paste arrives as plain text; several lines come in as their own blocks.
+  ed.onpaste = e => {
+    e.preventDefault();
+    const text = (e.clipboardData?.getData('text/plain') || '').replace(/\r\n?/g, '\n');
+    if (!text) return;
+    if (!getSelection().isCollapsed) { document.execCommand('delete'); mdSync(ed); }
+    const c = mdCaret(ed);
+    if (!c) return;
+    const parts = text.split('\n');
+    const cur = mdText(c.line), before = cur.slice(0, c.offset), tail = cur.slice(c.offset);
+    let line = c.line, at;
+    if (parts.length === 1) {
+      mdSetText(line, before + parts[0] + tail);
+      at = before.length + parts[0].length;
+    } else {
+      const first = !cur && mdKind(line) === 'p' ? mdParseLine(parts[0]) : null;
+      if (first) { mdSetKind(line, first.k, first.i); mdSetText(line, first.text); }
+      else mdSetText(line, before + parts[0]);
+      for (const raw of parts.slice(1)) {
+        const p = mdParseLine(raw);
+        const nl = mdMakeLine(p.k, p.i, p.text);
+        line.after(nl); line = nl;
+      }
+      at = mdText(line).length;
+      if (tail) mdSetText(line, mdText(line) + tail);
+    }
+    mdPlace(line, at);
+    after(); hooks.soon();
+  };
+
+  // Copying a selection takes its markdown along, not just the bare text.
+  ed.oncopy = e => {
+    const sel = getSelection();
+    if (sel.isCollapsed || !e.clipboardData) return;
+    const r = sel.getRangeAt(0);
+    const a = mdLineOf(ed, r.startContainer), b = mdLineOf(ed, r.endContainer);
+    if (!a || !b || a === b) return;
+    const box = document.createElement('div');
+    box.appendChild(r.cloneContents());
+    const lines = [...box.children].filter(x => x.tagName === 'DIV');
+    if (!lines.length) return;
+    e.preventDefault();
+    e.clipboardData.setData('text/plain', noteEditorValue({children: lines}));
+  };
+
+  ed.onblur = () => hooks.commit();
+  ed.onkeyup = ed.onclick = positionNotePlus;
+}
+
+
+
+// ── Start ──
+(async function start() {
+  if (!/^[a-f0-9]{32}$/.test(KEY)) {
+    data = null; $('name').textContent = 'Link not recognised';
+    $('list').innerHTML = '<div class="empty">This share link is incomplete — ask for it again.</div>';
+    return;
+  }
+  canEdit = await becomeEditor();
+  connect();
+})();
+</script>
+</body>
+</html>

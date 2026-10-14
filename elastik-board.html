@@ -4588,6 +4588,32 @@ body.chrome-off #col-filter-bar { display: none !important; }
 }
 #ptr.dragging { transition: none; }
 #ptr span { padding-bottom: 10px; }
+
+/* ── Share dialog ─────────────────────────────────────────────────────── */
+.share-modal { max-width: 460px; }
+.share-note { font-size: 13px; color: var(--text-2); line-height: 1.55; margin: 0 0 12px; }
+.share-quiet { color: var(--text-3); font-size: 12px; }
+.share-err { font-size: 12px; color: #E24B4A; margin: 0 0 12px; }
+.share-link {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 0; border-bottom: 1px solid var(--mc-line);
+}
+.share-link:first-of-type { border-top: 1px solid var(--mc-line); }
+.share-link-text { flex: 1; min-width: 0; }
+.share-link-label { font-size: 14px; font-weight: 600; color: var(--text); }
+.share-link-sub { font-size: 12px; color: var(--text-3); margin-top: 2px; }
+.share-copy {
+  flex-shrink: 0; height: 30px; padding: 0 12px; border-radius: 8px;
+  border: none; background: var(--accent); color: #fff;
+  font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.share-actions { display: flex; align-items: center; gap: 8px; margin-top: 16px; }
+.share-plain, .share-danger {
+  height: 32px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--mc-line);
+  background: none; font: inherit; font-size: 13px; color: var(--text-2); cursor: pointer;
+}
+.share-danger { color: #E24B4A; }
+.sb-shared { font-size: 11px; margin-left: 4px; opacity: .7; }
 </style>
 
 <!-- EditorJS core + block tools (rich-text notes editor) -->
@@ -5256,10 +5282,11 @@ body.chrome-off #col-filter-bar { display: none !important; }
       <details style="margin-top:14px" id="sync-rules-details">
         <summary style="font-size:11px;color:var(--text-3);cursor:pointer;user-select:none;list-style:none;display:flex;align-items:center;gap:5px">
           <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M2 1l4 3-4 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          Fix Firebase security rules
+          Security rules (needed for sharing)
         </summary>
         <div style="margin-top:10px;font-size:12px;color:var(--text-2);line-height:1.6">
-          <p style="margin-bottom:8px">Paste this into <strong>Firebase Console → Realtime Database → Rules</strong> and click <strong>Publish</strong>. This locks the database to your account only.</p>
+          <p style="margin-bottom:8px">Paste this into <strong>Firebase Console → Realtime Database → Rules</strong> and click <strong>Publish</strong>. Your board stays locked to your account; shared lists are open only to people holding their links.</p>
+          <p style="margin-bottom:8px">For edit links to work, also turn on <strong>Authentication → Sign-in method → Anonymous</strong>.</p>
           <pre id="sync-rules-json" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px 12px;font-size:11px;font-family:var(--mono);overflow-x:auto;white-space:pre;cursor:pointer;user-select:all" title="Click to select all"></pre>
           <p style="margin-top:6px;font-size:11px;color:var(--text-3)">Click the box above to select all, then copy.</p>
         </div>
@@ -5511,6 +5538,7 @@ function load() {
 function save() {
   localStorage.setItem('elastik_v3', JSON.stringify(state));
   scheduleSyncToFirebase();
+  scheduleSharePush();
 }
 /* A fresh device starts empty — its real lists arrive when it signs in to
    sync, and sample lists would only look like someone else's data. */
@@ -7861,6 +7889,7 @@ async function pullFromFirebase() {
 
 function startFirebaseStream() {
   if (!firebaseURL || !firebaseAPIKey || !firebaseToken) return;
+  startShareStreams();
   if (firebaseStream) firebaseStream.close();
   firebaseStream = new EventSource(`${firebaseURL}/elastik.json?auth=${firebaseToken}`);
   let firstEvent = true;
@@ -7892,6 +7921,30 @@ function startFirebaseStream() {
   };
 }
 
+/* The database rules: the board is the owner's alone; a share is readable
+   by anyone holding its key and writable by the owner, or by a signed-in
+   (anonymous is fine) visitor who has proved the edit key. */
+function firebaseRules(uid) {
+  const owner = "root.child('shares').child($k).child('owner').val() === auth.uid";
+  const editor = "root.child('shareEditors').child($k).child(auth.uid).val() === root.child('shareSecrets').child($k).val()";
+  return {rules: {
+    elastik: {'.read': `auth.uid === "${uid}"`, '.write': `auth.uid === "${uid}"`},
+    shares: {$k: {
+      '.read': true,
+      '.write': "auth != null && (data.child('owner').val() === auth.uid || (!data.exists() && newData.child('owner').val() === auth.uid))",
+      tasks: {'.write': `auth != null && ${editor}`},
+    }},
+    shareSecrets: {$k: {'.write': `auth != null && ${owner}`}},
+    shareEditors: {$k: {
+      '.write': `auth != null && ${owner}`,
+      $uid: {
+        '.write': 'auth != null && auth.uid === $uid',
+        '.validate': "newData.val() === root.child('shareSecrets').child($k).val()",
+      },
+    }},
+  }};
+}
+
 function openSyncModal() {
   const connected = !!firebaseURL && !!firebaseAPIKey && !!firebaseToken;
   document.getElementById('sync-panel-setup').style.display     = connected ? 'none'  : 'block';
@@ -7902,9 +7955,7 @@ function openSyncModal() {
     const rulesEl = document.getElementById('sync-rules-json');
     if (rulesEl) {
       const uid = firebaseUID || _uidFromJWT(firebaseToken) || '(sign out and back in to get your UID)';
-      rulesEl.textContent = JSON.stringify({
-        rules: { elastik: { '.read': `auth.uid === "${uid}"`, '.write': `auth.uid === "${uid}"` } }
-      }, null, 2);
+      rulesEl.textContent = JSON.stringify(firebaseRules(uid), null, 2);
     }
   } else {
     // Pre-fill Advanced fields with defaults so user only needs email + password
@@ -7963,6 +8014,309 @@ function disconnectFirebase() {
   localStorage.removeItem('elastik_firebase_uid');
   setSyncStatus('');
   closeSyncModal();
+}
+
+// ── Shared lists ────────────────────────────────────────────────────────
+/* A shared list lives twice: in the owner's blob like every other list, and
+   at /shares/<view key>, which anyone holding the view link can read and
+   anyone holding the edit link can write (the edit key sits in
+   /shareSecrets, which nobody can read; an editor proves it by writing it to
+   /shareEditors/<key>/<their uid>, and the rules compare the two).
+   The owner's devices keep both copies in step: local edits go up as
+   per-task patches, edits made on the share page come back down, and a task
+   changed on both sides goes to the newer updatedAt. `shareBase` is the last
+   state both sides agreed on, which is how a removal on either side is told
+   apart from a task the other side simply hasn't seen yet. */
+const SHARE_PAGE_URL = 'https://studioelastik.github.io/elastik-board/share.html';
+const shareStreams = {};
+const shareBase = {};
+let sharePushTimer = 0;
+
+function newShareKey() {
+  const a = new Uint8Array(16);
+  crypto.getRandomValues(a);
+  return [...a].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+function sharedLists() { return state.projects.filter(p => p.share && p.share.key); }
+function shareLinks(p) {
+  return {
+    view: `${SHARE_PAGE_URL}#v=${p.share.key}`,
+    edit: `${SHARE_PAGE_URL}#v=${p.share.key}&e=${p.share.edit}`,
+  };
+}
+
+/* Firebase drops empty objects, empty arrays and nulls, and hands keys back
+   sorted — so both sides are compared in that same shape. */
+function shareCanon(v) {
+  if (Array.isArray(v)) {
+    const a = v.map(shareCanon).filter(x => x !== undefined);
+    return a.length ? a : undefined;
+  }
+  if (v && typeof v === 'object') {
+    const o = {};
+    Object.keys(v).sort().forEach(k => { const x = shareCanon(v[k]); if (x !== undefined) o[k] = x; });
+    return Object.keys(o).length ? o : undefined;
+  }
+  return v === null || v === undefined ? undefined : v;
+}
+const shareSame = (a, b) => JSON.stringify(shareCanon(a)) === JSON.stringify(shareCanon(b));
+
+/* What of a task goes to the share: everything but the local-only parts
+   (attachment files live in this device's storage; the rich-editor blocks
+   mirror the description). */
+function shareTaskOut(t, ord) {
+  const o = JSON.parse(JSON.stringify(t));
+  delete o.attachments; delete o.noteEJ; delete o.pid;
+  o.ord = ord;
+  return shareCanon(o) || {};
+}
+function shareTaskIn(rt, pid, local) {
+  const t = JSON.parse(JSON.stringify(rt));
+  delete t.ord;
+  t.pid = pid;
+  if (local && local.attachments) t.attachments = local.attachments;
+  if (local && local.noteEJ && local.notes === t.notes) t.noteEJ = local.noteEJ;
+  return t;
+}
+function shareListMeta(p) { return shareCanon({name: p.name, emoji: p.emoji || '', color: p.color || ''}); }
+
+function loadShareBase(k) {
+  if (!shareBase[k]) shareBase[k] = prefGetJSON('mc_share_base_' + k, null) || {tasks: {}, meta: null};
+  return shareBase[k];
+}
+function saveShareBase(k) { prefSetJSON('mc_share_base_' + k, shareBase[k]); }
+
+function scheduleSharePush() {
+  if (!syncConnected() || !sharedLists().length) return;
+  clearTimeout(sharePushTimer);
+  sharePushTimer = setTimeout(pushShares, 600);
+}
+
+async function pushShares() {
+  for (const p of sharedLists()) {
+    const k = p.share.key;
+    const base = loadShareBase(k);
+    const before = JSON.stringify(base);
+    const patch = {};
+    const seen = new Set();
+    state.tasks.filter(t => t.pid === p.id).forEach((t, i) => {
+      seen.add(t.id);
+      const was = base.tasks[t.id];
+      let out = shareTaskOut(t, i);
+      if (was && shareSame(out, was)) return;
+      // A local change has to read as newer than what the share last had.
+      if ((t.updatedAt || 0) <= ((was && was.updatedAt) || 0)) {
+        t.updatedAt = Math.max(Date.now(), ((was && was.updatedAt) || 0) + 1);
+        out = shareTaskOut(t, i);
+      }
+      patch['tasks/' + t.id] = out;
+      base.tasks[t.id] = out;
+    });
+    Object.keys(base.tasks).forEach(id => {
+      if (!seen.has(id)) { patch['tasks/' + id] = null; delete base.tasks[id]; }
+    });
+    const meta = shareListMeta(p);
+    if (!shareSame(meta, base.meta)) { patch.list = meta; base.meta = meta; }
+    if (!Object.keys(patch).length) continue;
+    try {
+      const res = await firebaseFetch(`${firebaseURL}/shares/${k}.json`, {method: 'PATCH', body: JSON.stringify(patch)});
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      saveShareBase(k);
+    } catch (e) {
+      // Roll the base back so the next save tries the same patch again.
+      shareBase[k] = JSON.parse(before);
+      console.error('[share] push failed', e);
+    }
+  }
+}
+
+function startShareStreams() {
+  const want = new Set(syncConnected() ? sharedLists().map(p => p.share.key) : []);
+  Object.keys(shareStreams).forEach(k => {
+    if (!want.has(k)) { shareStreams[k].close(); delete shareStreams[k]; }
+  });
+  want.forEach(k => { if (!shareStreams[k]) openShareStream(k); });
+}
+
+function sharePathSet(obj, path, val) {
+  const parts = path.split('/').filter(Boolean);
+  if (!parts.length) return val;
+  const root = obj && typeof obj === 'object' ? obj : {};
+  let o = root;
+  parts.slice(0, -1).forEach(p => { if (!o[p] || typeof o[p] !== 'object') o[p] = {}; o = o[p]; });
+  const last = parts[parts.length - 1];
+  if (val === null) delete o[last]; else o[last] = val;
+  return root;
+}
+
+// The share is publicly readable, so the stream needs no token to expire.
+function openShareStream(k) {
+  let remote = null;
+  const es = new EventSource(`${firebaseURL}/shares/${k}.json`);
+  shareStreams[k] = es;
+  es.addEventListener('put', e => {
+    const {path, data} = JSON.parse(e.data);
+    remote = sharePathSet(remote, path, data);
+    mergeShare(k, remote);
+  });
+  es.addEventListener('patch', e => {
+    const {path, data} = JSON.parse(e.data);
+    Object.entries(data || {}).forEach(([key, v]) => {
+      remote = sharePathSet(remote, (path === '/' ? '' : path) + '/' + key, v);
+    });
+    mergeShare(k, remote);
+  });
+}
+
+function mergeShare(k, R) {
+  const p = state.projects.find(x => x.share && x.share.key === k);
+  if (!p || !R) return;
+  const base = loadShareBase(k);
+  const rTasks = R.tasks || {};
+  let changed = false;
+
+  Object.entries(rTasks).forEach(([id, rt]) => {
+    rt = shareCanon(rt) || {};
+    const local = getTask(id);
+    if (!local) {
+      // Known to both before and gone here: deleted locally, and the push
+      // that removes it from the share is on its way. Otherwise it's new.
+      if (!base.tasks[id]) { state.tasks.push(shareTaskIn(rt, p.id, null)); changed = true; }
+      else return;
+    } else if ((rt.updatedAt || 0) > (local.updatedAt || 0) &&
+               !shareSame(rt, shareTaskOut(local, rt.ord))) {
+      const fresh = shareTaskIn(rt, p.id, local);
+      Object.keys(local).forEach(key => { if (!(key in fresh)) delete local[key]; });
+      Object.assign(local, fresh);
+      changed = true;
+    }
+    base.tasks[id] = rt;
+  });
+
+  // Gone from the share but agreed on before: removed on the share page.
+  Object.keys(base.tasks).forEach(id => {
+    if (id in rTasks) return;
+    const i = state.tasks.findIndex(t => t.id === id && t.pid === p.id);
+    if (i >= 0) {
+      const [t] = state.tasks.splice(i, 1);
+      t.deletedAt = Date.now();
+      (state.trash || (state.trash = [])).unshift(t);
+      changed = true;
+    }
+    delete base.tasks[id];
+  });
+  if (R.list) base.meta = shareCanon(R.list);
+  saveShareBase(k);
+
+  if (changed) {
+    save();
+    renderAll();
+    if (detailTaskId) renderDetail();
+  }
+}
+
+async function startSharing(p) {
+  if (!syncConnected() || !firebaseUID) throw new Error('Sign in to Cloud sync first — sharing runs through it.');
+  const key = newShareKey(), edit = newShareKey();
+  const tasks = {};
+  state.tasks.filter(t => t.pid === p.id).forEach((t, i) => { tasks[t.id] = shareTaskOut(t, i); });
+  const meta = shareListMeta(p);
+  const put = (path, body) => firebaseFetch(`${firebaseURL}/${path}.json`, {method: 'PUT', body: JSON.stringify(body)});
+  let res = await put(`shares/${key}`, {owner: firebaseUID, created: Date.now(), list: meta, tasks});
+  if (!res.ok) throw new Error(res.status === 401 ? 'The database rules don’t allow sharing yet — see Cloud sync → Security rules.' : 'Couldn’t create the share (HTTP ' + res.status + ').');
+  res = await put(`shareSecrets/${key}`, edit);
+  if (!res.ok) throw new Error('Couldn’t store the edit key (HTTP ' + res.status + ').');
+  shareBase[key] = {tasks: JSON.parse(JSON.stringify(tasks)), meta};
+  saveShareBase(key);
+  p.share = {key, edit, since: Date.now()};
+  save();
+  startShareStreams();
+}
+
+async function stopSharing(p) {
+  if (!p.share) return;
+  const k = p.share.key;
+  const del = path => firebaseFetch(`${firebaseURL}/${path}.json`, {method: 'DELETE'}).catch(() => {});
+  // Secrets and editor grants first: their rules look the owner up on the share.
+  await del(`shareSecrets/${k}`);
+  await del(`shareEditors/${k}`);
+  await del(`shares/${k}`);
+  delete p.share;
+  delete shareBase[k];
+  try { localStorage.removeItem('mc_share_base_' + k); } catch (_) {}
+  save();
+  startShareStreams();
+}
+
+function openShareModal(pid) {
+  const p = getProject(pid);
+  if (!p) return;
+  closePops();
+  document.getElementById('share-modal')?.remove();
+  const ov = document.createElement('div');
+  ov.className = 'modal-overlay open';
+  ov.id = 'share-modal';
+  ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+  document.body.appendChild(ov);
+
+  const draw = (busy, err) => {
+    const shared = !!p.share;
+    const links = shared ? shareLinks(p) : null;
+    const linkRow = (label, sub, url, id) => `
+      <div class="share-link">
+        <div class="share-link-text">
+          <div class="share-link-label">${label}</div>
+          <div class="share-link-sub">${sub}</div>
+        </div>
+        <button class="share-copy" data-url="${esc(url)}" id="${id}">Copy link</button>
+      </div>`;
+    ov.innerHTML = `
+      <div class="modal share-modal">
+        <h3>${esc(listEmoji(p.id))} Share “${esc(p.name)}”</h3>
+        ${!syncConnected() ? `
+          <p class="share-note">Sharing runs through Cloud sync. Sign in on this device first.</p>
+          <div class="modal-actions"><button class="btn-cancel" data-act="close">Close</button>
+          <button class="btn-save" data-act="sync">Sign in…</button></div>`
+        : !shared ? `
+          <p class="share-note">Anyone with a link opens this list in their browser — no app or account needed. You get two links: one to read, one to edit.</p>
+          <p class="share-note share-quiet">Attachments stay on your devices and aren’t shared.</p>
+          ${err ? `<p class="share-err">${esc(err)}</p>` : ''}
+          <div class="modal-actions"><button class="btn-cancel" data-act="close">Cancel</button>
+          <button class="btn-save" data-act="start"${busy ? ' disabled' : ''}>${busy ? 'Creating…' : 'Create share links'}</button></div>`
+        : `
+          ${linkRow('Can view', 'Reads the list live; can’t change anything', links.view, 'share-copy-view')}
+          ${linkRow('Can edit', 'Adds, ticks and edits tasks, live', links.edit, 'share-copy-edit')}
+          <p class="share-note share-quiet">Anyone with a link has that access. To cut everyone off, reset the links — the old ones stop working.</p>
+          ${err ? `<p class="share-err">${esc(err)}</p>` : ''}
+          <div class="share-actions">
+            <button class="share-danger" data-act="stop"${busy ? ' disabled' : ''}>Stop sharing</button>
+            <button class="share-plain" data-act="reset"${busy ? ' disabled' : ''}>Reset links</button>
+            <span class="th-spacer"></span>
+            <button class="btn-save" data-act="close">Done</button>
+          </div>`}
+      </div>`;
+    ov.querySelectorAll('.share-copy').forEach(b => b.onclick = async () => {
+      const url = b.dataset.url;
+      try {
+        if (navigator.share && matchMedia('(max-width: 768px)').matches) await navigator.share({title: p.name, url});
+        else { await navigator.clipboard.writeText(url); b.textContent = 'Copied'; setTimeout(() => { b.textContent = 'Copy link'; }, 1600); }
+      } catch (_) {}
+    });
+    const run = async fn => {
+      draw(true);
+      try { await fn(); draw(false); renderAll(); }
+      catch (e) { draw(false, e.message); }
+    };
+    ov.querySelectorAll('[data-act]').forEach(b => b.onclick = () => {
+      const act = b.dataset.act;
+      if (act === 'close') ov.remove();
+      if (act === 'sync') { ov.remove(); openSyncModal(); }
+      if (act === 'start') run(() => startSharing(p));
+      if (act === 'stop' && confirm('Stop sharing this list? Both links stop working.')) run(() => stopSharing(p));
+      if (act === 'reset' && confirm('Make new links? The current ones stop working.')) run(async () => { await stopSharing(p); await startSharing(p); });
+    });
+  };
+  draw(false);
 }
 
 // ── Theme ──
@@ -9542,7 +9896,7 @@ function renderListsGroup() {
     li.className = 'sb-row' + (active ? ' active' : '');
     li.innerHTML = `
       <span class="sb-emoji" title="Change icon">${p.emoji || '📄'}</span>
-      <span class="sb-name">${esc(p.id === '_todos' ? 'General' : p.name)}</span>
+      <span class="sb-name">${esc(p.id === '_todos' ? 'General' : p.name)}${p.share ? '<span class="sb-shared" title="Shared">👥</span>' : ''}</span>
       <span class="sb-count">${count || ''}</span>
       <button class="sb-more" aria-label="List actions"><svg width="12" height="12" viewBox="0 0 18 18" fill="none"><circle cx="4" cy="9" r="1.5" fill="currentColor"/><circle cx="9" cy="9" r="1.5" fill="currentColor"/><circle cx="14" cy="9" r="1.5" fill="currentColor"/></svg></button>`;
     li.onclick = () => openScope({type:'list', id:p.id});
@@ -11748,6 +12102,7 @@ function openListMenu(anchor) {
   ];
   if (lid) items.push(
     {sep:true},
+    {label: getProject(lid)?.share ? 'Sharing…' : 'Share…', icon:'👥', fn: () => openShareModal(lid)},
     {label:'Change icon…', icon:'😀', fn: () => openEmojiPicker(anchor, lid)},
     {label:'Edit list…', icon:'✏️', fn: () => openProjectModal(lid)},
   );
@@ -11788,6 +12143,7 @@ function openListRowMenu(evt, pid) {
   if (!p) return;
   const items = [
     {label:'Open list', icon:'→', fn: () => openScope({type:'list', id:pid})},
+    {label: p.share ? 'Sharing…' : 'Share…', icon:'👥', fn: () => openShareModal(pid)},
     {label:'Change icon…', icon:'😀', fn: () => openEmojiPicker(evt.currentTarget || evt.target, pid)},
     {label:'Edit list…', icon:'✏️', fn: () => openProjectModal(pid)},
   ];
@@ -11797,6 +12153,7 @@ function openListRowMenu(evt, pid) {
 function deleteListWithTasks(pid) {
   const p = getProject(pid);
   if (!p || pid === '_todos') return;
+  if (p.share) stopSharing(p);
   const tasks = state.tasks.filter(t => t.pid === pid);
   if (!confirm(`Delete “${p.name}”? Its ${tasks.length} task${tasks.length === 1 ? '' : 's'} move to Trash.`)) return;
   tasks.forEach(t => { t.deletedAt = Date.now(); state.trash.unshift(t); });
