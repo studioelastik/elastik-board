@@ -4515,6 +4515,32 @@ body.chrome-off #col-filter-bar { display: none !important; }
   #sidebar { padding-top: calc(env(safe-area-inset-top, 0px) + 22px); }
   #tasks-head { padding-top: 14px; padding-bottom: 12px; }
 
+  /* Menus at finger size: wider, 50pt rows, 18pt type, and no keyboard
+     hints — there is no keyboard to press them on. */
+  body .pop {
+    min-width: min(300px, calc(100vw - 32px)); max-width: calc(100vw - 24px);
+    border-radius: 16px; padding: 8px;
+  }
+  body .pop .pop-item {
+    min-height: 50px; padding: 0 14px; gap: 14px;
+    font-size: 18px; border-radius: 10px;
+  }
+  body .pop .pop-item > span:first-child { width: 24px !important; font-size: 20px; text-align: center; flex-shrink: 0; }
+  body .pop .pop-item .pop-check { width: 24px; }
+  body .pop .pop-item .pop-sub:has(kbd) { display: none; }
+  body .pop .pop-item .pop-sub { font-size: 15px; }
+  body .pop .pop-sep { margin: 6px 10px; }
+  body .pop .pop-title { font-size: 13px; padding: 8px 14px 6px; }
+  body .pop .pop-empty { font-size: 15px; }
+
+  /* Scrolling is vertical only: no sideways drift of the list, the task
+     sheet, the drawer or search results. */
+  html, body { overscroll-behavior: none; }
+  #main, #tasks-view, #tasks-pane { overflow-x: hidden; }
+  #tasks-list, #time-view, #detail-scroll, #sidebar-scroll, #search-results, body .pop {
+    overflow-x: hidden; touch-action: pan-y;
+  }
+
   /* The task sheet sits square on the phone: even margins left and right,
      no gutter for the insert + (type / instead). */
   #detail-scroll { padding-left: 22px; padding-right: 22px; }
