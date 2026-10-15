@@ -175,6 +175,11 @@ button { font: inherit; color: inherit; }
 .md-line[data-k="h2"] { font-size: 17px; line-height: 1.45; font-weight: 650; color: var(--text); margin-top: 3px; }
 .md-line[data-k="h3"] { font-size: 15px; line-height: 1.5; font-weight: 650; color: var(--text); }
 .md-line[data-k="quote"] { padding-left: 13px; box-shadow: inset 3px 0 var(--mc-check); color: var(--text-3); }
+.md-auto {
+  color: var(--accent); text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  text-underline-offset: 2px; cursor: pointer;
+}
 .md-line[data-k="hr"] { cursor: default; }
 .md-line[data-k="hr"]::before {
   content: ''; position: absolute; left: 0; right: 0; top: 50%;
@@ -639,6 +644,71 @@ function setNoteEditor(ed, md) {
     return mdMakeLine(p.k, p.i, p.text);
   }));
   mdSync(ed);
+  if (document.activeElement !== ed) mdLinkify(ed);
+}
+
+// ── Tappable numbers, addresses and links ──
+/* While a description isn't being edited, phone numbers call, addresses open
+   Google Maps and web addresses open. They are <a>s laid over the line's
+   text; the first keystroke flattens them again (mdSync), so the stored
+   markdown never changes. */
+const MD_STREET = '(?:[Ss]tra(?:ß|ss)e|[Ss]tr\\.|[Gg]asse|[Ww]eg|[Pp]latz|[Aa]llee|[Rr]ing|[Uu]fer|[Zz]eile|[Kk]ai|[Ss]teig|[Pp]romenade|[Dd]amm|[Mm]arkt|[Gg]ürtel|[Ll]ände)';
+const MD_AUTO = [
+  {kind: 'url', re: /https?:\/\/[^\s<>"]*[^\s<>".,;:!?)\]]/g, href: m => m},
+  {kind: 'map', re: new RegExp(
+    // Mariahilfer Straße 12/3, 1060 Wien · Leitermayergasse 5
+    `(?<![\\wäöüßÄÖÜ])(?:[A-ZÄÖÜ][\\wäöüß-]*(?:er|sche)\\s)?[A-ZÄÖÜ]?[\\wäöüß-]*${MD_STREET}\\s+\\d{1,4}[a-z]?(?:\\s?[/-]\\s?\\d{1,4}[a-z]?)*` +
+    `(?:,?\\s*\\d{4,5}\\s+[A-ZÄÖÜ][\\wäöüß-]+|,\\s*[A-ZÄÖÜ][\\wäöüß-]+)?` +
+    // 221 Baker Street · 1600 Amphitheatre Pkwy
+    `|\\b\\d{1,5}\\s+(?:[A-Z][\\w'.-]*\\s+){1,3}(?:Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Lane|Ln|Drive|Dr|Way|Place|Pl|Square|Sq|Court|Ct|Terrace|Pkwy|Parkway)\\b\\.?`,
+    'gu'),
+    href: m => 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(m)},
+  {kind: 'tel', re: /(?<![\w+])(?:\+|00|0)\d[\d \/().-]{5,}\d(?!\w)/g,
+    // 7–15 digits, and not a date like 01.02.2026
+    ok: m => { const d = m.replace(/\D/g, '').length; return d >= 7 && d <= 15 && !/^\d{1,2}[./-]\d{1,2}[./-]\d{2,4}$/.test(m); },
+    href: m => 'tel:' + m.trim().replace(/(?!^)\+/g, '').replace(/[^\d+]/g, '')},
+];
+function mdAutoMatches(text) {
+  const hits = [];
+  MD_AUTO.forEach(a => {
+    a.re.lastIndex = 0;
+    let m;
+    while ((m = a.re.exec(text))) {
+      const str = m[0].trim();
+      if (!str || (a.ok && !a.ok(str))) continue;
+      const from = m.index + m[0].indexOf(str);
+      if (!hits.some(h => from < h.to && from + str.length > h.from)) hits.push({from, to: from + str.length, kind: a.kind, href: a.href(str)});
+    }
+  });
+  return hits.sort((x, y) => x.from - y.from);
+}
+function mdLinkify(ed) {
+  [...ed.children].forEach(line => {
+    if (mdKind(line) === 'hr' || line.querySelector('a.md-auto')) return;
+    const text = mdText(line);
+    const hits = mdAutoMatches(text);
+    if (!hits.length) return;
+    line.textContent = '';
+    let at = 0;
+    hits.forEach(h => {
+      if (h.from > at) line.append(text.slice(at, h.from));
+      const a = document.createElement('a');
+      a.className = 'md-auto';
+      a.dataset.kind = h.kind;
+      a.href = h.href;
+      if (h.kind !== 'tel') { a.target = '_blank'; a.rel = 'noopener'; }
+      a.textContent = text.slice(h.from, h.to);
+      line.append(a);
+      at = h.to;
+    });
+    if (at < text.length) line.append(text.slice(at));
+  });
+}
+function mdOpenAuto(a) {
+  // iOS hands tel: to the phone only from a top-level navigation; the Mac
+  // wrapper sends window.open on to the system (FaceTime / Maps / browser).
+  if (a.dataset.kind === 'tel' && /iPhone|iPad|iPod/.test(navigator.userAgent)) location.href = a.href;
+  else window.open(a.href, '_blank');
 }
 
 // ── Caret ──
@@ -841,8 +911,22 @@ function bindNoteEditor(ed, hooks) {
     hooks.soon();
   };
 
+  // Tapping a number or an address while not editing opens it; while editing
+  // it is only text to put the caret in.
+  let wasEditing = false;
+  ed.onpointerdown = () => { wasEditing = document.activeElement === ed; };
+  ed.onclick = e => {
+    positionNotePlus();
+    const a = e.target.closest && e.target.closest('a.md-auto');
+    if (!a) return;
+    e.preventDefault();
+    if (!wasEditing) { ed.blur(); mdOpenAuto(a); }
+  };
+
   // A click on a checkbox ticks it and leaves the caret where it was.
   ed.onmousedown = e => {
+    const a = e.target.closest && e.target.closest('a.md-auto');
+    if (a && document.activeElement !== ed) { e.preventDefault(); return; }
     const line = mdLineOf(ed, e.target);
     if (!line || !/^(todo|done)$/.test(mdKind(line))) return;
     const x = e.clientX - line.getBoundingClientRect().left - mdIndent(line) * 22;
@@ -897,10 +981,9 @@ function bindNoteEditor(ed, hooks) {
     e.clipboardData.setData('text/plain', noteEditorValue({children: lines}));
   };
 
-  ed.onblur = () => hooks.commit();
-  ed.onkeyup = ed.onclick = positionNotePlus;
+  ed.onblur = () => { hooks.commit(); mdLinkify(ed); };
+  ed.onkeyup = positionNotePlus;
 }
-
 
 
 // ── Start ──
