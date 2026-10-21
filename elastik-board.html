@@ -1763,10 +1763,11 @@ h3.ce-header { font-size: 15px; }
 /* ── Bottom nav ── */
 #bottom-nav { display: none; }
 /* Time tracking off (FEATURE_TIME): hide every way into it. The bottom bar
-   keeps the Calendar slot as empty space so the + stays centred. */
+   closes up and spreads its four buttons evenly. */
 .no-time #rail-calendar, .no-time #nav-time, .no-time #vbtn-time,
-.no-time #timer-pill, .no-time #th-timer, .no-time #timer-float { display: none !important; }
-.no-time #bnav-time { visibility: hidden; pointer-events: none; }
+.no-time #timer-pill, .no-time #th-timer, .no-time #timer-float,
+.no-time #bnav-time { display: none !important; }
+.no-time #bottom-nav { justify-content: space-evenly; }
 
 /* ── Touch: always show task actions ── */
 @media (pointer: coarse) {
