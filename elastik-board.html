@@ -3516,6 +3516,26 @@ label.focus-row {
 .sb-person:hover { color: var(--text); background: color-mix(in srgb, var(--text) 6%, transparent); }
 .sb-person.on { color: var(--text); border-color: var(--accent); background: var(--accent-bg); }
 .sb-person-add { color: var(--text-3); }
+#detail-owner .person-pill { height: 18px; min-width: 22px; font-size: 10px; }
+#detail-owner .do-name { font-size: 13px; }
+#detail-owner svg { flex-shrink: 0; }
+/* Opened from inside a task too, and the phone's task sheet sits at 700. */
+#people-modal { z-index: 900; }
+#detail-owner.inherited .person-pill { opacity: .6; }
+.pop-item .pop-sub .person-pill { cursor: inherit; }
+.pe-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.pe-color { border: none; background: none; padding: 0; cursor: pointer; display: flex; }
+.pe-color .person-pill { height: 26px; min-width: 32px; font-size: 11px; border-radius: 13px; }
+.pe-row input {
+  font-family: inherit; font-size: 15px; color: var(--text);
+  background: var(--surface2); border: 1px solid var(--border); border-radius: 7px;
+  padding: 6px 8px; min-width: 0;
+}
+.pe-name { flex: 1; }
+.pe-ini { width: 54px; text-transform: uppercase; text-align: center; }
+.pe-del { border: none; background: none; cursor: pointer; color: var(--text-3); font-size: 20px; width: 28px; height: 28px; }
+.pe-del:hover { color: #E24B4A; }
+.pe-add { border: 1px dashed var(--border-strong); background: none; color: var(--text-2); border-radius: 7px; padding: 7px 10px; font-family: inherit; font-size: 13px; cursor: pointer; width: 100%; }
 .tl-flag { flex-shrink: 0; }
 .tl-empty {
   padding: 60px 20px; text-align: center;
@@ -4995,6 +5015,7 @@ body.chrome-off #col-filter-bar { display: none !important; }
               <span id="detail-date-extra"></span>
             </button>
             <span class="th-spacer"></span>
+            <button id="detail-owner" class="dtop-chip" aria-label="Owner"></button>
             <button id="detail-flag" class="dtop-icon" aria-label="Priority"></button>
             <button id="detail-close" class="dtop-icon" onclick="closeDetail()" aria-label="Close">
               <svg width="14" height="14" viewBox="0 0 12 12" fill="none"><path d="M1.5 1.5l9 9M10.5 1.5l-9 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
@@ -9688,13 +9709,14 @@ function allTags() {
   return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0]));
 }
 
-// ── People: who owns a tag ─────────────────────────────────────────────
-/* Each tag can have one owner. A task shows the owners of its tags as
-   small initial pills, so it's clear at a glance whose project it is. */
+// ── People: who owns what ──────────────────────────────────────────
+/* A task's owner is its own (t.owner) when set; otherwise whoever owns its
+   list (p.owner) and its tags. Each shows as a small pill of initials. */
 const PERSON_COLORS = ['#3B7CE8','#E8A84B','#2FA67A','#D9577A','#8B5CF6','#E06B3A','#1FA3B8','#7A8A2E'];
 function getPerson(id) { return (state.people || []).find(p => p.id === id) || null; }
-function personInitials(name) {
-  const words = String(name || '').trim().split(/\s+/).filter(Boolean);
+function personInitials(p) {
+  if (p && p.initials) return p.initials.toUpperCase();
+  const words = String((p && p.name) || '').trim().split(/\s+/).filter(Boolean);
   if (!words.length) return '?';
   const s = words.length > 1 ? words[0][0] + words[words.length - 1][0] : words[0].slice(0, 2);
   return s.toUpperCase();
@@ -9703,55 +9725,125 @@ function tagOwner(tag) {
   const o = (state.tagOwners || []).find(o => o.tag === tag);
   return o ? getPerson(o.person) : null;
 }
+function listOwner(pid) { const p = getProject(pid); return p && p.owner ? getPerson(p.owner) : null; }
 function setTagOwner(tag, personId) {
   state.tagOwners = (state.tagOwners || []).filter(o => o.tag !== tag);
   if (personId) state.tagOwners.push({tag, person: personId});
   save(); renderAll();
 }
+function setListOwner(pid, personId) {
+  const p = getProject(pid); if (!p) return;
+  if (personId) p.owner = personId; else delete p.owner;
+  save(); renderAll();
+}
+function setTaskOwner(t, personId) {
+  if (personId) t.owner = personId; else delete t.owner;
+  t.updatedAt = Date.now();
+  save(); renderAll();
+}
 function taskOwners(t) {
+  const own = t.owner && getPerson(t.owner);
+  if (own) return [own];
   const seen = new Map();
+  const lo = listOwner(t.pid); if (lo) seen.set(lo.id, lo);
   (t.tags || []).forEach(tag => { const p = tagOwner(tag); if (p) seen.set(p.id, p); });
   return [...seen.values()];
 }
 function personPill(p) {
-  return `<span class="person-pill" style="--pp:${esc(p.color)}" title="${esc(p.name)}">${esc(personInitials(p.name))}</span>`;
+  return `<span class="person-pill" style="--pp:${esc(p.color)}" title="${esc(p.name)}">${esc(personInitials(p))}</span>`;
+}
+function newPerson(name) {
+  state.people = state.people || [];
+  const p = {id: uid(), name, color: PERSON_COLORS[state.people.length % PERSON_COLORS.length]};
+  state.people.push(p);
+  return p;
 }
 function addPerson(then) {
   const name = (prompt('Person’s name') || '').trim();
   if (!name) return;
-  state.people = state.people || [];
-  const p = {id: uid(), name, color: PERSON_COLORS[state.people.length % PERSON_COLORS.length]};
-  state.people.push(p);
+  const p = newPerson(name);
   if (then) then(p); else { save(); renderAll(); }
+}
+/* One picker for every owner field: a task, a list or a tag. */
+function pickOwner(anchor, curId, onPick, title) {
+  showPop(anchor, [
+    {label:'No owner', on: !curId, fn: () => onPick(null)},
+    ...(state.people || []).map(p => ({label: p.name, hint: personPill(p), on: curId === p.id, fn: () => onPick(p.id)})),
+    {sep:true},
+    {label:'Add person…', icon:'＋', fn: () => addPerson(p => onPick(p.id))},
+    {label:'Edit people…', icon:'✏️', fn: () => openPeopleModal()},
+  ], {title});
 }
 function openOwnerMenu(anchor, tag) {
   const cur = tagOwner(tag);
-  showPop(anchor, [
-    {label:'No owner', on: !cur, fn: () => setTagOwner(tag, null)},
-    ...(state.people || []).map(p => ({label: p.name, on: !!cur && cur.id === p.id, fn: () => setTagOwner(tag, p.id)})),
-    {sep:true},
-    {label:'Add person…', icon:'＋', fn: () => addPerson(p => setTagOwner(tag, p.id))},
-  ], {title: 'Owner of #' + tag});
+  pickOwner(anchor, cur && cur.id, id => setTagOwner(tag, id), 'Owner of #' + tag);
 }
-function openPersonMenu(anchor, p) {
-  showPop(anchor, [
-    {label:'Rename…', icon:'✏️', fn: () => {
-      const name = (prompt('Rename person', p.name) || '').trim();
-      if (name && name !== p.name) { p.name = name; save(); renderAll(); }
-    }},
-    {label:'Colour', icon:'🎨', fn: () => {
+
+/* People editor: name, initials and colour for everyone. */
+function openPeopleModal() {
+  let ov = document.getElementById('people-modal');
+  if (!ov) {
+    ov = document.createElement('div');
+    ov.className = 'modal-overlay';
+    ov.id = 'people-modal';
+    ov.onclick = e => { if (e.target === ov) closePeopleModal(); };
+    document.body.appendChild(ov);
+  }
+  const people = state.people || [];
+  ov.innerHTML = `
+    <div class="modal">
+      <h3>People</h3>
+      <div id="people-rows">
+        ${people.length ? people.map(p => `
+          <div class="pe-row" data-id="${esc(p.id)}">
+            <button type="button" class="pe-color" title="Change colour">${personPill(p)}</button>
+            <input type="text" class="pe-name" value="${esc(p.name)}" placeholder="Name" aria-label="Name">
+            <input type="text" class="pe-ini" value="${esc(p.initials || '')}" placeholder="${esc(personInitials({name: p.name}))}" maxlength="3" aria-label="Initials">
+            <button type="button" class="pe-del" title="Remove" aria-label="Remove">×</button>
+          </div>`).join('')
+        : '<div class="sb-empty" style="margin:0 0 6px">No people yet. Add someone, then pick them as the owner of a task, a list or a tag.</div>'}
+      </div>
+      <button type="button" class="pe-add" id="pe-add">＋ Add person</button>
+      <div class="modal-actions">
+        <button class="btn-save" onclick="closePeopleModal()">Done</button>
+      </div>
+    </div>`;
+  ov.classList.add('open');
+  const commit = () => { save(); renderAll(); };
+  ov.querySelectorAll('.pe-row').forEach(row => {
+    const p = getPerson(row.dataset.id);
+    row.querySelector('.pe-name').onchange = e => { const v = e.target.value.trim(); if (v) { p.name = v; commit(); openPeopleModal(); } else e.target.value = p.name; };
+    row.querySelector('.pe-ini').onchange = e => {
+      const v = e.target.value.trim().replace(/\s+/g, '').slice(0, 3);
+      if (v) p.initials = v.toUpperCase(); else delete p.initials;
+      commit(); openPeopleModal();
+    };
+    row.querySelector('.pe-color').onclick = () => {
       p.color = PERSON_COLORS[(PERSON_COLORS.indexOf(p.color) + 1) % PERSON_COLORS.length];
-      save(); renderAll();
-    }},
-    {sep:true},
-    {label:'Remove person', danger:true, fn: () => {
-      state.people = state.people.filter(x => x.id !== p.id);
-      state.tagOwners = (state.tagOwners || []).filter(o => o.person !== p.id);
-      (state.savedFilters || []).forEach(f => { if (f.rules && f.rules.people) f.rules.people = f.rules.people.filter(id => id !== p.id); });
-      if (UI.tagPerson === p.id) { UI.tagPerson = ''; uiSave(); }
-      save(); renderAll();
-    }},
-  ], {title: p.name});
+      commit(); openPeopleModal();
+    };
+    row.querySelector('.pe-del').onclick = () => {
+      if (!confirm(`Remove ${p.name}? Tasks, lists and tags they own become unowned.`)) return;
+      removePerson(p.id); openPeopleModal();
+    };
+  });
+  ov.querySelector('#pe-add').onclick = () => {
+    newPerson('New person'); commit(); openPeopleModal();
+    const names = ov.querySelectorAll('.pe-name');
+    const last = names[names.length - 1];
+    if (last) { last.focus(); last.select(); }
+  };
+}
+function closePeopleModal() { document.getElementById('people-modal')?.classList.remove('open'); }
+function removePerson(id) {
+  state.people = (state.people || []).filter(x => x.id !== id);
+  state.tagOwners = (state.tagOwners || []).filter(o => o.person !== id);
+  state.projects.forEach(p => { if (p.owner === id) delete p.owner; });
+  state.tasks.forEach(t => { if (t.owner === id) delete t.owner; });
+  (state.savedFilters || []).forEach(f => { if (f.rules && f.rules.people) f.rules.people = f.rules.people.filter(x => x !== id); });
+  if (UI.tagPerson === id) { UI.tagPerson = ''; uiSave(); }
+  if (taskScope.type === 'person' && taskScope.id === id) { taskScope = {type:'today'}; saveScope(); }
+  save(); renderAll();
 }
 
 // ── Scope: what the task pane is showing ───────────────────────────────
@@ -9765,6 +9857,7 @@ let taskScope = (function () {
     // Inbox was a second door into General; it's General now.
     if (s.type === 'inbox') return {type:'list', id:'_todos'};
     if (s.type === 'list' && !getProject(s.id)) return {type:'today'};
+    if (s.type === 'person' && !(state.people || []).some(p => p.id === s.id)) return {type:'today'};
     return s;
   }
   catch (_) { return {type:'today'}; }
@@ -9783,6 +9876,7 @@ function scopeTitle() {
     case 'completed': return 'Completed';
     case 'trash':     return 'Trash';
     case 'tag':       return '#' + taskScope.id;
+    case 'person':    { const p = getPerson(taskScope.id); return p ? p.name : 'Person'; }
     case 'all':       return 'All tasks';
     case 'filter': {
       const f = (state.savedFilters || []).find(f => f.id === taskScope.id);
@@ -9799,6 +9893,7 @@ function scopeEmoji() {
     case 'completed': return '✅';
     case 'trash': return '🗑️';
     case 'tag': return '🏷️';
+    case 'person': return '👤';
     case 'all': return '🌐';
     case 'filter': {
       const f = (state.savedFilters || []).find(f => f.id === taskScope.id);
@@ -9851,6 +9946,9 @@ function scopeTasks() {
     case 'tag':
       out = out.filter(t => (t.tags || []).includes(taskScope.id));
       break;
+    case 'person':
+      out = out.filter(t => taskOwners(t).some(p => p.id === taskScope.id));
+      break;
     case 'filter':
       out = out.filter(t => filterMatches((state.savedFilters || []).find(f => f.id === taskScope.id), t));
       break;
@@ -9884,6 +9982,7 @@ function scopeCompleted() {
     case 'next7':  out = closed.filter(t => doneToday(t) && dueOrStartedWithin(t, 7)); break;
     case 'list':   out = closed.filter(t => t.pid === taskScope.id); break;
     case 'tag':    out = closed.filter(t => (t.tags || []).includes(taskScope.id)); break;
+    case 'person': out = closed.filter(t => taskOwners(t).some(p => p.id === taskScope.id)); break;
     case 'filter': {
       const f = (state.savedFilters || []).find(f => f.id === taskScope.id);
       out = closed.filter(t => filterMatches(f, t));
@@ -10014,12 +10113,17 @@ function renderListsGroup() {
     li.innerHTML = `
       <span class="sb-emoji" title="Change icon">${p.emoji || '📄'}</span>
       <span class="sb-name">${esc(p.id === '_todos' ? 'General' : p.name)}${p.share ? '<span class="sb-shared" title="Shared">👥</span>' : ''}</span>
+      ${listOwner(p.id) ? personPill(listOwner(p.id)) : ''}
       <span class="sb-count">${count || ''}</span>
       <button class="sb-more" aria-label="List actions"><svg width="12" height="12" viewBox="0 0 18 18" fill="none"><circle cx="4" cy="9" r="1.5" fill="currentColor"/><circle cx="9" cy="9" r="1.5" fill="currentColor"/><circle cx="14" cy="9" r="1.5" fill="currentColor"/></svg></button>`;
     li.onclick = () => openScope({type:'list', id:p.id});
     li.oncontextmenu = e => { e.preventDefault(); openListRowMenu(e, p.id); };
     li.querySelector('.sb-emoji').onclick = e => { e.stopPropagation(); openEmojiPicker(e.currentTarget, p.id); };
     li.querySelector('.sb-more').onclick  = e => { e.stopPropagation(); openListRowMenu(e, p.id); };
+    li.querySelector('.person-pill')?.addEventListener('click', e => {
+      e.stopPropagation();
+      pickOwner(e.currentTarget, p.owner, id => setListOwner(p.id, id), 'Owner of ' + listName(p.id));
+    });
     attachListDrop(li, p.id);
     attachListReorder(li, p.id);
     ul.appendChild(li);
@@ -10071,6 +10175,7 @@ function renderTagsGroup() {
   if (grp) grp.classList.toggle('collapsed', UI.sbCollapsed.has('tags'));
   const people = state.people || [];
   if (UI.tagPerson && !getPerson(UI.tagPerson)) UI.tagPerson = '';
+  if (currentView === 'tasks' && taskScope.type === 'person') UI.tagPerson = taskScope.id;
   const all = allTags();
   const tags = UI.tagPerson
     ? all.filter(([tag]) => { const o = tagOwner(tag); return o && o.id === UI.tagPerson; })
@@ -10084,19 +10189,21 @@ function renderTagsGroup() {
     strip.className = 'sb-people';
     strip.innerHTML =
       `<button type="button" class="sb-person${UI.tagPerson ? '' : ' on'}" data-p="">All</button>` +
-      people.map(p => `<button type="button" class="sb-person${UI.tagPerson === p.id ? ' on' : ''}" data-p="${esc(p.id)}" title="${esc(p.name)} — click again to edit">${personPill(p)}<span>${esc(p.name.split(/\s+/)[0])}</span></button>`).join('') +
-      `<button type="button" class="sb-person sb-person-add" title="Add person" aria-label="Add person">＋</button>`;
+      people.map(p => `<button type="button" class="sb-person${UI.tagPerson === p.id ? ' on' : ''}" data-p="${esc(p.id)}" title="${esc(p.name)}’s tasks">${personPill(p)}<span>${esc(p.name.split(/\s+/)[0])}</span></button>`).join('') +
+      `<button type="button" class="sb-person sb-person-add" title="Add or edit people" aria-label="People">${people.length ? '✎ People' : '＋ Person'}</button>`;
     strip.querySelectorAll('.sb-person[data-p]').forEach(b => {
       const p = getPerson(b.dataset.p);
-      // Tapping the person already picked opens their menu — the way in on
-      // a phone, where there's no right-click.
+      // A person opens their tasks and narrows the tags to theirs; All
+      // clears that. Right-click (or the ✎ chip on a phone) edits people.
       b.onclick = () => {
-        if (p && UI.tagPerson === p.id) { openPersonMenu(b, p); return; }
-        UI.tagPerson = b.dataset.p; uiSave(); renderTagsGroup();
+        UI.tagPerson = b.dataset.p; uiSave();
+        if (p) openScope({type:'person', id:p.id});
+        else if (taskScope.type === 'person') openScope({type:'today'});
+        else renderTagsGroup();
       };
-      if (p) b.oncontextmenu = e => { e.preventDefault(); openPersonMenu(e, p); };
+      if (p) b.oncontextmenu = e => { e.preventDefault(); openPeopleModal(); };
     });
-    strip.querySelector('.sb-person-add').onclick = () => addPerson();
+    strip.querySelector('.sb-person-add').onclick = () => openPeopleModal();
     box.appendChild(strip);
   }
 
@@ -10604,6 +10711,7 @@ function commitQuickAdd() {
     updatedAt: Date.now(), createdAt: Date.now(),
   };
   if (taskScope.type === 'tag' && !t.tags.includes(taskScope.id)) t.tags.push(taskScope.id);
+  if (taskScope.type === 'person') t.owner = taskScope.id;
   state.tasks.unshift(t);
   input.value = '';
   closeTokenMenu();
@@ -10797,6 +10905,19 @@ function renderDetail() {
     (t.repeat ? DP_ICON.repeatSm : '') + (t.reminder != null ? DP_ICON.alarmSm : '');
   dateBtn.className = 'dtop-chip' + (t.dueDate ? ' set ' + dueClass(t.dueDate) : '');
   dateBtn.onclick = () => openDueMenu(dateBtn, t.id);
+
+  // Owner: the task's own, or else who it inherits from its list / tags.
+  const ownerBtn = document.getElementById('detail-owner');
+  const owners = taskOwners(t);
+  const inherited = !t.owner && owners.length;
+  ownerBtn.className = 'dtop-chip' + (owners.length ? ' set' : '') + (inherited ? ' inherited' : '');
+  ownerBtn.innerHTML = owners.length
+    ? owners.map(personPill).join('') + (owners.length === 1 ? `<span class="do-name">${esc(owners[0].name.split(/\s+/)[0])}</span>` : '')
+    : `<svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="5.6" r="2.7" stroke="currentColor" stroke-width="1.4"/><path d="M2.8 14c.6-2.8 2.7-4.3 5.2-4.3s4.6 1.5 5.2 4.3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg><span class="do-name">Owner</span>`;
+  ownerBtn.title = !owners.length ? 'Set owner'
+    : inherited ? 'Owner from its list or tags — tap to set one for this task'
+    : 'Owner: ' + owners[0].name;
+  ownerBtn.onclick = () => pickOwner(ownerBtn, t.owner, id => setTaskOwner(t, id), 'Owner of this task');
 
   const flag = document.getElementById('detail-flag');
   flag.className = 'dtop-icon' + (t.priority ? ' on' : '');
@@ -11989,6 +12110,8 @@ function openDetailMenu(anchor, id) {
     {label:'Print', icon:'🖨', fn: () => printTask(id)},
     {label:'Delete', danger:true, fn: () => deleteTask(id)},
     {sep:true},
+    {label: t.owner && getPerson(t.owner) ? 'Owner: ' + getPerson(t.owner).name + '…' : 'Set owner…', icon:'👤',
+     fn: () => pickOwner(anchor, t.owner, pid => setTaskOwner(t, pid), 'Owner of this task')},
     ...(FEATURE_TIME ? [{label: running ? 'Stop the timer' : 'Start timer on this task', icon:'⏱', fn: () => startTimerForDetail()}] : []),
     {html:'<div class="pop-title">Status</div>'},
   ];
@@ -12379,6 +12502,8 @@ function openTaskMenu(evt, id, anchor) {
     {label:'Medium priority', icon: '🚩', fn: () => set('priority', 2)},
     {label:'No priority',     icon: '⚑', fn: () => set('priority', 0)},
     {sep:true},
+    {label: t.owner && getPerson(t.owner) ? 'Owner: ' + getPerson(t.owner).name + '…' : 'Set owner…', icon:'👤',
+     fn: () => pickOwner(anchor || evt, t.owner, pid => setTaskOwner(t, pid), 'Owner of this task')},
     {label:'Open notes editor', icon:'📝', fn: () => { setView('kanban'); setTimeout(() => openCard(id), 60); }},
     {label:'Move to Trash', danger:true, fn: () => deleteTask(id)},
   ]);
@@ -12392,6 +12517,8 @@ function openListRowMenu(evt, pid) {
     {label: p.share ? 'Sharing…' : 'Share…', icon:'👥', fn: () => openShareModal(pid)},
     {label:'Change icon…', icon:'😀', fn: () => openEmojiPicker(evt.currentTarget || evt.target, pid)},
     {label:'Edit list…', icon:'✏️', fn: () => openProjectModal(pid)},
+    {label: listOwner(pid) ? 'Owner: ' + listOwner(pid).name + '…' : 'Set owner…', icon:'👤',
+     fn: () => pickOwner(evt.currentTarget || evt.target, p.owner, id => setListOwner(pid, id), 'Owner of ' + listName(pid))},
   ];
   if (pid !== '_todos') items.push({sep:true}, {label:'Delete list', danger:true, fn: () => deleteListWithTasks(pid)});
   showPop(evt.currentTarget || evt, items);
