@@ -3307,6 +3307,19 @@ label.focus-row {
 .sb-row:hover .sb-count { display: none; }
 .sb-more:hover { background: color-mix(in srgb, var(--text) 12%, transparent); color: var(--text); }
 .sb-swatch { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+/* Folders read as list rows one level up; their lists sit indented below. */
+.sb-folder .sb-name { font-weight: 500; }
+.sb-twisty {
+  width: 12px; flex-shrink: 0; margin-left: -4px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-3); cursor: pointer;
+  transition: transform .18s var(--ease-out), color .12s;
+}
+.sb-twisty:hover { color: var(--text); }
+.sb-folder.collapsed .sb-twisty { transform: rotate(-90deg); }
+.sb-nested { padding-left: 30px !important; }
+.sb-empty-folder { color: var(--text-3); }
+.sb-empty-folder .sb-emoji { font-size: 13px; }
 /* Section rows keep their grouping role, one notch quieter */
 .sb-sec {
   margin: 7px 7px 1px; padding: 2px 8px;
@@ -4862,7 +4875,7 @@ body.chrome-off #col-filter-bar { display: none !important; }
           </span>
           <span class="sb-used" id="lists-used" title="Lists used — click to change the cap" onclick="event.stopPropagation();editListLimit()"></span>
           <span class="sb-head-spacer"></span>
-          <button class="sb-add" title="New list" onclick="event.stopPropagation();openProjectModal()">
+          <button class="sb-add" title="New list or folder" onclick="event.stopPropagation();openNewListMenu(this)">
             <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M6 1.5v9M1.5 6h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
           </button>
         </div>
@@ -9746,6 +9759,12 @@ function shellMigrate(raw) {
   if (typeof raw.listLimit !== 'number') raw.listLimit = 9;
   // People who own tags. Owners are a list of {tag, person} rather than a map
   // keyed by tag, because Firebase refuses keys with . # $ / [ ] in them.
+  // Folders hold lists: state.folders, and `folder` on a list. (The old
+  // `sections` / `section` pair is cleared by migrateFoldersAway, so these
+  // use their own names.)
+  if (!Array.isArray(raw.folders)) raw.folders = [];
+  const folderIds = new Set(raw.folders.map(f => f.id));
+  (raw.projects || []).forEach(p => { if (p.folder && !folderIds.has(p.folder)) delete p.folder; });
   if (!Array.isArray(raw.people)) raw.people = [];
   if (!Array.isArray(raw.tagOwners)) raw.tagOwners = [];
   const personIds = new Set(raw.people.map(p => p.id));
@@ -10139,6 +10158,65 @@ function removePerson(id) {
   save(); renderAll();
 }
 
+// ── Folders: lists filed under a project ───────────────────────────────
+function getFolder(id) { return (state.folders || []).find(f => f.id === id) || null; }
+function folderLists(fid) { return state.projects.filter(p => p.folder === fid); }
+function inFolder(t, fid) { const p = getProject(t.pid); return !!p && p.folder === fid; }
+function newFolder(then) {
+  const name = (prompt('Folder name') || '').trim();
+  if (!name) return;
+  state.folders = state.folders || [];
+  const f = {id: uid(), name, emoji: '🗂️'};
+  state.folders.push(f);
+  if (then) then(f);
+  save(); renderAll();
+}
+function moveListToFolder(pid, fid) {
+  const p = getProject(pid); if (!p || pid === '_todos') return;
+  if (fid) {
+    p.folder = fid;
+    UI.sbCollapsed.delete('fold:' + fid); uiSave();   // show where it went
+  } else delete p.folder;
+  save(); renderAll();
+}
+function openMoveToFolder(anchor, pid) {
+  const p = getProject(pid); if (!p) return;
+  showPop(anchor, [
+    {label:'No folder', on: !p.folder, fn: () => moveListToFolder(pid, null)},
+    ...(state.folders || []).map(f => ({label: f.name, icon: f.emoji || '🗂️', on: p.folder === f.id, fn: () => moveListToFolder(pid, f.id)})),
+    {sep:true},
+    {label:'New folder…', icon:'＋', fn: () => newFolder(f => { p.folder = f.id; })},
+  ], {title: 'Move ' + listName(pid) + ' to'});
+}
+let newListFolder = null;   // a list made from a folder's menu lands in it
+function openFolderMenu(anchor, fid) {
+  const f = getFolder(fid); if (!f) return;
+  showPop(anchor, [
+    {label:'Open folder', icon:'→', fn: () => openScope({type:'folder', id: fid})},
+    {label:'New list in folder…', icon:'＋', fn: () => { newListFolder = fid; openProjectModal(); }},
+    {label:'Change icon…', icon:'😀', fn: () => pickEmoji(anchor && anchor.getBoundingClientRect ? anchor : anchor.target, f.emoji, e => { f.emoji = e; save(); renderAll(); })},
+    {label:'Rename folder…', icon:'✏️', fn: () => {
+      const name = (prompt('Rename folder', f.name) || '').trim();
+      if (name && name !== f.name) { f.name = name; save(); renderAll(); }
+    }},
+    {sep:true},
+    {label:'Delete folder', danger:true, fn: () => {
+      const n = folderLists(fid).length;
+      if (n && !confirm(`Delete the folder “${f.name}”? Its ${n} list${n === 1 ? '' : 's'} stay, at the top level.`)) return;
+      folderLists(fid).forEach(p => { delete p.folder; });
+      state.folders = state.folders.filter(x => x.id !== fid);
+      if (taskScope.type === 'folder' && taskScope.id === fid) openScope({type:'today'});
+      save(); renderAll();
+    }},
+  ], {title: f.name});
+}
+function openNewListMenu(anchor) {
+  showPop(anchor, [
+    {label:'New list', icon:'📄', fn: () => openProjectModal()},
+    {label:'New folder', icon:'🗂️', fn: () => newFolder()},
+  ]);
+}
+
 // ── Scope: what the task pane is showing ───────────────────────────────
 let taskScope = (function () {
   try {
@@ -10151,6 +10229,7 @@ let taskScope = (function () {
     if (s.type === 'inbox') return {type:'list', id:'_todos'};
     if (s.type === 'list' && !getProject(s.id)) return {type:'today'};
     if (s.type === 'person' && !(state.people || []).some(p => p.id === s.id)) return {type:'today'};
+    if (s.type === 'folder' && !(state.folders || []).some(f => f.id === s.id)) return {type:'today'};
     return s;
   }
   catch (_) { return {type:'today'}; }
@@ -10170,6 +10249,7 @@ function scopeTitle() {
     case 'trash':     return 'Trash';
     case 'tag':       return '#' + taskScope.id;
     case 'person':    { const p = getPerson(taskScope.id); return p ? p.name : 'Person'; }
+    case 'folder':    { const f = getFolder(taskScope.id); return f ? f.name : 'Folder'; }
     case 'all':       return 'All tasks';
     case 'filter': {
       const f = (state.savedFilters || []).find(f => f.id === taskScope.id);
@@ -10187,6 +10267,7 @@ function scopeEmoji() {
     case 'trash': return '🗑️';
     case 'tag': return '🏷️';
     case 'person': return '👤';
+    case 'folder': return (getFolder(taskScope.id) || {}).emoji || '🗂️';
     case 'all': return '🌐';
     case 'filter': {
       const f = (state.savedFilters || []).find(f => f.id === taskScope.id);
@@ -10242,6 +10323,9 @@ function scopeTasks() {
     case 'person':
       out = out.filter(t => taskOwners(t).some(p => p.id === taskScope.id));
       break;
+    case 'folder':
+      out = out.filter(t => inFolder(t, taskScope.id));
+      break;
     case 'filter':
       out = out.filter(t => filterMatches((state.savedFilters || []).find(f => f.id === taskScope.id), t));
       break;
@@ -10276,6 +10360,7 @@ function scopeCompleted() {
     case 'list':   out = closed.filter(t => t.pid === taskScope.id); break;
     case 'tag':    out = closed.filter(t => (t.tags || []).includes(taskScope.id)); break;
     case 'person': out = closed.filter(t => taskOwners(t).some(p => p.id === taskScope.id)); break;
+    case 'folder': out = closed.filter(t => inFolder(t, taskScope.id)); break;
     case 'filter': {
       const f = (state.savedFilters || []).find(f => f.id === taskScope.id);
       out = closed.filter(t => filterMatches(f, t));
@@ -10305,8 +10390,12 @@ function sortTasks(arr) {
       return a;   // manual — array order, which drag-and-drop rewrites
   }
 }
-function groupKeyFor(t) {
-  switch (UI.group) {
+function groupKeyFor(t, mode = UI.group) {
+  switch (mode) {
+    case 'folder-list': {
+      const i = state.projects.findIndex(p => p.id === t.pid);
+      return {k: String(i).padStart(4, '0'), label: listEmoji(t.pid) + '  ' + listName(t.pid)};
+    }
     case 'list': return {k: listName(t.pid), label: listEmoji(t.pid) + '  ' + listName(t.pid)};
     case 'due': {
       const n = daysFromToday(t.dueDate);
@@ -10398,11 +10487,12 @@ function renderListsGroup() {
   const grp = document.getElementById('grp-lists');
   if (grp) grp.classList.toggle('collapsed', UI.sbCollapsed.has('lists'));
 
-  state.projects.forEach(p => {
+  const folders = state.folders || [];
+  const listRow = (p, nested) => {
     const count = state.tasks.filter(t => t.pid === p.id && isOpen(t)).length;
     const active = currentView === 'tasks' && taskScope.type === 'list' && taskScope.id === p.id;
     const li = document.createElement('li');
-    li.className = 'sb-row' + (active ? ' active' : '');
+    li.className = 'sb-row' + (nested ? ' sb-nested' : '') + (active ? ' active' : '');
     li.innerHTML = `
       <span class="sb-emoji" title="Change icon">${p.emoji || '📄'}</span>
       <span class="sb-name">${esc(p.id === '_todos' ? 'General' : p.name)}${p.share ? '<span class="sb-shared" title="Shared">👥</span>' : ''}</span>
@@ -10420,6 +10510,53 @@ function renderListsGroup() {
     attachListDrop(li, p.id);
     attachListReorder(li, p.id);
     ul.appendChild(li);
+  };
+
+  // Lists outside any folder first, then each folder with its lists.
+  state.projects.filter(p => !p.folder).forEach(p => listRow(p, false));
+  folders.forEach(f => {
+    const key = 'fold:' + f.id;
+    const collapsed = UI.sbCollapsed.has(key);
+    const lists = folderLists(f.id);
+    const count = state.tasks.filter(t => isOpen(t) && inFolder(t, f.id)).length;
+    const active = currentView === 'tasks' && taskScope.type === 'folder' && taskScope.id === f.id;
+    const head = document.createElement('li');
+    head.className = 'sb-row sb-folder' + (collapsed ? ' collapsed' : '') + (active ? ' active' : '');
+    head.innerHTML = `
+      <span class="sb-twisty" title="Expand or collapse"><svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M2 3.5l3 3 3-3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      <span class="sb-emoji" title="Change icon">${f.emoji || '🗂️'}</span>
+      <span class="sb-name">${esc(f.name)}</span>
+      <span class="sb-count">${count || ''}</span>
+      <button class="sb-more" aria-label="Folder actions"><svg width="12" height="12" viewBox="0 0 18 18" fill="none"><circle cx="4" cy="9" r="1.5" fill="currentColor"/><circle cx="9" cy="9" r="1.5" fill="currentColor"/><circle cx="14" cy="9" r="1.5" fill="currentColor"/></svg></button>`;
+    head.onclick = () => openScope({type:'folder', id: f.id});
+    head.oncontextmenu = e => { e.preventDefault(); openFolderMenu(e, f.id); };
+    head.querySelector('.sb-twisty').onclick = e => {
+      e.stopPropagation();
+      if (collapsed) UI.sbCollapsed.delete(key); else UI.sbCollapsed.add(key);
+      uiSave(); renderSidebar();
+    };
+    head.querySelector('.sb-emoji').onclick = e => { e.stopPropagation(); pickEmoji(e.currentTarget, f.emoji, em => { f.emoji = em; save(); renderAll(); }); };
+    head.querySelector('.sb-more').onclick  = e => { e.stopPropagation(); openFolderMenu(e.currentTarget, f.id); };
+    // Drop a list row on a folder to file it there.
+    head.addEventListener('dragover', e => { if (!dragListId) return; e.preventDefault(); head.classList.add('drop-target'); });
+    head.addEventListener('dragleave', () => head.classList.remove('drop-target'));
+    head.addEventListener('drop', e => {
+      if (!dragListId) return;
+      e.preventDefault(); e.stopPropagation();
+      head.classList.remove('drop-target');
+      const src = dragListId; dragListId = null;
+      moveListToFolder(src, f.id);
+    });
+    ul.appendChild(head);
+    if (collapsed) return;
+    lists.forEach(p => listRow(p, true));
+    if (!lists.length) {
+      const empty = document.createElement('li');
+      empty.className = 'sb-row sb-nested sb-empty-folder';
+      empty.innerHTML = `<span class="sb-emoji">＋</span><span class="sb-name">New list</span>`;
+      empty.onclick = () => { newListFolder = f.id; openProjectModal(); };
+      ul.appendChild(empty);
+    }
   });
 }
 
@@ -10670,6 +10807,9 @@ function attachListReorder(el, pid) {
     const r = el.getBoundingClientRect();
     const after = e.clientY > r.top + r.height / 2;
     clearListOverMarks();
+    // Dropped beside a list: it joins that list's folder (or the top level).
+    const s2 = getProject(src), tgt = getProject(pid);
+    if (s2 && tgt && s2.id !== '_todos') { if (tgt.folder) s2.folder = tgt.folder; else delete s2.folder; }
     moveList(src, pid, after);
   });
 }
@@ -10779,12 +10919,14 @@ function renderTaskList() {
     return;
   }
 
-  if (UI.group === 'none') {
+  // A folder reads as a project: its lists become the sections.
+  const groupMode = taskScope.type === 'folder' && UI.group === 'none' ? 'folder-list' : UI.group;
+  if (groupMode === 'none') {
     rows.forEach(t => box.appendChild(taskRow(t)));
   } else {
     const groups = new Map();
     rows.forEach(t => {
-      const g = groupKeyFor(t) || {k:'_', label:''};
+      const g = groupKeyFor(t, groupMode) || {k:'_', label:''};
       if (!groups.has(g.k)) groups.set(g.k, {label: g.label, items: []});
       groups.get(g.k).items.push(t);
     });
@@ -10811,7 +10953,8 @@ function taskRow(t) {
   // Meta sits inline and right-aligned, the way the reference lays a row out.
   const meta = [];
   (t.tags || []).forEach(tag => meta.push(`<span class="tl-tag">#${esc(tag)}</span>`));
-  if (taskScope.type !== 'list')
+  // A folder already heads each task with its list, so no chip there.
+  if (taskScope.type !== 'list' && taskScope.type !== 'folder')
     meta.push(`<span class="tl-list-chip">${listEmoji(t.pid)} ${esc(listName(t.pid))}</span>`);
   const prog = subProgress(t);
   if (prog) meta.push(`<span class="tl-sub">☑ ${prog}</span>`);
@@ -11107,6 +11250,7 @@ function parseQuickAdd(text) {
 }
 function defaultPidForScope() {
   if (taskScope.type === 'list') return taskScope.id;
+  if (taskScope.type === 'folder') { const l = folderLists(taskScope.id)[0]; if (l) return l.id; }
   if (filterProject) return filterProject;
   return '_todos';
 }
@@ -12905,6 +13049,7 @@ function openListMenu(anchor) {
     {label: getProject(lid)?.share ? 'Sharing…' : 'Share…', icon:'👥', fn: () => openShareModal(lid)},
     {label:'Change icon…', icon:'😀', fn: () => openEmojiPicker(anchor, lid)},
     {label:'Edit list…', icon:'✏️', fn: () => openProjectModal(lid)},
+    ...(lid !== '_todos' ? [{label:'Move to folder…', icon:'🗂️', fn: () => openMoveToFolder(anchor, lid)}] : []),
     {label:'Import tasks…', icon:'📥', fn: () => openImportModal(lid)},
   );
   if (lid && lid !== '_todos') items.push({label:'Delete list', danger:true, fn: () => deleteListWithTasks(lid)});
@@ -12950,6 +13095,7 @@ function openListRowMenu(evt, pid) {
     {label: ownersLabel(listOwners(pid)), icon:'👤', fn: () => pickListOwners(evt.currentTarget || evt.target, pid)},
     {label:'Import tasks…', icon:'📥', fn: () => openImportModal(pid)},
   ];
+  if (pid !== '_todos') items.splice(4, 0, {label: p.folder && getFolder(p.folder) ? 'Folder: ' + getFolder(p.folder).name + '…' : 'Move to folder…', icon:'🗂️', fn: () => openMoveToFolder(evt.currentTarget || evt.target, pid)});
   if (pid !== '_todos') items.push({sep:true}, {label:'Delete list', danger:true, fn: () => deleteListWithTasks(pid)});
   showPop(evt.currentTarget || evt, items);
 }
@@ -13159,6 +13305,7 @@ function saveFilter() {
 let draftListEmoji = '📄';
 function openProjectModal(id = null) {
   editingProjectId = id;
+  if (id) newListFolder = null;
   const used = state.projects.filter(p => p.id !== '_todos').length;
   if (!id && used >= (state.listLimit || 9)) {
     showToast(`List cap reached (${used}/${state.listLimit}). Raise it from the Lists header.`);
@@ -13210,6 +13357,8 @@ function saveProject() {
     const name = document.getElementById('proj-name-input').value.trim();
     if (!name) return;
     const p = {id: uid(), name, color: selectedColor, emoji: draftListEmoji, focused};
+    if (newListFolder && getFolder(newListFolder)) p.folder = newListFolder;
+    newListFolder = null;
     state.projects.push(p);
     save(); closeProjectModal(); openScope({type:'list', id: p.id});
     return;
