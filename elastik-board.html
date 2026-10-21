@@ -4658,8 +4658,11 @@ body.chrome-off #col-filter-bar { display: none !important; }
    so the icons drop into the rest of it. */
 #bottom-nav {
   --bnav-pad: max(4px, calc(env(safe-area-inset-bottom, 0px) - 18px));
+  --bnav-drop: min(9px, var(--bnav-pad));   /* icons sit this much lower */
+  box-sizing: border-box;
   height: calc(50px + var(--bnav-pad));
-  padding-bottom: var(--bnav-pad);
+  padding-top: var(--bnav-drop);
+  padding-bottom: calc(var(--bnav-pad) - var(--bnav-drop));
 }
 /* A task becomes a checklist from Add Subtask in its ••• menu (or / in the
    description), and goes back from the same menu — no title-row switch. */
