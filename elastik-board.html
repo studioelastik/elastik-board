@@ -3501,7 +3501,7 @@ label.focus-row {
   font-size: 9.5px; font-weight: 600; letter-spacing: .02em; line-height: 1;
   font-variant-numeric: normal; cursor: pointer;
 }
-.tl-owners { display: inline-flex; gap: 3px; }
+.tl-owners { display: inline-flex; gap: 3px; flex-shrink: 0; }
 .tl-owners .person-pill { cursor: inherit; }
 .dtag .person-pill { height: 14px; min-width: 18px; font-size: 9px; margin-right: 1px; }
 .dtag { cursor: pointer; }
@@ -4486,6 +4486,7 @@ body.chrome-off #col-filter-bar { display: none !important; }
   .tl-check { margin-top: 2px; }
   .tl-name { flex: 1 1 auto; white-space: normal; overflow: visible; }
   .tl-flag { order: 2; margin-top: 3px; }
+  .tl-owners { order: 2; margin-top: 2px; }
   .tl-meta {
     order: 3; flex: 1 0 100%; max-width: none;
     margin: 1px 0 0 25px; line-height: 1.3; row-gap: 3px;
@@ -10525,8 +10526,9 @@ function taskRow(t) {
     meta.push(`<span class="tl-note" title="Has a description"><svg width="12" height="12" viewBox="0 0 14 14" fill="none"><rect x="1.4" y="1.4" width="11.2" height="11.2" rx="2.6" stroke="currentColor" stroke-width="1.2"/><path d="M4 5h6M4 7.4h6M4 9.8h3.6" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg></span>`);
   if (t.dueDate) meta.push(`<span class="tl-due ${dueClass(t.dueDate)}">${t.repeat ? DP_ICON.repeatSm : ''}${esc(rowWhenLabel(t))}</span>`);
   if (inTrash && t.deletedAt) meta.push(`<span>deleted ${esc(fmtDue(isoDay(new Date(t.deletedAt))))}</span>`);
+  // Owners sit on the name's line, not in meta — on a phone meta wraps to
+  // a second line, and a row whose only detail is its owner stays one line.
   const owners = taskOwners(t);
-  if (owners.length) meta.push(`<span class="tl-owners">${owners.map(personPill).join('')}</span>`);
 
   // A checklist leads with its list glyph rather than a checkbox.
   const nSubs = (t.subtasks || []).length;
@@ -10542,6 +10544,7 @@ function taskRow(t) {
     ${lead}
     <div class="tl-name">${esc(t.name)}</div>
     ${meta.length ? `<div class="tl-meta">${meta.join('')}</div>` : ''}
+    ${owners.length ? `<span class="tl-owners">${owners.map(personPill).join('')}</span>` : ''}
     ${t.priority ? flagSVG(prioColor(t.priority)) : ''}
     ${inTrash ? '<button class="tl-restore">Restore</button>' : ''}`;
 
