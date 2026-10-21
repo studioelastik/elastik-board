@@ -9787,7 +9787,7 @@ function personInitials(p) {
   const name = String((p && p.name) || '').trim();
   // A short all-caps name is already an abbreviation (ÖBA, MA37 aside).
   if (/^[A-ZÄÖÜ]{2,3}$/.test(name)) return name;
-  // CAPE.LAND, Anna-Lena: dots and hyphens split words too.
+  // ACME.STUDIO, Anna-Lena: dots and hyphens split words too.
   const words = name.split(/[\s.\-_]+/).filter(Boolean);
   if (!words.length) return '?';
   const s = words.length > 1 ? words[0][0] + words[words.length - 1][0] : words[0].slice(0, 2);
