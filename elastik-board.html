@@ -8490,6 +8490,10 @@ function applyZoom() {
   const mobile = window.innerWidth <= 768;
   // Text that must land at an exact on-screen size divides by this.
   document.documentElement.style.setProperty('--ui-zoom', mobile ? uiScale : 1);
+  // The phone's task list always reads at the 120% it was tuned at, so
+  // turning the app's text size down shrinks everything else but not it.
+  const list = document.getElementById('tasks-list');
+  if (list) list.style.zoom = mobile ? String(1.2 / uiScale) : '';
   if (mobile) {
     main.style.zoom   = uiScale;
     main.style.width  = (100 / uiScale) + '%';
