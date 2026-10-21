@@ -1762,6 +1762,11 @@ h3.ce-header { font-size: 15px; }
 
 /* ── Bottom nav ── */
 #bottom-nav { display: none; }
+/* Time tracking off (FEATURE_TIME): hide every way into it. The bottom bar
+   keeps the Calendar slot as empty space so the + stays centred. */
+.no-time #rail-calendar, .no-time #nav-time, .no-time #vbtn-time,
+.no-time #timer-pill, .no-time #th-timer, .no-time #timer-float { display: none !important; }
+.no-time #bnav-time { visibility: hidden; pointer-events: none; }
 
 /* ── Touch: always show task actions ── */
 @media (pointer: coarse) {
@@ -5432,6 +5437,12 @@ body.chrome-off #col-filter-bar { display: none !important; }
 <input type="file" id="attach-file-input" multiple style="display:none">
 
 <script>
+/* Time tracking (timers, time entries and the Calendar & time view) is
+   switched off for now — the code and any stored entries stay, only the
+   ways in are hidden. Flip to true to bring it all back. */
+const FEATURE_TIME = false;
+document.documentElement.classList.toggle('no-time', !FEATURE_TIME);
+
 // ── Safe localStorage helpers (Safari private mode throws on write). ──
 function prefGet(key, fallback) {
   try {
@@ -5594,7 +5605,8 @@ let currentView = (function(){
 })();
 // The board and the old flat list are no longer top-level views — anyone
 // whose last session ended on one lands on the task list instead.
-if (currentView === 'kanban' || currentView === 'list' || currentView === 'today' || currentView === 'inbox')
+if (currentView === 'kanban' || currentView === 'list' || currentView === 'today' || currentView === 'inbox'
+    || (currentView === 'time' && !FEATURE_TIME))
   currentView = 'tasks';
 let filterProject = state.filterProject || null;
 let editingTaskId = null;
@@ -11977,7 +11989,7 @@ function openDetailMenu(anchor, id) {
     {label:'Print', icon:'🖨', fn: () => printTask(id)},
     {label:'Delete', danger:true, fn: () => deleteTask(id)},
     {sep:true},
-    {label: running ? 'Stop the timer' : 'Start timer on this task', icon:'⏱', fn: () => startTimerForDetail()},
+    ...(FEATURE_TIME ? [{label: running ? 'Stop the timer' : 'Start timer on this task', icon:'⏱', fn: () => startTimerForDetail()}] : []),
     {html:'<div class="pop-title">Status</div>'},
   ];
   ['wip','next','block','nosched','done'].forEach(st => items.push({
@@ -12433,7 +12445,7 @@ function openNotifications(anchor) {
 
 function openHelp(anchor) {
   const rows = [
-    ['1 / 2', 'Tasks · Calendar'],
+    FEATURE_TIME ? ['1 / 2', 'Tasks · Calendar'] : ['1', 'Tasks'],
     ['A', 'Focus the add-task field'],
     ['N', 'New task (full form)'],
     ['C', 'Quick capture'],
@@ -12650,6 +12662,7 @@ function saveProject() {
 
 // ── View plumbing ──────────────────────────────────────────────────────
 function setView(v) {
+  if (v === 'time' && !FEATURE_TIME) v = 'tasks';
   if (v === 'today') { openScope({type:'today'}); return; }
   if (v === 'inbox') { openScope({type:'list', id:'_todos'}); return; }   // old callers
   currentView = v;
