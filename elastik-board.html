@@ -1767,7 +1767,6 @@ h3.ce-header { font-size: 15px; }
 .no-time #rail-calendar, .no-time #nav-time, .no-time #vbtn-time,
 .no-time #timer-pill, .no-time #th-timer, .no-time #timer-float,
 .no-time #bnav-time { display: none !important; }
-.no-time #bottom-nav { justify-content: space-evenly; }
 
 /* ── Touch: always show task actions ── */
 @media (pointer: coarse) {
@@ -4620,7 +4619,7 @@ body.chrome-off #col-filter-bar { display: none !important; }
   /* The list is the scroller — nothing above it scrolls on a phone. */
   #tasks-list {
     overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain;
-    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(150px + env(safe-area-inset-bottom, 0px));
   }
 
   /* A long name wraps inside its row instead of dropping below the box. */
@@ -4634,6 +4633,15 @@ body.chrome-off #col-filter-bar { display: none !important; }
 .bnav-btn svg { width: 22px; height: 22px; }
 .bnav-btn .cut      { stroke: var(--surface); }
 .bnav-btn .cut-fill { fill: var(--surface); }
+/* The + floats on its own, bottom right just above the bar, and the bar's
+   remaining buttons share its width evenly. */
+#bottom-nav { justify-content: space-evenly; }
+#bottom-nav .bnav-btn:not(.bnav-add) { flex: 1 1 0; }
+.bnav-add {
+  position: absolute; right: 16px; bottom: calc(100% + 14px);
+  width: 56px; height: 56px; transform: none;
+}
+.bnav-add svg { width: 24px; height: 24px; }
 
 /* Pull to refresh (phones): there is no browser reload in a home-screen app. */
 #ptr {
