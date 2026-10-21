@@ -3520,7 +3520,13 @@ label.focus-row {
 #detail-owner .do-name { font-size: 13px; }
 #detail-owner svg { flex-shrink: 0; }
 /* Opened from inside a task too, and the phone's task sheet sits at 700. */
-#people-modal { z-index: 900; }
+#people-modal, #import-modal { z-index: 900; }
+#imp-text {
+  width: 100%; box-sizing: border-box; margin-top: 8px;
+  font-family: inherit; font-size: 14px; color: var(--text);
+  background: var(--surface2); border: 1px solid var(--border); border-radius: 7px;
+  padding: 8px; resize: vertical;
+}
 #detail-owner.inherited .person-pill { opacity: .6; }
 .pop-item .pop-sub .person-pill { cursor: inherit; }
 .pe-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
@@ -9778,7 +9784,11 @@ const PERSON_COLORS = ['#3B7CE8','#E8A84B','#2FA67A','#D9577A','#8B5CF6','#E06B3
 function getPerson(id) { return (state.people || []).find(p => p.id === id) || null; }
 function personInitials(p) {
   if (p && p.initials) return p.initials.toUpperCase();
-  const words = String((p && p.name) || '').trim().split(/\s+/).filter(Boolean);
+  const name = String((p && p.name) || '').trim();
+  // A short all-caps name is already an abbreviation (ÖBA, MA37 aside).
+  if (/^[A-ZÄÖÜ]{2,3}$/.test(name)) return name;
+  // CAPE.LAND, Anna-Lena: dots and hyphens split words too.
+  const words = name.split(/[\s.\-_]+/).filter(Boolean);
   if (!words.length) return '?';
   const s = words.length > 1 ? words[0][0] + words[words.length - 1][0] : words[0].slice(0, 2);
   return s.toUpperCase();
@@ -9874,6 +9884,133 @@ function pickOwner(anchor, curId, onPick, title) {
 function openOwnerMenu(anchor, tag) {
   const cur = tagOwner(tag);
   pickOwner(anchor, cur && cur.id, id => setTagOwner(tag, id), 'Owner of #' + tag);
+}
+
+/* ── Import tasks from a Markdown file ──────────────────────────────────
+   One task per block, blocks split by --- lines:
+     **Task name**
+     Owner · 30.10.2026            (or "· ongoing" for no date)
+     Notes — any number of lines
+     _Phase 1 – Basics · In progress_   (Open / In progress / Done)
+   Owners match people by name, and missing ones are added. The phase
+   becomes a tag (phase-1). A task already in the list by that name is
+   skipped, so importing the same file twice adds nothing. */
+function parseTaskMarkdown(text) {
+  const out = [];
+  String(text || '').replace(/\r/g, '').split(/\n\s*-{3,}\s*\n/).forEach(block => {
+    const lines = block.split('\n').map(l => l.trim()).filter(Boolean);
+    const ti = lines.findIndex(l => /^\*\*.+\*\*$/.test(l));
+    if (ti < 0) return;
+    const item = {name: lines[ti].replace(/^\*\*|\*\*$/g, '').trim(), who: '', due: '', status: 'next', phase: '', notes: []};
+    lines.slice(ti + 1).forEach((l, i) => {
+      const foot = /^_(.+)_$/.exec(l);
+      if (foot) {
+        const [phase, st = ''] = foot[1].split('·').map(x => x.trim());
+        item.phase = phase;
+        const s = st.toLowerCase();
+        item.status = s === 'done' ? 'done' : s.startsWith('in progress') ? 'wip' : 'next';
+        return;
+      }
+      if (i === 0 && l.includes('·')) {
+        const [who, when = ''] = l.split('·').map(x => x.trim());
+        item.who = who;
+        const d = /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/.exec(when);
+        if (d) item.due = `${d[3]}-${d[2].padStart(2, '0')}-${d[1].padStart(2, '0')}`;
+        return;
+      }
+      item.notes.push(l);
+    });
+    item.notes = item.notes.join('\n');
+    out.push(item);
+  });
+  return out;
+}
+function phaseTag(phase) {
+  const m = /phase\s*(\d+)/i.exec(phase || '');
+  return m ? 'phase-' + m[1] : '';
+}
+function importTasks(pid, items) {
+  const byName = new Map((state.people || []).map(p => [p.name.toLowerCase(), p]));
+  const have = new Set(state.tasks.filter(t => t.pid === pid).map(t => t.name.trim().toLowerCase()));
+  const now = Date.now();
+  let added = 0, skipped = 0;
+  items.forEach((it, i) => {
+    if (have.has(it.name.toLowerCase())) { skipped++; return; }
+    let person = null;
+    if (it.who) {
+      person = byName.get(it.who.toLowerCase());
+      if (!person) { person = newPerson(it.who); byName.set(it.who.toLowerCase(), person); }
+    }
+    const tag = phaseTag(it.phase);
+    const t = {
+      id: uid(), pid, name: it.name, status: it.status, notes: it.notes,
+      dueDate: it.due, tags: tag ? [tag] : [], priority: 0,
+      createdAt: now + i, updatedAt: now + i,
+    };
+    if (person) t.owners = [person.id];
+    if (it.status === 'done') t.completedAt = now;
+    state.tasks.push(t);
+    have.add(it.name.toLowerCase());
+    added++;
+  });
+  save(); renderAll();
+  return {added, skipped};
+}
+function openImportModal(pid) {
+  let ov = document.getElementById('import-modal');
+  if (!ov) {
+    ov = document.createElement('div');
+    ov.className = 'modal-overlay';
+    ov.id = 'import-modal';
+    ov.onclick = e => { if (e.target === ov) ov.classList.remove('open'); };
+    document.body.appendChild(ov);
+  }
+  ov.innerHTML = `
+    <div class="modal">
+      <h3>Import tasks into ${esc(listName(pid))}</h3>
+      <button type="button" class="pe-add" id="imp-file-btn">📄 Choose a .md file</button>
+      <input type="file" id="imp-file" accept=".md,.markdown,.txt,text/markdown,text/plain" style="display:none">
+      <textarea id="imp-text" rows="7" placeholder="…or paste the tasks here"></textarea>
+      <div id="imp-summary" class="sb-empty" style="margin:8px 0 0">Each task: **Name**, then “Owner · dd.mm.yyyy”, notes, and “_Phase · Status_”, separated by --- lines.</div>
+      <div class="modal-actions">
+        <button class="btn-cancel" id="imp-cancel">Cancel</button>
+        <button class="btn-save" id="imp-go" disabled>Import</button>
+      </div>
+    </div>`;
+  ov.classList.add('open');
+  const ta = ov.querySelector('#imp-text'), go = ov.querySelector('#imp-go'), sum = ov.querySelector('#imp-summary');
+  let items = [];
+  const update = () => {
+    items = parseTaskMarkdown(ta.value);
+    go.disabled = !items.length;
+    if (!items.length) { sum.textContent = ta.value.trim() ? 'No tasks found in that text.' : sum.textContent; return; }
+    const have = new Set(state.tasks.filter(t => t.pid === pid).map(t => t.name.trim().toLowerCase()));
+    const fresh = items.filter(it => !have.has(it.name.toLowerCase()));
+    const known = new Set((state.people || []).map(p => p.name.toLowerCase()));
+    const who = [...new Set(items.map(it => it.who).filter(Boolean))];
+    const newWho = who.filter(w => !known.has(w.toLowerCase()));
+    sum.textContent = `${items.length} tasks found` +
+      (items.length - fresh.length ? ` · ${items.length - fresh.length} already in the list (skipped)` : '') +
+      ` · ${fresh.filter(it => it.status === 'done').length} done · owners: ${who.join(', ') || '—'}` +
+      (newWho.length ? ` (new: ${newWho.join(', ')})` : '');
+    go.textContent = fresh.length ? `Import ${fresh.length}` : 'Nothing new';
+    go.disabled = !fresh.length;
+  };
+  ta.oninput = update;
+  ov.querySelector('#imp-file-btn').onclick = () => ov.querySelector('#imp-file').click();
+  ov.querySelector('#imp-file').onchange = async e => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    ta.value = await f.text();
+    update();
+  };
+  ov.querySelector('#imp-cancel').onclick = () => ov.classList.remove('open');
+  go.onclick = () => {
+    const r = importTasks(pid, items);
+    ov.classList.remove('open');
+    openScope({type:'list', id:pid});
+    showToast(`Imported ${r.added} task${r.added === 1 ? '' : 's'}` + (r.skipped ? ` · ${r.skipped} already there` : ''));
+  };
 }
 
 /* People editor: name, initials and colour for everyone. */
@@ -12576,6 +12713,7 @@ function openListMenu(anchor) {
     {label: getProject(lid)?.share ? 'Sharing…' : 'Share…', icon:'👥', fn: () => openShareModal(lid)},
     {label:'Change icon…', icon:'😀', fn: () => openEmojiPicker(anchor, lid)},
     {label:'Edit list…', icon:'✏️', fn: () => openProjectModal(lid)},
+    {label:'Import tasks…', icon:'📥', fn: () => openImportModal(lid)},
   );
   if (lid && lid !== '_todos') items.push({label:'Delete list', danger:true, fn: () => deleteListWithTasks(lid)});
   if (taskScope.type === 'trash') items.push({sep:true}, {label:'Empty trash', danger:true, fn: emptyTrash});
@@ -12618,6 +12756,7 @@ function openListRowMenu(evt, pid) {
     {label:'Change icon…', icon:'😀', fn: () => openEmojiPicker(evt.currentTarget || evt.target, pid)},
     {label:'Edit list…', icon:'✏️', fn: () => openProjectModal(pid)},
     {label: ownersLabel(listOwners(pid)), icon:'👤', fn: () => pickListOwners(evt.currentTarget || evt.target, pid)},
+    {label:'Import tasks…', icon:'📥', fn: () => openImportModal(pid)},
   ];
   if (pid !== '_todos') items.push({sep:true}, {label:'Delete list', danger:true, fn: () => deleteListWithTasks(pid)});
   showPop(evt.currentTarget || evt, items);
