@@ -7673,7 +7673,7 @@ function saveTask() {
                createdAt: Date.now(), updatedAt: Date.now()};
     const x = addScopeExtras;
     if (x && x.tag && !t.tags.includes(x.tag)) t.tags.push(x.tag);
-    if (x && x.owner) t.owner = x.owner;
+    if (x && x.owner) t.owners = [x.owner];
     if (status === 'archive') t.archivedAt = Date.now();
     // New tasks go on top, as from the add bar.
     state.tasks.unshift(t);
@@ -9681,6 +9681,16 @@ function shellMigrate(raw) {
   if (!Array.isArray(raw.tagOwners)) raw.tagOwners = [];
   const personIds = new Set(raw.people.map(p => p.id));
   raw.tagOwners = raw.tagOwners.filter(o => o && o.tag && personIds.has(o.person));
+  // Tasks and lists can have several owners: owners is a list of person ids
+  // (the single `owner` it grew out of folds into it).
+  const ownersOf = x => {
+    if (x.owner) { x.owners = [...new Set([...(x.owners || []), x.owner])]; delete x.owner; }
+    if (Array.isArray(x.owners)) x.owners = x.owners.filter(id => personIds.has(id));
+    if (x.owners && !x.owners.length) delete x.owners;
+  };
+  (raw.projects || []).forEach(ownersOf);
+  (raw.tasks || []).forEach(ownersOf);
+  (raw.trash || []).forEach(ownersOf);
   (raw.projects || []).forEach((p, i) => {
     const pool = listEmojiPool();
     if (!p.emoji) p.emoji = p.id === '_todos' ? '🗒️' : pool[i % pool.length];
@@ -9757,8 +9767,8 @@ function allTags() {
 }
 
 // ── People: who owns what ──────────────────────────────────────────
-/* A task's owner is its own (t.owner) when set; otherwise whoever owns its
-   list (p.owner) and its tags. Each shows as a small pill of initials. */
+/* A task's owners are its own (t.owners) when set; otherwise whoever owns
+   its list (p.owners) and its tags. Each shows as a small pill of initials. */
 const PERSON_COLORS = ['#3B7CE8','#E8A84B','#2FA67A','#D9577A','#8B5CF6','#E06B3A','#1FA3B8','#7A8A2E'];
 function getPerson(id) { return (state.people || []).find(p => p.id === id) || null; }
 function personInitials(p) {
@@ -9772,27 +9782,38 @@ function tagOwner(tag) {
   const o = (state.tagOwners || []).find(o => o.tag === tag);
   return o ? getPerson(o.person) : null;
 }
-function listOwner(pid) { const p = getProject(pid); return p && p.owner ? getPerson(p.owner) : null; }
+function peopleOf(ids) { return (ids || []).map(getPerson).filter(Boolean); }
+function listOwners(pid) { const p = getProject(pid); return p ? peopleOf(p.owners) : []; }
+function ownersLabel(people) {
+  return people.length ? 'Owners: ' + people.map(p => p.name).join(', ') + '…' : 'Set owners…';
+}
+/* Adds or removes one person; null clears everyone. */
+function toggleOwnerIn(x, personId) {
+  if (!personId) { delete x.owners; return; }
+  const set = new Set(x.owners || []);
+  if (set.has(personId)) set.delete(personId); else set.add(personId);
+  if (set.size) x.owners = [...set]; else delete x.owners;
+}
 function setTagOwner(tag, personId) {
   state.tagOwners = (state.tagOwners || []).filter(o => o.tag !== tag);
   if (personId) state.tagOwners.push({tag, person: personId});
   save(); renderAll();
 }
-function setListOwner(pid, personId) {
+function toggleListOwner(pid, personId) {
   const p = getProject(pid); if (!p) return;
-  if (personId) p.owner = personId; else delete p.owner;
+  toggleOwnerIn(p, personId);
   save(); renderAll();
 }
-function setTaskOwner(t, personId) {
-  if (personId) t.owner = personId; else delete t.owner;
+function toggleTaskOwner(t, personId) {
+  toggleOwnerIn(t, personId);
   t.updatedAt = Date.now();
   save(); renderAll();
 }
 function taskOwners(t) {
-  const own = t.owner && getPerson(t.owner);
-  if (own) return [own];
+  const own = peopleOf(t.owners);
+  if (own.length) return own;
   const seen = new Map();
-  const lo = listOwner(t.pid); if (lo) seen.set(lo.id, lo);
+  listOwners(t.pid).forEach(p => seen.set(p.id, p));
   (t.tags || []).forEach(tag => { const p = tagOwner(tag); if (p) seen.set(p.id, p); });
   return [...seen.values()];
 }
@@ -9811,7 +9832,31 @@ function addPerson(then) {
   const p = newPerson(name);
   if (then) then(p); else { save(); renderAll(); }
 }
-/* One picker for every owner field: a task, a list or a tag. */
+/* Several owners for a task or a list: each tap adds or removes someone and
+   the picker stays open. The anchor's spot is kept, because the re-render
+   behind it can replace the element it was opened from. */
+function pickOwners(anchor, getIds, onToggle, title) {
+  const at = anchor && anchor.getBoundingClientRect ? anchor.getBoundingClientRect() : null;
+  const spot = at ? {getBoundingClientRect: () => at} : anchor;
+  const again = () => pickOwners(spot, getIds, onToggle, title);
+  const cur = getIds() || [];
+  showPop(spot, [
+    {label:'No owner', on: !cur.length, fn: () => onToggle(null)},
+    ...(state.people || []).map(p => ({label: p.name, hint: personPill(p), on: cur.includes(p.id),
+                                       fn: () => { onToggle(p.id); again(); }})),
+    {sep:true},
+    {label:'Add person…', icon:'＋', fn: () => addPerson(p => { onToggle(p.id); again(); })},
+    {label:'Edit people…', icon:'✏️', fn: () => openPeopleModal()},
+  ], {title});
+}
+function pickTaskOwners(anchor, t) {
+  pickOwners(anchor, () => t.owners, id => toggleTaskOwner(t, id), 'Owners of this task');
+}
+function pickListOwners(anchor, pid) {
+  const p = getProject(pid); if (!p) return;
+  pickOwners(anchor, () => p.owners, id => toggleListOwner(pid, id), 'Owners of ' + listName(pid));
+}
+/* A tag keeps one owner. */
 function pickOwner(anchor, curId, onPick, title) {
   showPop(anchor, [
     {label:'No owner', on: !curId, fn: () => onPick(null)},
@@ -9885,8 +9930,9 @@ function closePeopleModal() { document.getElementById('people-modal')?.classList
 function removePerson(id) {
   state.people = (state.people || []).filter(x => x.id !== id);
   state.tagOwners = (state.tagOwners || []).filter(o => o.person !== id);
-  state.projects.forEach(p => { if (p.owner === id) delete p.owner; });
-  state.tasks.forEach(t => { if (t.owner === id) delete t.owner; });
+  [...state.projects, ...state.tasks, ...(state.trash || [])].forEach(x => {
+    if (x.owners && x.owners.includes(id)) toggleOwnerIn(x, id);
+  });
   (state.savedFilters || []).forEach(f => { if (f.rules && f.rules.people) f.rules.people = f.rules.people.filter(x => x !== id); });
   if (UI.tagPerson === id) { UI.tagPerson = ''; uiSave(); }
   if (taskScope.type === 'person' && taskScope.id === id) { taskScope = {type:'today'}; saveScope(); }
@@ -10160,16 +10206,16 @@ function renderListsGroup() {
     li.innerHTML = `
       <span class="sb-emoji" title="Change icon">${p.emoji || '📄'}</span>
       <span class="sb-name">${esc(p.id === '_todos' ? 'General' : p.name)}${p.share ? '<span class="sb-shared" title="Shared">👥</span>' : ''}</span>
-      ${listOwner(p.id) ? personPill(listOwner(p.id)) : ''}
+      ${listOwners(p.id).length ? `<span class="tl-owners">${listOwners(p.id).map(personPill).join('')}</span>` : ''}
       <span class="sb-count">${count || ''}</span>
       <button class="sb-more" aria-label="List actions"><svg width="12" height="12" viewBox="0 0 18 18" fill="none"><circle cx="4" cy="9" r="1.5" fill="currentColor"/><circle cx="9" cy="9" r="1.5" fill="currentColor"/><circle cx="14" cy="9" r="1.5" fill="currentColor"/></svg></button>`;
     li.onclick = () => openScope({type:'list', id:p.id});
     li.oncontextmenu = e => { e.preventDefault(); openListRowMenu(e, p.id); };
     li.querySelector('.sb-emoji').onclick = e => { e.stopPropagation(); openEmojiPicker(e.currentTarget, p.id); };
     li.querySelector('.sb-more').onclick  = e => { e.stopPropagation(); openListRowMenu(e, p.id); };
-    li.querySelector('.person-pill')?.addEventListener('click', e => {
+    li.querySelector('.tl-owners')?.addEventListener('click', e => {
       e.stopPropagation();
-      pickOwner(e.currentTarget, p.owner, id => setListOwner(p.id, id), 'Owner of ' + listName(p.id));
+      pickListOwners(e.currentTarget, p.id);
     });
     attachListDrop(li, p.id);
     attachListReorder(li, p.id);
@@ -10760,7 +10806,7 @@ function commitQuickAdd() {
     updatedAt: Date.now(), createdAt: Date.now(),
   };
   if (taskScope.type === 'tag' && !t.tags.includes(taskScope.id)) t.tags.push(taskScope.id);
-  if (taskScope.type === 'person') t.owner = taskScope.id;
+  if (taskScope.type === 'person') t.owners = [taskScope.id];
   state.tasks.unshift(t);
   input.value = '';
   closeTokenMenu();
@@ -10959,15 +11005,14 @@ function renderDetail() {
   // Owner: the task's own, or else who it inherits from its list / tags.
   const ownerBtn = document.getElementById('detail-owner');
   const owners = taskOwners(t);
-  const inherited = !t.owner && owners.length;
+  const inherited = !(t.owners && t.owners.length) && owners.length;
   ownerBtn.className = 'dtop-chip' + (owners.length ? ' set' : '') + (inherited ? ' inherited' : '');
   ownerBtn.innerHTML = owners.length
-    ? owners.map(personPill).join('') + (owners.length === 1 ? `<span class="do-name">${esc(owners[0].name.split(/\s+/)[0])}</span>` : '')
+    ? owners.map(personPill).join('')
     : `<svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="5.6" r="2.7" stroke="currentColor" stroke-width="1.4"/><path d="M2.8 14c.6-2.8 2.7-4.3 5.2-4.3s4.6 1.5 5.2 4.3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg><span class="do-name">Owner</span>`;
-  ownerBtn.title = !owners.length ? 'Set owner'
-    : inherited ? 'Owner from its list or tags — tap to set one for this task'
-    : 'Owner: ' + owners[0].name;
-  ownerBtn.onclick = () => pickOwner(ownerBtn, t.owner, id => setTaskOwner(t, id), 'Owner of this task');
+  ownerBtn.title = !owners.length ? 'Set owners'
+    : (inherited ? 'From its list or tags: ' : 'Owners: ') + owners.map(p => p.name).join(', ');
+  ownerBtn.onclick = () => pickTaskOwners(ownerBtn, t);
 
   const flag = document.getElementById('detail-flag');
   flag.className = 'dtop-icon' + (t.priority ? ' on' : '');
@@ -12163,8 +12208,7 @@ function openDetailMenu(anchor, id) {
     {label:'Print', icon:'🖨', fn: () => printTask(id)},
     {label:'Delete', danger:true, fn: () => deleteTask(id)},
     {sep:true},
-    {label: t.owner && getPerson(t.owner) ? 'Owner: ' + getPerson(t.owner).name + '…' : 'Set owner…', icon:'👤',
-     fn: () => pickOwner(anchor, t.owner, pid => setTaskOwner(t, pid), 'Owner of this task')},
+    {label: ownersLabel(peopleOf(t.owners)), icon:'👤', fn: () => pickTaskOwners(anchor, t)},
     ...(FEATURE_TIME ? [{label: running ? 'Stop the timer' : 'Start timer on this task', icon:'⏱', fn: () => startTimerForDetail()}] : []),
     {html:'<div class="pop-title">Status</div>'},
   ];
@@ -12555,8 +12599,7 @@ function openTaskMenu(evt, id, anchor) {
     {label:'Medium priority', icon: '🚩', fn: () => set('priority', 2)},
     {label:'No priority',     icon: '⚑', fn: () => set('priority', 0)},
     {sep:true},
-    {label: t.owner && getPerson(t.owner) ? 'Owner: ' + getPerson(t.owner).name + '…' : 'Set owner…', icon:'👤',
-     fn: () => pickOwner(anchor || evt, t.owner, pid => setTaskOwner(t, pid), 'Owner of this task')},
+    {label: ownersLabel(peopleOf(t.owners)), icon:'👤', fn: () => pickTaskOwners(anchor || evt, t)},
     {label:'Move to Trash', danger:true, fn: () => deleteTask(id)},
   ]);
 }
@@ -12569,8 +12612,7 @@ function openListRowMenu(evt, pid) {
     {label: p.share ? 'Sharing…' : 'Share…', icon:'👥', fn: () => openShareModal(pid)},
     {label:'Change icon…', icon:'😀', fn: () => openEmojiPicker(evt.currentTarget || evt.target, pid)},
     {label:'Edit list…', icon:'✏️', fn: () => openProjectModal(pid)},
-    {label: listOwner(pid) ? 'Owner: ' + listOwner(pid).name + '…' : 'Set owner…', icon:'👤',
-     fn: () => pickOwner(evt.currentTarget || evt.target, p.owner, id => setListOwner(pid, id), 'Owner of ' + listName(pid))},
+    {label: ownersLabel(listOwners(pid)), icon:'👤', fn: () => pickListOwners(evt.currentTarget || evt.target, pid)},
   ];
   if (pid !== '_todos') items.push({sep:true}, {label:'Delete list', danger:true, fn: () => deleteListWithTasks(pid)});
   showPop(evt.currentTarget || evt, items);
