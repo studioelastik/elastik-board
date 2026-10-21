@@ -10065,8 +10065,9 @@ function renderTagsGroup() {
     : all;
   box.innerHTML = '';
 
-  // Person strip: tap someone to see only the tags they own.
-  if (all.length || people.length) {
+  // Person strip: tap someone to see only the tags they own. Always shown,
+  // so there's a way to add the first person before any tag exists.
+  {
     const strip = document.createElement('div');
     strip.className = 'sb-people';
     strip.innerHTML =
