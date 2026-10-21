@@ -11183,6 +11183,8 @@ function openDetail(id) {
   renderDetail();
 }
 function closeDetail() {
+  // Keep a tag that was typed but not yet entered.
+  document.getElementById('detail-tag-input')?._commit?.();
   detailTaskId = null;
   document.getElementById('detail-pane')?.classList.remove('mobile-open');
   renderTaskList();
@@ -11360,14 +11362,22 @@ function renderDetail() {
     t.tags = (t.tags || []).filter(x => x !== b.dataset.t); touch(); save(); renderAll();
   });
   const tagInput = document.getElementById('detail-tag-input');
-  tagInput.onkeydown = e => {
-    if (e.key !== 'Enter') return;
-    const v = tagInput.value.trim().replace(/^#/, '');
+  // A typed tag is kept however the field is left — return, a comma, tapping
+  // elsewhere, or closing the task — not only on return.
+  const commitTag = refocus => {
+    const v = tagInput.value.trim().replace(/^#/, '').replace(/,+$/, '').trim();
+    tagInput.value = '';
     if (!v) return;
     t.tags = [...new Set([...(t.tags || []), v])];
     touch(); save(); renderAll();
-    setTimeout(() => document.getElementById('detail-tag-input')?.focus(), 0);
+    if (refocus) setTimeout(() => document.getElementById('detail-tag-input')?.focus(), 0);
   };
+  tagInput._commit = () => commitTag(false);
+  tagInput.onkeydown = e => {
+    if (e.key === 'Enter' || e.keyCode === 13) { e.preventDefault(); commitTag(true); }
+  };
+  tagInput.oninput = () => { if (tagInput.value.endsWith(',')) commitTag(true); };
+  tagInput.onblur = () => commitTag(false);
   document.getElementById('detail-tag-btn').onclick = () =>
     document.getElementById('detail-tag-input')?.focus();
 
