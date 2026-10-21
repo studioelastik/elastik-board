@@ -3508,21 +3508,34 @@ label.focus-row {
 .tl-row.swipe-left .tl-swipe-right, .tl-row.swipe-right .tl-swipe-left { visibility: visible; }
 .tl-swipe-right { left: 100%; }
 .tl-swipe-left  { right: 100%; }
+/* Mail's round buttons: a coloured circle with a white glyph, its label
+   underneath when the row is tall enough, on the list's own background. */
 .tl-swipe-act button {
-  width: 74px; border: none; color: #fff; cursor: pointer;
+  width: 64px; border: none; background: none; cursor: pointer; padding: 0;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
-  font-family: inherit; font-size: 12px; font-weight: 500;
-  transition: width .15s;
+  font-family: inherit; font-size: 11px; font-weight: 500; color: var(--text-2);
+  transition: width .18s;
 }
-.sw-more { background: #8E8E93; }
-.sw-flag { background: #FF9500; }
-.sw-delete { background: #FF3B30; }
-.sw-done { background: #34C759; }
-/* A long swipe: the deciding button stretches to fill, as in Mail. */
+.tl-swipe-act button i {
+  width: 40px; height: 40px; border-radius: 20px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; transition: width .18s;
+}
+.tl-swipe-act button i svg { width: 19px; height: 19px; }
+.tl-swipe-act button span { display: none; }
+.tl-row.swipe-tall .tl-swipe-act button span { display: block; }
+.sw-more i   { background: #8E8E93; }
+.sw-flag i   { background: #FF9500; }
+.sw-delete i { background: #FF3B30; }
+.sw-done i   { background: #34C759; }
+.tl-swipe-act button:active i { filter: brightness(.88); }
+/* A long swipe: the deciding circle stretches into a pill, as in Mail. */
 .tl-row.swipe-left.swipe-full .sw-more,
-.tl-row.swipe-left.swipe-full .sw-flag { width: 0; overflow: hidden; padding: 0; }
-.tl-row.swipe-left.swipe-full .sw-delete { width: 100vw; align-items: flex-start; padding-left: 24px; }
-.tl-row.swipe-right.swipe-full .sw-done { width: 100vw; align-items: flex-end; padding-right: 24px; }
+.tl-row.swipe-left.swipe-full .sw-flag { display: none; }
+.tl-row.swipe-left.swipe-full .sw-delete,
+.tl-row.swipe-right.swipe-full .sw-done { width: 100vw; padding: 0 10px; }
+.tl-row.swipe-left.swipe-full .sw-delete i,
+.tl-row.swipe-right.swipe-full .sw-done i { width: 100%; }
 .tl-owners .person-pill { cursor: inherit; }
 .dtag .person-pill { height: 14px; min-width: 18px; font-size: 9px; margin-right: 1px; }
 .dtag { cursor: pointer; }
@@ -10886,7 +10899,7 @@ function taskRow(t) {
    else closes it. The list is CSS-zoomed on the phone, so finger distances
    are divided by that zoom before they move the row. */
 let swipeOpenRow = null;
-const SWIPE_BTN = 74;
+const SWIPE_BTN = 64;
 function closeSwipe(row, animate = true) {
   if (!row) return;
   row.style.transition = animate ? 'transform .22s cubic-bezier(.2,.8,.2,1)' : '';
@@ -10910,12 +10923,12 @@ function attachSwipe(row, t) {
   row.classList.add('swipeable');
   row.insertAdjacentHTML('beforeend', `
     <div class="tl-swipe-act tl-swipe-right">
-      <button type="button" data-a="more" class="sw-more">${icon.more}<span>More</span></button>
-      <button type="button" data-a="flag" class="sw-flag">${icon.flag}<span>${t.priority ? 'Unflag' : 'Flag'}</span></button>
-      <button type="button" data-a="delete" class="sw-delete">${icon.trash}<span>Delete</span></button>
+      <button type="button" data-a="more" class="sw-more" aria-label="More"><i>${icon.more}</i><span>More</span></button>
+      <button type="button" data-a="flag" class="sw-flag" aria-label="${t.priority ? 'Unflag' : 'Flag'}"><i>${icon.flag}</i><span>${t.priority ? 'Unflag' : 'Flag'}</span></button>
+      <button type="button" data-a="delete" class="sw-delete" aria-label="Delete"><i>${icon.trash}</i><span>Delete</span></button>
     </div>
     <div class="tl-swipe-act tl-swipe-left">
-      <button type="button" data-a="done" class="sw-done">${icon.check}<span>${done ? 'Reopen' : 'Done'}</span></button>
+      <button type="button" data-a="done" class="sw-done" aria-label="${done ? 'Reopen' : 'Done'}"><i>${icon.check}</i><span>${done ? 'Reopen' : 'Done'}</span></button>
     </div>`);
 
   const act = {
@@ -10963,6 +10976,8 @@ function attachSwipe(row, t) {
       if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) {
         mode = 'swipe';
         if (swipeOpenRow && swipeOpenRow !== row) closeSwipe(swipeOpenRow);
+        // Labels go under the circles only where the row has room for them.
+        row.classList.toggle('swipe-tall', row.getBoundingClientRect().height / zoom() >= 62);
         row.style.transition = '';
         try { row.setPointerCapture(e.pointerId); } catch (_) {}
       } else return;
