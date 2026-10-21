@@ -3307,6 +3307,21 @@ label.focus-row {
 .sb-row:hover .sb-count { display: none; }
 .sb-more:hover { background: color-mix(in srgb, var(--text) 12%, transparent); color: var(--text); }
 .sb-swatch { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+/* A list's folders sit indented under it in the sidebar. */
+.sb-nested { padding-left: 30px !important; }
+.sb-nested .sb-emoji { font-size: 13px; }
+/* A folder heading inside a list. */
+.tl-section .tl-group-head { padding-right: 4px; }
+.tlg-spacer { flex: 1; }
+.tlg-btn {
+  width: 28px; height: 28px; border-radius: 7px; flex-shrink: 0;
+  border: none; background: none; cursor: pointer; color: var(--text-3);
+  display: flex; align-items: center; justify-content: center;
+}
+.tlg-btn:hover { background: var(--mc-hover, rgba(0,0,0,.05)); color: var(--text); }
+.tl-group-head.drop-target { color: var(--accent); }
+.tl-sec-empty { padding: 4px 4px 10px 30px; font-size: 13px; color: var(--text-3); }
+.dfoot-sec { margin-left: 4px; color: var(--text-2); }
 /* Section rows keep their grouping role, one notch quieter */
 .sb-sec {
   margin: 7px 7px 1px; padding: 2px 8px;
@@ -7713,8 +7728,9 @@ function openAddFromScope() {
   if (!onTasks) return;
   document.getElementById('task-due-input').value = defaultDueForScope();
   addScopeExtras = {
-    tag:   taskScope.type === 'tag'    ? taskScope.id : null,
-    owner: taskScope.type === 'person' ? taskScope.id : null,
+    tag:     taskScope.type === 'tag'      ? taskScope.id : null,
+    owner:   taskScope.type === 'person'   ? taskScope.id : null,
+    section: taskScope.type === 'lsection' ? taskScope.id : null,
   };
 }
 function saveTask() {
@@ -7737,6 +7753,7 @@ function saveTask() {
     const x = addScopeExtras;
     if (x && x.tag && !t.tags.includes(x.tag)) t.tags.push(x.tag);
     if (x && x.owner) t.owners = [x.owner];
+    if (x && x.section && getSection(t.pid, x.section)) t.section = x.section;
     if (status === 'archive') t.archivedAt = Date.now();
     // New tasks go on top, as from the add bar.
     state.tasks.unshift(t);
@@ -9746,6 +9763,15 @@ function shellMigrate(raw) {
   if (typeof raw.listLimit !== 'number') raw.listLimit = 9;
   // People who own tags. Owners are a list of {tag, person} rather than a map
   // keyed by tag, because Firebase refuses keys with . # $ / [ ] in them.
+  // Folders inside a list: `sections` on the list ({id, name}), `section` on
+  // the task. A task whose section isn't in its current list has none.
+  (raw.projects || []).forEach(p => {
+    if (!Array.isArray(p.sections)) p.sections = [];
+    delete p.folder;                       // list folders were tried and removed
+  });
+  delete raw.folders;
+  const secOf = new Map((raw.projects || []).map(p => [p.id, new Set(p.sections.map(s => s.id))]));
+  (raw.tasks || []).forEach(t => { if (t.section && !(secOf.get(t.pid) || new Set()).has(t.section)) delete t.section; });
   if (!Array.isArray(raw.people)) raw.people = [];
   if (!Array.isArray(raw.tagOwners)) raw.tagOwners = [];
   const personIds = new Set(raw.people.map(p => p.id));
@@ -10139,6 +10165,74 @@ function removePerson(id) {
   save(); renderAll();
 }
 
+// ── Folders inside a list ──────────────────────────────────────────────
+/* A list (LMG) holds any number of folders, and each folder its tasks.
+   Stored as `sections` on the list and `section` on the task. */
+function listSections(pid) { return (getProject(pid) || {}).sections || []; }
+function getSection(pid, sid) { return listSections(pid).find(s => s.id === sid) || null; }
+function taskSection(t) { return t.section ? getSection(t.pid, t.section) : null; }
+function addSection(pid, then) {
+  const p = getProject(pid); if (!p) return;
+  const name = (prompt('New folder in ' + listName(pid)) || '').trim();
+  if (!name) return;
+  p.sections = p.sections || [];
+  const sec = {id: uid(), name};
+  p.sections.push(sec);
+  if (then) then(sec);
+  save(); renderAll();
+}
+function setTaskSection(t, sid) {
+  if (sid) t.section = sid; else delete t.section;
+  t.updatedAt = Date.now();
+  save(); renderAll();
+}
+function openMoveToSection(anchor, t) {
+  const secs = listSections(t.pid);
+  showPop(anchor, [
+    {label:'No folder', on: !taskSection(t), fn: () => setTaskSection(t, null)},
+    ...secs.map(s => ({label: s.name, icon: '📁', on: t.section === s.id, fn: () => setTaskSection(t, s.id)})),
+    {sep:true},
+    {label:'New folder…', icon:'＋', fn: () => addSection(t.pid, s => { t.section = s.id; t.updatedAt = Date.now(); })},
+  ], {title: 'Folder in ' + listName(t.pid)});
+}
+function openSectionMenu(anchor, pid, sid) {
+  const p = getProject(pid), sec = getSection(pid, sid);
+  if (!p || !sec) return;
+  const i = p.sections.indexOf(sec);
+  showPop(anchor, [
+    {label:'Add task here', icon:'＋', fn: () => openAddInSection(pid, sid)},
+    {label:'Open folder', icon:'→', fn: () => openScope({type:'lsection', pid, id: sid})},
+    {label:'Rename folder…', icon:'✏️', fn: () => {
+      const name = (prompt('Rename folder', sec.name) || '').trim();
+      if (name && name !== sec.name) { sec.name = name; save(); renderAll(); }
+    }},
+    ...(i > 0 ? [{label:'Move up', icon:'↑', fn: () => { p.sections.splice(i, 1); p.sections.splice(i - 1, 0, sec); save(); renderAll(); }}] : []),
+    ...(i < p.sections.length - 1 ? [{label:'Move down', icon:'↓', fn: () => { p.sections.splice(i, 1); p.sections.splice(i + 1, 0, sec); save(); renderAll(); }}] : []),
+    {sep:true},
+    {label:'Delete folder', danger:true, fn: () => {
+      const n = state.tasks.filter(t => t.pid === pid && t.section === sid).length;
+      if (n && !confirm(`Delete the folder “${sec.name}”? Its ${n} task${n === 1 ? '' : 's'} stay in ${listName(pid)}.`)) return;
+      state.tasks.forEach(t => { if (t.pid === pid && t.section === sid) delete t.section; });
+      p.sections = p.sections.filter(x => x !== sec);
+      if (taskScope.type === 'lsection' && taskScope.id === sid) openScope({type:'list', id: pid});
+      save(); renderAll();
+    }},
+  ], {title: sec.name});
+}
+/* Adding a task straight into a folder: the phone's form, or the desktop's
+   add bar with the folder remembered for the next task it files. */
+let addBarSection = null;
+function openAddInSection(pid, sid) {
+  if (matchMedia('(max-width: 768px)').matches) {
+    openTaskModal(null, 'next', pid);
+    addScopeExtras = {tag: null, owner: null, section: sid};
+    return;
+  }
+  addBarSection = {pid, sid};
+  const input = document.getElementById('add-task-input');
+  if (input) { input.placeholder = 'Add task to ' + (getSection(pid, sid) || {}).name; input.focus(); }
+}
+
 // ── Scope: what the task pane is showing ───────────────────────────────
 let taskScope = (function () {
   try {
@@ -10151,6 +10245,7 @@ let taskScope = (function () {
     if (s.type === 'inbox') return {type:'list', id:'_todos'};
     if (s.type === 'list' && !getProject(s.id)) return {type:'today'};
     if (s.type === 'person' && !(state.people || []).some(p => p.id === s.id)) return {type:'today'};
+    if (s.type === 'lsection' && !(getProject(s.pid)?.sections || []).some(x => x.id === s.id)) return {type:'today'};
     return s;
   }
   catch (_) { return {type:'today'}; }
@@ -10170,6 +10265,7 @@ function scopeTitle() {
     case 'trash':     return 'Trash';
     case 'tag':       return '#' + taskScope.id;
     case 'person':    { const p = getPerson(taskScope.id); return p ? p.name : 'Person'; }
+    case 'lsection':  { const s = getSection(taskScope.pid, taskScope.id); return s ? s.name : 'Folder'; }
     case 'all':       return 'All tasks';
     case 'filter': {
       const f = (state.savedFilters || []).find(f => f.id === taskScope.id);
@@ -10187,6 +10283,7 @@ function scopeEmoji() {
     case 'trash': return '🗑️';
     case 'tag': return '🏷️';
     case 'person': return '👤';
+    case 'lsection': return '📁';
     case 'all': return '🌐';
     case 'filter': {
       const f = (state.savedFilters || []).find(f => f.id === taskScope.id);
@@ -10242,6 +10339,9 @@ function scopeTasks() {
     case 'person':
       out = out.filter(t => taskOwners(t).some(p => p.id === taskScope.id));
       break;
+    case 'lsection':
+      out = out.filter(t => t.pid === taskScope.pid && t.section === taskScope.id);
+      break;
     case 'filter':
       out = out.filter(t => filterMatches((state.savedFilters || []).find(f => f.id === taskScope.id), t));
       break;
@@ -10276,6 +10376,7 @@ function scopeCompleted() {
     case 'list':   out = closed.filter(t => t.pid === taskScope.id); break;
     case 'tag':    out = closed.filter(t => (t.tags || []).includes(taskScope.id)); break;
     case 'person': out = closed.filter(t => taskOwners(t).some(p => p.id === taskScope.id)); break;
+    case 'lsection': out = closed.filter(t => t.pid === taskScope.pid && t.section === taskScope.id); break;
     case 'filter': {
       const f = (state.savedFilters || []).find(f => f.id === taskScope.id);
       out = closed.filter(t => filterMatches(f, t));
@@ -10326,6 +10427,7 @@ function groupKeyFor(t) {
 // ── Navigation ─────────────────────────────────────────────────────────
 function openScope(sc) {
   taskScope = sc;
+  addBarSection = null;
   saveScope();
   detailTaskId = null;
   completedShown = COMPLETED_PAGE;
@@ -10420,6 +10522,32 @@ function renderListsGroup() {
     attachListDrop(li, p.id);
     attachListReorder(li, p.id);
     ul.appendChild(li);
+    // The list's folders, indented under it.
+    (p.sections || []).forEach(sec => {
+      const n = state.tasks.filter(t => t.pid === p.id && t.section === sec.id && isOpen(t)).length;
+      const on = currentView === 'tasks' && taskScope.type === 'lsection' && taskScope.id === sec.id;
+      const row = document.createElement('li');
+      row.className = 'sb-row sb-nested' + (on ? ' active' : '');
+      row.innerHTML = `
+        <span class="sb-emoji">📁</span>
+        <span class="sb-name">${esc(sec.name)}</span>
+        <span class="sb-count">${n || ''}</span>
+        <button class="sb-more" aria-label="Folder actions"><svg width="12" height="12" viewBox="0 0 18 18" fill="none"><circle cx="4" cy="9" r="1.5" fill="currentColor"/><circle cx="9" cy="9" r="1.5" fill="currentColor"/><circle cx="14" cy="9" r="1.5" fill="currentColor"/></svg></button>`;
+      row.onclick = () => openScope({type:'lsection', pid: p.id, id: sec.id});
+      row.oncontextmenu = e => { e.preventDefault(); openSectionMenu(e, p.id, sec.id); };
+      row.querySelector('.sb-more').onclick = e => { e.stopPropagation(); openSectionMenu(e.currentTarget, p.id, sec.id); };
+      // A task dropped here moves into the folder (and the list).
+      row.ondragover = e => { if (dragTaskId) { e.preventDefault(); row.classList.add('drop-target'); } };
+      row.ondragleave = () => row.classList.remove('drop-target');
+      row.ondrop = e => {
+        row.classList.remove('drop-target');
+        const t = dragTaskId && getTask(dragTaskId);
+        if (!t) return;
+        e.preventDefault(); e.stopPropagation();
+        t.pid = p.id; setTaskSection(t, sec.id);
+      };
+      ul.appendChild(row);
+    });
   });
 }
 
@@ -10715,8 +10843,10 @@ function renderTasksView() {
   const addBox = document.getElementById('tasks-add');
   if (addBox) addBox.style.display = (taskScope.type === 'trash' || taskScope.type === 'completed') ? 'none' : '';
   const input = document.getElementById('add-task-input');
-  if (input) input.placeholder = taskScope.type === 'list'
-    ? 'Add task to ' + scopeTitle()
+  const barSec = addBarSection && taskScope.type === 'list' && addBarSection.pid === taskScope.id
+    && getSection(addBarSection.pid, addBarSection.sid);
+  if (input) input.placeholder = barSec ? 'Add task to ' + barSec.name
+    : taskScope.type === 'list' || taskScope.type === 'lsection' ? 'Add task to ' + scopeTitle()
     : 'Add task';
 
   renderShellTimer();
@@ -10734,6 +10864,38 @@ function groupHead(label, count, key, collapsed) {
     uiSave(); renderTaskList();
   };
   return head;
+}
+
+/* One folder inside a list: a heading with its count, a + to add straight
+   into it and a ••• for the rest; tasks dragged onto it (desktop) move in. */
+function sectionGroup(pid, sec, items) {
+  const key = 'sec:' + sec.id;
+  const collapsed = UI.collapsedGroups.has(key);
+  const wrap = document.createElement('div');
+  wrap.className = 'tl-group tl-section' + (collapsed ? ' collapsed' : '');
+  const head = groupHead('📁  ' + sec.name, items.length, key, collapsed);
+  head.insertAdjacentHTML('beforeend', `
+    <span class="tlg-spacer"></span>
+    <button type="button" class="tlg-btn tlg-add" aria-label="Add task to ${esc(sec.name)}"><svg width="13" height="13" viewBox="0 0 12 12" fill="none"><path d="M6 1.5v9M1.5 6h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+    <button type="button" class="tlg-btn tlg-more" aria-label="Folder actions"><svg width="13" height="13" viewBox="0 0 18 18" fill="none"><circle cx="4" cy="9" r="1.5" fill="currentColor"/><circle cx="9" cy="9" r="1.5" fill="currentColor"/><circle cx="14" cy="9" r="1.5" fill="currentColor"/></svg></button>`);
+  head.querySelector('.tlg-add').onclick = e => { e.stopPropagation(); openAddInSection(pid, sec.id); };
+  head.querySelector('.tlg-more').onclick = e => { e.stopPropagation(); openSectionMenu(e.currentTarget, pid, sec.id); };
+  head.ondragover = e => { if (dragTaskId) { e.preventDefault(); head.classList.add('drop-target'); } };
+  head.ondragleave = () => head.classList.remove('drop-target');
+  head.ondrop = e => {
+    head.classList.remove('drop-target');
+    const t = dragTaskId && getTask(dragTaskId);
+    if (!t) return;
+    e.preventDefault();
+    if (t.pid !== pid) t.pid = pid;
+    setTaskSection(t, sec.id);
+  };
+  const body = document.createElement('div');
+  body.className = 'tl-group-body';
+  items.forEach(t => body.appendChild(taskRow(t)));
+  if (!items.length) body.insertAdjacentHTML('beforeend', '<div class="tl-sec-empty">No tasks yet</div>');
+  wrap.append(head, body);
+  return wrap;
 }
 
 /* A list with years of history shouldn't build thousands of rows the moment
@@ -10768,7 +10930,8 @@ function renderTaskList() {
   const closed = UI.hideCompleted ? [] : scopeCompleted();
   box.innerHTML = '';
 
-  if (!rows.length && !closed.length) {
+  const secs = taskScope.type === 'list' && UI.group === 'none' ? listSections(taskScope.id) : [];
+  if (!rows.length && !closed.length && !secs.length) {
     const msg = {
       today: ['🌤️', 'Nothing due today.'],
       next7: ['🗓️', 'The week ahead is clear.'],
@@ -10779,7 +10942,12 @@ function renderTaskList() {
     return;
   }
 
-  if (UI.group === 'none') {
+  if (secs.length) {
+    // Tasks outside any folder first, then each folder — empty ones too, so
+    // there's somewhere to add to.
+    rows.filter(t => !taskSection(t)).forEach(t => box.appendChild(taskRow(t)));
+    secs.forEach(sec => box.appendChild(sectionGroup(taskScope.id, sec, rows.filter(t => t.section === sec.id))));
+  } else if (UI.group === 'none') {
     rows.forEach(t => box.appendChild(taskRow(t)));
   } else {
     const groups = new Map();
@@ -11107,6 +11275,7 @@ function parseQuickAdd(text) {
 }
 function defaultPidForScope() {
   if (taskScope.type === 'list') return taskScope.id;
+  if (taskScope.type === 'lsection') return taskScope.pid;
   if (filterProject) return filterProject;
   return '_todos';
 }
@@ -11131,6 +11300,8 @@ function commitQuickAdd() {
   };
   if (taskScope.type === 'tag' && !t.tags.includes(taskScope.id)) t.tags.push(taskScope.id);
   if (taskScope.type === 'person') t.owners = [taskScope.id];
+  if (taskScope.type === 'lsection') t.section = taskScope.id;
+  else if (addBarSection && addBarSection.pid === t.pid && getSection(t.pid, addBarSection.sid)) t.section = addBarSection.sid;
   state.tasks.unshift(t);
   input.value = '';
   closeTokenMenu();
@@ -11448,8 +11619,13 @@ function renderDetail() {
 
   // ── Footer ──
   const listBtn = document.getElementById('detail-list-btn');
-  listBtn.innerHTML = `<span class="dfoot-emoji">${listEmoji(t.pid)}</span><span>${esc(listName(t.pid))}</span>`;
-  listBtn.onclick = () => openMoveMenu(listBtn, t.id);
+  const sec = taskSection(t);
+  listBtn.innerHTML = `<span class="dfoot-emoji">${listEmoji(t.pid)}</span><span>${esc(listName(t.pid))}</span>` +
+    (sec ? `<span class="dfoot-sec">/ 📁 ${esc(sec.name)}</span>` : '');
+  listBtn.onclick = e => {
+    if (e.target.closest('.dfoot-sec')) openMoveToSection(listBtn, t);
+    else openMoveMenu(listBtn, t.id);
+  };
   document.getElementById('detail-more').onclick = e => openDetailMenu(e.currentTarget, t.id);
 }
 
@@ -12543,6 +12719,7 @@ function openDetailMenu(anchor, id) {
     {label:'Delete', danger:true, fn: () => deleteTask(id)},
     {sep:true},
     {label: ownersLabel(peopleOf(t.owners)), icon:'👤', fn: () => pickTaskOwners(anchor, t)},
+    {label: taskSection(t) ? 'Folder: ' + taskSection(t).name + '…' : 'Move to folder…', icon:'📁', fn: () => openMoveToSection(anchor, t)},
     ...(FEATURE_TIME ? [{label: running ? 'Stop the timer' : 'Start timer on this task', icon:'⏱', fn: () => startTimerForDetail()}] : []),
     {html:'<div class="pop-title">Status</div>'},
   ];
@@ -12905,6 +13082,7 @@ function openListMenu(anchor) {
     {label: getProject(lid)?.share ? 'Sharing…' : 'Share…', icon:'👥', fn: () => openShareModal(lid)},
     {label:'Change icon…', icon:'😀', fn: () => openEmojiPicker(anchor, lid)},
     {label:'Edit list…', icon:'✏️', fn: () => openProjectModal(lid)},
+    {label:'New folder…', icon:'📁', fn: () => addSection(lid)},
     {label:'Import tasks…', icon:'📥', fn: () => openImportModal(lid)},
   );
   if (lid && lid !== '_todos') items.push({label:'Delete list', danger:true, fn: () => deleteListWithTasks(lid)});
@@ -12935,6 +13113,7 @@ function openTaskMenu(evt, id, anchor) {
     {label:'No priority',     icon: '⚑', fn: () => set('priority', 0)},
     {sep:true},
     {label: ownersLabel(peopleOf(t.owners)), icon:'👤', fn: () => pickTaskOwners(anchor || evt, t)},
+    {label: taskSection(t) ? 'Folder: ' + taskSection(t).name + '…' : 'Move to folder…', icon:'📁', fn: () => openMoveToSection(anchor || evt, t)},
     {label:'Move to Trash', danger:true, fn: () => deleteTask(id)},
   ]);
 }
@@ -12948,6 +13127,7 @@ function openListRowMenu(evt, pid) {
     {label:'Change icon…', icon:'😀', fn: () => openEmojiPicker(evt.currentTarget || evt.target, pid)},
     {label:'Edit list…', icon:'✏️', fn: () => openProjectModal(pid)},
     {label: ownersLabel(listOwners(pid)), icon:'👤', fn: () => pickListOwners(evt.currentTarget || evt.target, pid)},
+    {label:'New folder…', icon:'📁', fn: () => addSection(pid)},
     {label:'Import tasks…', icon:'📥', fn: () => openImportModal(pid)},
   ];
   if (pid !== '_todos') items.push({sep:true}, {label:'Delete list', danger:true, fn: () => deleteListWithTasks(pid)});
