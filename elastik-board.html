@@ -4598,13 +4598,12 @@ body.chrome-off #col-filter-bar { display: none !important; }
   }
 
   /* The task sheet sits square on the phone: even margins left and right.
-     The description gets its own gutter for the insert +, always shown
-     (there's no hover on a phone), finger-sized. */
+     The insert + sits in the left margin beside the description, always
+     shown (there's no hover on a phone). */
   #detail-scroll { padding-left: 22px; padding-right: 22px; }
-  #detail-note-wrap { padding-left: 32px; }
   #detail-plus {
-    left: -4px; width: 30px; height: 30px; margin-top: -4px;
-    opacity: 1; color: var(--text-2); border-radius: 8px;
+    left: -22px; width: 22px; height: 30px; margin-top: -4px;
+    opacity: 1; color: var(--text-2); border-radius: 6px;
   }
   #detail-plus svg { width: 15px; height: 15px; }
   #detail-top { padding-left: 16px; padding-right: 16px; }
@@ -4662,6 +4661,8 @@ body.chrome-off #col-filter-bar { display: none !important; }
 /* The description is edited in place, so the old full-screen notes editor
    (a jump to the board's card view) has no door in from a task. */
 #detail-notes-btn { display: none !important; }
+/* Attach from the task's ••• menu (Upload Attachment), or drop files on it. */
+#detail-attach-btn { display: none !important; }
 
 /* Pull to refresh (phones): there is no browser reload in a home-screen app. */
 #ptr {
