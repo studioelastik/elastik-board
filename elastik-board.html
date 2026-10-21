@@ -4643,6 +4643,19 @@ body.chrome-off #col-filter-bar { display: none !important; }
   width: 56px; height: 56px; transform: none;
 }
 .bnav-add svg { width: 24px; height: 24px; }
+/* Sit the bar low: the home indicator only needs part of its safe area,
+   so the icons drop into the rest of it. */
+#bottom-nav {
+  --bnav-pad: max(4px, calc(env(safe-area-inset-bottom, 0px) - 18px));
+  height: calc(50px + var(--bnav-pad));
+  padding-bottom: var(--bnav-pad);
+}
+/* A task becomes a checklist from Add Subtask in its ••• menu (or / in the
+   description), and goes back from the same menu — no title-row switch. */
+#detail-mode { display: none !important; }
+/* The description is edited in place, so the old full-screen notes editor
+   (a jump to the board's card view) has no door in from a task. */
+#detail-notes-btn { display: none !important; }
 
 /* Pull to refresh (phones): there is no browser reload in a home-screen app. */
 #ptr {
@@ -12121,6 +12134,9 @@ function openDetailMenu(anchor, id) {
       setChecklistMode(t, true); renderDetail(); renderTaskList();
       setTimeout(() => document.getElementById('sub-new-input')?.focus(), 30);
     }},
+    ...(t.checklist ? [{label:'Back to a plain task', icon:'≡', fn: () => {
+      setChecklistMode(t, false); renderDetail(); renderTaskList();
+    }}] : []),
     {label: pinned ? 'Unpin from Today' : 'Pin to Today', icon:'⇧',
      hint: pinned ? '' : todayPins.filter(Boolean).length + '/3',
      fn: () => {
@@ -12541,7 +12557,6 @@ function openTaskMenu(evt, id, anchor) {
     {sep:true},
     {label: t.owner && getPerson(t.owner) ? 'Owner: ' + getPerson(t.owner).name + '…' : 'Set owner…', icon:'👤',
      fn: () => pickOwner(anchor || evt, t.owner, pid => setTaskOwner(t, pid), 'Owner of this task')},
-    {label:'Open notes editor', icon:'📝', fn: () => { setView('kanban'); setTimeout(() => openCard(id), 60); }},
     {label:'Move to Trash', danger:true, fn: () => deleteTask(id)},
   ]);
 }
