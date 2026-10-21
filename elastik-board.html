@@ -3487,6 +3487,30 @@ label.focus-row {
   padding: 0 5px; border-radius: 4px; font-size: 11px;
 }
 .tl-list-chip { display: inline-flex; align-items: center; gap: 4px; }
+/* Initials of whoever owns a tag — on task rows, tag rows and the detail pane. */
+.person-pill {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 20px; height: 16px; padding: 0 5px; box-sizing: border-box;
+  border-radius: 8px; flex-shrink: 0;
+  background: var(--pp, var(--accent)); color: #fff;
+  font-size: 9.5px; font-weight: 600; letter-spacing: .02em; line-height: 1;
+  font-variant-numeric: normal; cursor: pointer;
+}
+.tl-owners { display: inline-flex; gap: 3px; }
+.tl-owners .person-pill { cursor: inherit; }
+.dtag .person-pill { height: 14px; min-width: 18px; font-size: 9px; margin-right: 1px; }
+.dtag { cursor: pointer; }
+.sb-people { display: flex; flex-wrap: wrap; gap: 4px; margin: 2px 15px 6px; }
+.sb-person {
+  display: inline-flex; align-items: center; gap: 5px;
+  border: 1px solid var(--border); background: none; color: var(--text-2);
+  border-radius: 11px; padding: 2px 8px 2px 3px; min-height: 22px;
+  font-family: inherit; font-size: 11.5px; cursor: pointer;
+}
+.sb-person[data-p=""], .sb-person-add { padding: 2px 8px; }
+.sb-person:hover { color: var(--text); background: color-mix(in srgb, var(--text) 6%, transparent); }
+.sb-person.on { color: var(--text); border-color: var(--accent); background: var(--accent-bg); }
+.sb-person-add { color: var(--text-3); }
 .tl-flag { flex-shrink: 0; }
 .tl-empty {
   padding: 60px 20px; text-align: center;
@@ -9538,6 +9562,8 @@ const UI = {
   hideCompleted: localStorage.getItem('mc_hide_done') === '1',
   collapsedGroups: new Set(JSON.parse(localStorage.getItem('mc_collapsed_groups') || '[]')),
   sbCollapsed: new Set(JSON.parse(localStorage.getItem('mc_sb_collapsed') || '[]')),
+  // The sidebar's Tags group narrowed to one person's tags ('' = everyone).
+  tagPerson: localStorage.getItem('mc_tag_person') || '',
 };
 function uiSave() {
   try {
@@ -9546,6 +9572,7 @@ function uiSave() {
     localStorage.setItem('mc_hide_done', UI.hideCompleted ? '1' : '0');
     localStorage.setItem('mc_collapsed_groups', JSON.stringify([...UI.collapsedGroups]));
     localStorage.setItem('mc_sb_collapsed', JSON.stringify([...UI.sbCollapsed]));
+    localStorage.setItem('mc_tag_person', UI.tagPerson || '');
   } catch (_) {}
 }
 
@@ -9568,6 +9595,12 @@ function shellMigrate(raw) {
   raw.trash.forEach(t => { delete t.asana; });
   if (raw.projects) raw.projects = raw.projects.filter(p => p.id !== '_asana');
   if (typeof raw.listLimit !== 'number') raw.listLimit = 9;
+  // People who own tags. Owners are a list of {tag, person} rather than a map
+  // keyed by tag, because Firebase refuses keys with . # $ / [ ] in them.
+  if (!Array.isArray(raw.people)) raw.people = [];
+  if (!Array.isArray(raw.tagOwners)) raw.tagOwners = [];
+  const personIds = new Set(raw.people.map(p => p.id));
+  raw.tagOwners = raw.tagOwners.filter(o => o && o.tag && personIds.has(o.person));
   (raw.projects || []).forEach((p, i) => {
     const pool = listEmojiPool();
     if (!p.emoji) p.emoji = p.id === '_todos' ? '🗒️' : pool[i % pool.length];
@@ -9643,6 +9676,72 @@ function allTags() {
   return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0]));
 }
 
+// ── People: who owns a tag ─────────────────────────────────────────────
+/* Each tag can have one owner. A task shows the owners of its tags as
+   small initial pills, so it's clear at a glance whose project it is. */
+const PERSON_COLORS = ['#3B7CE8','#E8A84B','#2FA67A','#D9577A','#8B5CF6','#E06B3A','#1FA3B8','#7A8A2E'];
+function getPerson(id) { return (state.people || []).find(p => p.id === id) || null; }
+function personInitials(name) {
+  const words = String(name || '').trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return '?';
+  const s = words.length > 1 ? words[0][0] + words[words.length - 1][0] : words[0].slice(0, 2);
+  return s.toUpperCase();
+}
+function tagOwner(tag) {
+  const o = (state.tagOwners || []).find(o => o.tag === tag);
+  return o ? getPerson(o.person) : null;
+}
+function setTagOwner(tag, personId) {
+  state.tagOwners = (state.tagOwners || []).filter(o => o.tag !== tag);
+  if (personId) state.tagOwners.push({tag, person: personId});
+  save(); renderAll();
+}
+function taskOwners(t) {
+  const seen = new Map();
+  (t.tags || []).forEach(tag => { const p = tagOwner(tag); if (p) seen.set(p.id, p); });
+  return [...seen.values()];
+}
+function personPill(p) {
+  return `<span class="person-pill" style="--pp:${esc(p.color)}" title="${esc(p.name)}">${esc(personInitials(p.name))}</span>`;
+}
+function addPerson(then) {
+  const name = (prompt('Person’s name') || '').trim();
+  if (!name) return;
+  state.people = state.people || [];
+  const p = {id: uid(), name, color: PERSON_COLORS[state.people.length % PERSON_COLORS.length]};
+  state.people.push(p);
+  if (then) then(p); else { save(); renderAll(); }
+}
+function openOwnerMenu(anchor, tag) {
+  const cur = tagOwner(tag);
+  showPop(anchor, [
+    {label:'No owner', on: !cur, fn: () => setTagOwner(tag, null)},
+    ...(state.people || []).map(p => ({label: p.name, on: !!cur && cur.id === p.id, fn: () => setTagOwner(tag, p.id)})),
+    {sep:true},
+    {label:'Add person…', icon:'＋', fn: () => addPerson(p => setTagOwner(tag, p.id))},
+  ], {title: 'Owner of #' + tag});
+}
+function openPersonMenu(anchor, p) {
+  showPop(anchor, [
+    {label:'Rename…', icon:'✏️', fn: () => {
+      const name = (prompt('Rename person', p.name) || '').trim();
+      if (name && name !== p.name) { p.name = name; save(); renderAll(); }
+    }},
+    {label:'Colour', icon:'🎨', fn: () => {
+      p.color = PERSON_COLORS[(PERSON_COLORS.indexOf(p.color) + 1) % PERSON_COLORS.length];
+      save(); renderAll();
+    }},
+    {sep:true},
+    {label:'Remove person', danger:true, fn: () => {
+      state.people = state.people.filter(x => x.id !== p.id);
+      state.tagOwners = (state.tagOwners || []).filter(o => o.person !== p.id);
+      (state.savedFilters || []).forEach(f => { if (f.rules && f.rules.people) f.rules.people = f.rules.people.filter(id => id !== p.id); });
+      if (UI.tagPerson === p.id) { UI.tagPerson = ''; uiSave(); }
+      save(); renderAll();
+    }},
+  ], {title: p.name});
+}
+
 // ── Scope: what the task pane is showing ───────────────────────────────
 let taskScope = (function () {
   try {
@@ -9705,6 +9804,7 @@ function filterMatches(f, t) {
   const r = f.rules || {};
   if (r.lists && r.lists.length && !r.lists.includes(t.pid)) return false;
   if (r.tags && r.tags.length && !(t.tags || []).some(tag => r.tags.includes(tag))) return false;
+  if (r.people && r.people.length && !taskOwners(t).some(p => r.people.includes(p.id))) return false;
   if (r.status && r.status.length && !r.status.includes(t.status)) return false;
   if (r.priority && r.priority.length && !r.priority.includes(t.priority || 0)) return false;
   if (r.due) {
@@ -9957,12 +10057,44 @@ function renderTagsGroup() {
   if (!box) return;
   const grp = document.getElementById('grp-tags');
   if (grp) grp.classList.toggle('collapsed', UI.sbCollapsed.has('tags'));
-  const tags = allTags();
-  if (!tags.length) {
-    box.innerHTML = `<div class="sb-empty">Categorize your tasks with tags. Quickly select a tag by typing "#" when adding a task</div>`;
+  const people = state.people || [];
+  if (UI.tagPerson && !getPerson(UI.tagPerson)) UI.tagPerson = '';
+  const all = allTags();
+  const tags = UI.tagPerson
+    ? all.filter(([tag]) => { const o = tagOwner(tag); return o && o.id === UI.tagPerson; })
+    : all;
+  box.innerHTML = '';
+
+  // Person strip: tap someone to see only the tags they own.
+  if (all.length || people.length) {
+    const strip = document.createElement('div');
+    strip.className = 'sb-people';
+    strip.innerHTML =
+      `<button type="button" class="sb-person${UI.tagPerson ? '' : ' on'}" data-p="">All</button>` +
+      people.map(p => `<button type="button" class="sb-person${UI.tagPerson === p.id ? ' on' : ''}" data-p="${esc(p.id)}" title="${esc(p.name)} — click again to edit">${personPill(p)}<span>${esc(p.name.split(/\s+/)[0])}</span></button>`).join('') +
+      `<button type="button" class="sb-person sb-person-add" title="Add person" aria-label="Add person">＋</button>`;
+    strip.querySelectorAll('.sb-person[data-p]').forEach(b => {
+      const p = getPerson(b.dataset.p);
+      // Tapping the person already picked opens their menu — the way in on
+      // a phone, where there's no right-click.
+      b.onclick = () => {
+        if (p && UI.tagPerson === p.id) { openPersonMenu(b, p); return; }
+        UI.tagPerson = b.dataset.p; uiSave(); renderTagsGroup();
+      };
+      if (p) b.oncontextmenu = e => { e.preventDefault(); openPersonMenu(e, p); };
+    });
+    strip.querySelector('.sb-person-add').onclick = () => addPerson();
+    box.appendChild(strip);
+  }
+
+  if (!all.length) {
+    box.insertAdjacentHTML('beforeend', `<div class="sb-empty">Categorize your tasks with tags. Quickly select a tag by typing "#" when adding a task</div>`);
     return;
   }
-  box.innerHTML = '';
+  if (!tags.length) {
+    box.insertAdjacentHTML('beforeend', `<div class="sb-empty">${esc(getPerson(UI.tagPerson).name)} doesn’t own any tags yet. Set an owner from a tag’s ••• menu.</div>`);
+    return;
+  }
   tags.forEach(([tag, count]) => {
     const active = currentView === 'tasks' && taskScope.type === 'tag' && taskScope.id === tag;
     const row = document.createElement('div');
@@ -9970,16 +10102,21 @@ function renderTagsGroup() {
     row.innerHTML = `
       <span class="sb-emoji" style="font-size:13px;color:var(--accent)">#</span>
       <span class="sb-name">${esc(tag)}</span>
+      ${tagOwner(tag) ? personPill(tagOwner(tag)) : ''}
       <span class="sb-count">${count || ''}</span>
       <button class="sb-more" aria-label="Tag actions"><svg width="12" height="12" viewBox="0 0 18 18" fill="none"><circle cx="4" cy="9" r="1.5" fill="currentColor"/><circle cx="9" cy="9" r="1.5" fill="currentColor"/><circle cx="14" cy="9" r="1.5" fill="currentColor"/></svg></button>`;
     row.onclick = () => openScope({type:'tag', id:tag});
+    row.querySelector('.person-pill')?.addEventListener('click', e => { e.stopPropagation(); openOwnerMenu(e.currentTarget, tag); });
+    row.oncontextmenu = e => { e.preventDefault(); row.querySelector('.sb-more').onclick(e); };
     row.querySelector('.sb-more').onclick = e => {
       e.stopPropagation();
-      showPop(e.currentTarget, [
+      showPop(e.currentTarget || e, [
+        {label: tagOwner(tag) ? 'Owner: ' + tagOwner(tag).name + '…' : 'Set owner…', icon:'👤', fn: () => openOwnerMenu(row, tag)},
         {label:'Rename tag…', fn: () => renameTag(tag)},
         {sep:true},
         {label:'Remove from all tasks', danger:true, fn: () => {
           state.tasks.forEach(t => { t.tags = (t.tags || []).filter(x => x !== tag); });
+          state.tagOwners = (state.tagOwners || []).filter(o => o.tag !== tag);
           if (taskScope.type === 'tag' && taskScope.id === tag) openScope({type:'today'});
           save(); renderAll();
         }},
@@ -9992,6 +10129,12 @@ function renameTag(tag) {
   const next = (prompt('Rename tag', tag) || '').trim().replace(/^#/, '');
   if (!next || next === tag) return;
   state.tasks.forEach(t => { t.tags = [...new Set((t.tags || []).map(x => x === tag ? next : x))]; });
+  // The owner follows the rename, unless the tag it merges into has its own.
+  const own = (state.tagOwners || []).find(o => o.tag === tag);
+  if (own) {
+    if ((state.tagOwners || []).some(o => o.tag === next)) state.tagOwners = state.tagOwners.filter(o => o !== own);
+    else own.tag = next;
+  }
   if (taskScope.type === 'tag' && taskScope.id === tag) { taskScope.id = next; saveScope(); }
   save(); renderAll();
 }
@@ -10262,6 +10405,8 @@ function taskRow(t) {
     meta.push(`<span class="tl-note" title="Has a description"><svg width="12" height="12" viewBox="0 0 14 14" fill="none"><rect x="1.4" y="1.4" width="11.2" height="11.2" rx="2.6" stroke="currentColor" stroke-width="1.2"/><path d="M4 5h6M4 7.4h6M4 9.8h3.6" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg></span>`);
   if (t.dueDate) meta.push(`<span class="tl-due ${dueClass(t.dueDate)}">${t.repeat ? DP_ICON.repeatSm : ''}${esc(rowWhenLabel(t))}</span>`);
   if (inTrash && t.deletedAt) meta.push(`<span>deleted ${esc(fmtDue(isoDay(new Date(t.deletedAt))))}</span>`);
+  const owners = taskOwners(t);
+  if (owners.length) meta.push(`<span class="tl-owners">${owners.map(personPill).join('')}</span>`);
 
   // A checklist leads with its list glyph rather than a checkbox.
   const nSubs = (t.subtasks || []).length;
@@ -10667,8 +10812,12 @@ function renderDetail() {
   // ── Tags ──
   const tagBox = document.getElementById('detail-tags');
   tagBox.innerHTML = (t.tags || []).map(tag =>
-    `<span class="dtag">#${esc(tag)}<button data-t="${esc(tag)}" aria-label="Remove tag">×</button></span>`).join('') +
+    `<span class="dtag" data-tag="${esc(tag)}" title="Click to set the owner">${tagOwner(tag) ? personPill(tagOwner(tag)) : ''}#${esc(tag)}<button data-t="${esc(tag)}" aria-label="Remove tag">×</button></span>`).join('') +
     `<input id="detail-tag-input" placeholder="${(t.tags || []).length ? '' : '+ tag'}" aria-label="Add tag">`;
+  tagBox.querySelectorAll('.dtag').forEach(c => c.onclick = e => {
+    if (e.target.closest('button')) return;
+    openOwnerMenu(c, c.dataset.tag);
+  });
   tagBox.querySelectorAll('.dtag button').forEach(b => b.onclick = () => {
     t.tags = (t.tags || []).filter(x => x !== b.dataset.t); touch(); save(); renderAll();
   });
@@ -12331,8 +12480,9 @@ function openFilterModal(id = null) {
   const existing = id ? (state.savedFilters || []).find(f => f.id === id) : null;
   filterDraft = existing
     ? JSON.parse(JSON.stringify(existing))
-    : {id: uid(), name: '', emoji: '🔍', rules: {lists: [], tags: [], status: [], priority: [], due: ''}};
+    : {id: uid(), name: '', emoji: '🔍', rules: {lists: [], tags: [], people: [], status: [], priority: [], due: ''}};
   if (!filterDraft.rules.priority) filterDraft.rules.priority = [];
+  if (!filterDraft.rules.people) filterDraft.rules.people = [];
   renderFilterModal();
 }
 function renderFilterModal() {
@@ -12369,6 +12519,10 @@ function renderFilterModal() {
           ? chips(allTags().map(([t]) => [t, '#' + t]), r.tags, 'tags')
           : '<div class="sb-empty" style="margin:2px 0">No tags yet — type #something when adding a task.</div>'}
       </div>
+      ${(state.people || []).length ? `<div class="form-group">
+        <label>Owner</label>
+        ${chips(state.people.map(p => [p.id, p.name]), r.people, 'people')}
+      </div>` : ''}
       <div class="form-group">
         <label>Status</label>
         ${chips([['wip','In progress'],['next','Up next'],['block','Blocked'],['nosched','No schedule'],['done','Done']], r.status, 'status')}
