@@ -4470,7 +4470,8 @@ body.chrome-off #col-filter-bar { display: none !important; }
   #tasks-list { overflow: visible; }
   #tasks-pane { min-height: 0; flex: 1 1 auto; background: var(--surface); }
   #tasks-head { padding: 10px 14px 8px; }
-  #tasks-add { margin: 0 14px 6px; }
+  /* The floating + adds tasks on a phone, so the inline bar goes. */
+  #tasks-add { display: none !important; }
   #tasks-list { padding: 0 14px 90px; }
   #detail-pane {
     position: fixed; inset: 0; z-index: 700;
@@ -5091,7 +5092,7 @@ body.chrome-off #col-filter-bar { display: none !important; }
       <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="9.6" cy="9.6" r="6.6" stroke="currentColor" stroke-width="2.4"/><path d="M14.6 14.6l5 5" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>
       <span>Search</span>
     </button>
-    <button class="bnav-btn bnav-add" onclick="openTaskModal()">
+    <button class="bnav-btn bnav-add" onclick="openAddFromScope()" aria-label="New task">
       <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M11 4v14M4 11h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
     </button>
     <button class="bnav-btn" id="bnav-tasks" onclick="setView('tasks')">
@@ -7624,7 +7625,22 @@ function openTaskModal(id=null, defaultStatus='next', defaultListId=null) {
   modal.classList.add('open');
   setTimeout(()=>document.getElementById('task-name-input').focus(), 100);
 }
-function closeTaskModal() { document.getElementById('task-modal').classList.remove('open'); }
+function closeTaskModal() { document.getElementById('task-modal').classList.remove('open'); addScopeExtras = null; }
+
+/* The phone's floating +. A task added from a view lands in it, the way the
+   desktop's add bar files it: into the open list, due today from Today, with
+   the tag from a tag, owned by the person from a person's view. */
+let addScopeExtras = null;
+function openAddFromScope() {
+  const onTasks = currentView === 'tasks' && taskScope.type !== 'trash' && taskScope.type !== 'completed';
+  openTaskModal(null, 'next', onTasks ? defaultPidForScope() : null);
+  if (!onTasks) return;
+  document.getElementById('task-due-input').value = defaultDueForScope();
+  addScopeExtras = {
+    tag:   taskScope.type === 'tag'    ? taskScope.id : null,
+    owner: taskScope.type === 'person' ? taskScope.id : null,
+  };
+}
 function saveTask() {
   const name = document.getElementById('task-name-input').value.trim();
   if (!name) return;
@@ -7637,9 +7653,17 @@ function saveTask() {
     t.name=name; t.pid=pid; setTaskStatus(t, status); t.notes=notes; t.dueDate=dueDate;
     t.updatedAt = Date.now();
   } else {
-    const t = {id:uid(),pid,name,status,notes,dueDate,updatedAt:Date.now()};
+    // The same #tag ~date !priority shorthand the add bar understands.
+    const q = parseQuickAdd(name);
+    const t = {id:uid(), pid, name: q.name || name, status, notes,
+               dueDate: q.due || dueDate, tags: q.tags, priority: q.priority,
+               createdAt: Date.now(), updatedAt: Date.now()};
+    const x = addScopeExtras;
+    if (x && x.tag && !t.tags.includes(x.tag)) t.tags.push(x.tag);
+    if (x && x.owner) t.owner = x.owner;
     if (status === 'archive') t.archivedAt = Date.now();
-    state.tasks.push(t);
+    // New tasks go on top, as from the add bar.
+    state.tasks.unshift(t);
   }
   save(); closeTaskModal(); renderAll();
 }
@@ -10731,6 +10755,7 @@ function commitQuickAdd() {
   input.focus();
 }
 function focusAddTask(prefix) {
+  if (matchMedia('(max-width: 768px)').matches) { openAddFromScope(); return; }
   if (currentView !== 'tasks') setView('tasks');
   const input = document.getElementById('add-task-input');
   if (!input) return;
