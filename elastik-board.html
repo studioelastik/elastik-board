@@ -2,7 +2,7 @@
 <html lang="en" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Mission Control">
@@ -4134,7 +4134,7 @@ body.chrome-off #col-filter-bar { display: none !important; }
   position: relative;
   width: 100%; min-height: 76px; margin-top: 4px;
   border: none; outline: none; background: none; resize: none;
-  font-family: inherit; font-size: 14px; line-height: 1.55; color: var(--text-2);
+  font-family: inherit; font-size: 14px; line-height: 1.55; color: var(--text);
   white-space: pre-wrap; overflow-wrap: anywhere; cursor: text;
   counter-reset: md-ol;
 }
@@ -4667,6 +4667,11 @@ body.chrome-off #col-filter-bar { display: none !important; }
 /* The description is edited in place, so the old full-screen notes editor
    (a jump to the board's card view) has no door in from a task. */
 #detail-notes-btn { display: none !important; }
+/* The description reads a size down on a phone. maximum-scale=1 in the
+   viewport keeps iOS from zooming in on focus below 16px (pinch still works). */
+@media (max-width: 768px) {
+  #detail-notes[contenteditable="true"] { font-size: 15px !important; line-height: 1.5; }
+}
 
 /* Pull to refresh (phones): there is no browser reload in a home-screen app. */
 #ptr {
