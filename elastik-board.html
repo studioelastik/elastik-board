@@ -3502,6 +3502,27 @@ label.focus-row {
   font-variant-numeric: normal; cursor: pointer;
 }
 .tl-owners { display: inline-flex; gap: 3px; flex-shrink: 0; }
+/* Swipe actions ride just outside the row and slide in with it. */
+.tl-row.swipeable { touch-action: pan-y; overflow: visible; }
+.tl-swipe-act { position: absolute; top: 0; bottom: 0; display: flex; visibility: hidden; }
+.tl-row.swipe-left .tl-swipe-right, .tl-row.swipe-right .tl-swipe-left { visibility: visible; }
+.tl-swipe-right { left: 100%; }
+.tl-swipe-left  { right: 100%; }
+.tl-swipe-act button {
+  width: 74px; border: none; color: #fff; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  font-family: inherit; font-size: 12px; font-weight: 500;
+  transition: width .15s;
+}
+.sw-more { background: #8E8E93; }
+.sw-flag { background: #FF9500; }
+.sw-delete { background: #FF3B30; }
+.sw-done { background: #34C759; }
+/* A long swipe: the deciding button stretches to fill, as in Mail. */
+.tl-row.swipe-left.swipe-full .sw-more,
+.tl-row.swipe-left.swipe-full .sw-flag { width: 0; overflow: hidden; padding: 0; }
+.tl-row.swipe-left.swipe-full .sw-delete { width: 100vw; align-items: flex-start; padding-left: 24px; }
+.tl-row.swipe-right.swipe-full .sw-done { width: 100vw; align-items: flex-end; padding-right: 24px; }
 .tl-owners .person-pill { cursor: inherit; }
 .dtag .person-pill { height: 14px; min-width: 18px; font-size: 9px; margin-right: 1px; }
 .dtag { cursor: pointer; }
@@ -10729,6 +10750,7 @@ function completedGroup(items) {
 function renderTaskList() {
   const box = document.getElementById('tasks-list');
   if (!box) return;
+  swipeOpenRow = null;
   const rows = sortTasks(scopeTasks());
   const closed = UI.hideCompleted ? [] : scopeCompleted();
   box.innerHTML = '';
@@ -10853,7 +10875,128 @@ function taskRow(t) {
     row.ondragstart = e => { dragTaskId = t.id; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', t.id); };
     row.ondragend = () => { dragTaskId = null; };
   }
+  if (matchMedia('(max-width: 768px)').matches) attachSwipe(row, t);
   return row;
+}
+
+/* ── Swipe a row, the way Apple Mail does ─────────────────────────────
+   Left reveals More · Flag · Delete; a long swipe left deletes (to Trash,
+   with Undo). Right reveals Done; a long swipe right completes it (or
+   reopens a completed one). One row stays open at a time; a tap anywhere
+   else closes it. The list is CSS-zoomed on the phone, so finger distances
+   are divided by that zoom before they move the row. */
+let swipeOpenRow = null;
+const SWIPE_BTN = 74;
+function closeSwipe(row, animate = true) {
+  if (!row) return;
+  row.style.transition = animate ? 'transform .22s cubic-bezier(.2,.8,.2,1)' : '';
+  row.style.transform = '';
+  row._swipeX = 0;
+  row.classList.remove('swipe-left', 'swipe-right');
+  if (swipeOpenRow === row) swipeOpenRow = null;
+}
+document.addEventListener('pointerdown', e => {
+  if (swipeOpenRow && !swipeOpenRow.contains(e.target)) closeSwipe(swipeOpenRow);
+}, true);
+
+function attachSwipe(row, t) {
+  const done = !isOpen(t);
+  const icon = {
+    more:  '<svg width="22" height="22" viewBox="0 0 22 22"><circle cx="5" cy="11" r="1.8" fill="currentColor"/><circle cx="11" cy="11" r="1.8" fill="currentColor"/><circle cx="17" cy="11" r="1.8" fill="currentColor"/></svg>',
+    flag:  '<svg width="20" height="20" viewBox="0 0 12 12" fill="none"><path d="M2.6 1.4v9.2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M2.6 2.1h6.6L7.9 4.4l1.3 2.3H2.6z" fill="currentColor"/></svg>',
+    trash: '<svg width="20" height="20" viewBox="0 0 16 16" fill="none"><path d="M2.6 4.2h10.8M6.2 4.2V2.9c0-.5.4-.9.9-.9h1.8c.5 0 .9.4.9.9v1.3M4 4.2l.6 8.4c0 .8.6 1.4 1.4 1.4h4c.8 0 1.4-.6 1.4-1.4l.6-8.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    check: '<svg width="22" height="22" viewBox="0 0 10 10" fill="none"><path d="M1.6 5.1l2.2 2.2 4.6-4.8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  };
+  row.classList.add('swipeable');
+  row.insertAdjacentHTML('beforeend', `
+    <div class="tl-swipe-act tl-swipe-right">
+      <button type="button" data-a="more" class="sw-more">${icon.more}<span>More</span></button>
+      <button type="button" data-a="flag" class="sw-flag">${icon.flag}<span>${t.priority ? 'Unflag' : 'Flag'}</span></button>
+      <button type="button" data-a="delete" class="sw-delete">${icon.trash}<span>Delete</span></button>
+    </div>
+    <div class="tl-swipe-act tl-swipe-left">
+      <button type="button" data-a="done" class="sw-done">${icon.check}<span>${done ? 'Reopen' : 'Done'}</span></button>
+    </div>`);
+
+  const act = {
+    more:   btn => { closeSwipe(row); openTaskMenu(null, t.id, btn); },
+    flag:   () => { closeSwipe(row); t.priority = t.priority ? 0 : 1; t.updatedAt = Date.now(); save(); renderAll(); },
+    delete: () => commit(-1, () => deleteTask(t.id)),
+    done:   () => commit(1, () => {
+      if (t.status === 'archive') { setTaskStatus(t, 'next'); save(); renderAll(); }
+      else toggleDone(t.id);
+    }),
+  };
+  row.querySelectorAll('.tl-swipe-act button').forEach(b => {
+    b.addEventListener('pointerdown', e => e.stopPropagation());
+    b.addEventListener('click', e => { e.stopPropagation(); act[b.dataset.a](b); });
+  });
+
+  const zoom = () => parseFloat(document.getElementById('tasks-list')?.style.zoom) || 1;
+  const width = () => row.getBoundingClientRect().width / zoom();
+  // Slide the row all the way out, then act.
+  function commit(dir, fn) {
+    row.style.transition = 'transform .18s ease-in';
+    row.style.transform = `translateX(${dir * width()}px)`;
+    row.classList.add(dir < 0 ? 'swipe-left' : 'swipe-right', 'swipe-full');
+    if (swipeOpenRow === row) swipeOpenRow = null;
+    setTimeout(fn, 170);
+  }
+  const setX = x => {
+    row._swipeX = x;
+    row.style.transform = x ? `translateX(${x}px)` : '';
+    row.classList.toggle('swipe-left', x < 0);
+    row.classList.toggle('swipe-right', x > 0);
+    row.classList.toggle('swipe-full', Math.abs(x) > width() * 0.55);
+  };
+
+  let sx = 0, sy = 0, base = 0, mode = null, pid = null;
+  row.addEventListener('pointerdown', e => {
+    if (e.pointerType === 'mouse') return;
+    sx = e.clientX; sy = e.clientY; base = row._swipeX || 0; mode = null; pid = e.pointerId;
+  });
+  row.addEventListener('pointermove', e => {
+    if (e.pointerId !== pid) return;
+    const dx = e.clientX - sx, dy = e.clientY - sy;
+    if (!mode) {
+      if (Math.abs(dy) > 8 && Math.abs(dy) > Math.abs(dx)) { mode = 'scroll'; return; }
+      if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) {
+        mode = 'swipe';
+        if (swipeOpenRow && swipeOpenRow !== row) closeSwipe(swipeOpenRow);
+        row.style.transition = '';
+        try { row.setPointerCapture(e.pointerId); } catch (_) {}
+      } else return;
+    }
+    if (mode !== 'swipe') return;
+    e.preventDefault();
+    let x = base + dx / zoom();
+    const w = width();
+    x = Math.max(-w, Math.min(w, x));
+    setX(x);
+  });
+  const end = e => {
+    if (e.pointerId !== pid) return;
+    pid = null;
+    if (mode !== 'swipe') return;
+    // The click a finished swipe ends in isn't a tap; let later ones through.
+    row._noClick = true;
+    setTimeout(() => { row._noClick = false; }, 350);
+    const x = row._swipeX || 0, w = width();
+    row.style.transition = 'transform .22s cubic-bezier(.2,.8,.2,1)';
+    if (x < -w * 0.55) act.delete();
+    else if (x > w * 0.45) act.done();
+    else if (x < -50) { setX(-SWIPE_BTN * 3); row.classList.remove('swipe-full'); swipeOpenRow = row; }
+    else if (x > 50)  { setX(SWIPE_BTN);     row.classList.remove('swipe-full'); swipeOpenRow = row; }
+    else closeSwipe(row);
+  };
+  row.addEventListener('pointerup', end);
+  row.addEventListener('pointercancel', end);
+  // A finished swipe isn't a tap; a tap on an open row just closes it.
+  row.addEventListener('click', e => {
+    if (e.target.closest('.tl-swipe-act')) return;
+    if (row._noClick) { row._noClick = false; e.stopImmediatePropagation(); e.preventDefault(); return; }
+    if (row._swipeX) { e.stopImmediatePropagation(); e.preventDefault(); closeSwipe(row); }
+  }, true);
 }
 
 function toggleDone(id) {
